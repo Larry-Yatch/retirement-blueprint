@@ -1180,18 +1180,6 @@ function runUniversalEngine(rowNum) {
 function quickTestEngine() {
   const testRow = 4;  // ← change this to the row with your Phase 2 data
   const { domains, vehicles } = runUniversalEngine(testRow);
-  Logger.log('domains:  %s', JSON.stringify(domains,  null, 2));
-  Logger.log('vehicles: %s', JSON.stringify(vehicles, null, 2));
-}
-
-
-
-/**
- * Quick smoke test for runUniversalEngine()
- */
-function quickTestEngine() {
-  const testRow = 4;  // ← change this to the row with your Phase 2 data
-  const { domains, vehicles } = runUniversalEngine(testRow);
   Logger.log('domains: %s',  JSON.stringify(domains,  null, 2));
   Logger.log('vehicles: %s', JSON.stringify(vehicles, null, 2));
 }
