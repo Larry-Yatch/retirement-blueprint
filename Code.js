@@ -277,6 +277,49 @@ const PROFILE_CONFIG = {
 
 // end PROFILE_CONFIG
 
+/**
+ * Tax preference utility functions
+ */
+function prioritizeTraditionalAccounts(vehicleOrder) {
+  // Move Traditional/401k accounts higher in priority for current tax savings
+  const traditional = [];
+  const roth = [];
+  const other = [];
+  
+  vehicleOrder.forEach(v => {
+    if (v.name.includes('Traditional') || (v.name.includes('401') && !v.name.includes('Roth'))) {
+      traditional.push(v);
+    } else if (v.name.includes('Roth')) {
+      roth.push(v);
+    } else {
+      other.push(v);
+    }
+  });
+  
+  // Order: Traditional first, then other, then Roth
+  return [...traditional, ...other, ...roth];
+}
+
+function prioritizeRothAccounts(vehicleOrder) {
+  // Move Roth accounts higher in priority for tax-free growth
+  const roth = [];
+  const traditional = [];
+  const other = [];
+  
+  vehicleOrder.forEach(v => {
+    if (v.name.includes('Roth')) {
+      roth.push(v);
+    } else if (v.name.includes('Traditional') || (v.name.includes('401') && !v.name.includes('Roth'))) {
+      traditional.push(v);
+    } else {
+      other.push(v);
+    }
+  });
+  
+  // Order: Roth first, then other, then Traditional
+  return [...roth, ...other, ...traditional];
+}
+
 // Stub helpers object—one entry per profileId
 /**
  * Per-profile configuration helpers.
@@ -362,6 +405,9 @@ const profileHelpers = {
     const age = Number(getValue(hdr, rowArr, HEADERS.CURRENT_AGE));
     const filing = getValue(hdr, rowArr, HEADERS.FILING_STATUS);
     
+    // Get tax preference
+    const taxFocus = getValue(hdr, rowArr, HEADERS.TAX_MINIMIZATION);
+    
     let hsaCap = 0;
     if (hsaElig) {
       const type = (filing === 'Married Filing Jointly') ? 'FAMILY' : 'INDIVIDUAL';
@@ -374,6 +420,22 @@ const profileHelpers = {
     const seeds = { Education: {}, Health: {}, Retirement: {} };
     
     const cfg = PROFILE_CONFIG['1A_ROBS_In_Use'];
+    
+    // Build base retirement order
+    let baseRetirementOrder = cfg.vehicleOrder_Retirement
+      .map(v => ({ name: v.name, capMonthly: v.capMonthly }))
+      .filter(v => !(v.name === 'HSA' && !hsaElig));
+    
+    // Adjust order based on tax preference
+    if (taxFocus === 'Now') {
+      // Prioritize Traditional over Roth for current tax savings
+      baseRetirementOrder = prioritizeTraditionalAccounts(baseRetirementOrder);
+    } else if (taxFocus === 'Later') {
+      // Prioritize Roth over Traditional for tax-free growth
+      baseRetirementOrder = prioritizeRothAccounts(baseRetirementOrder);
+    }
+    // For 'Both' or undefined, keep original order (balanced approach)
+    
     const educationOrder = (numKids > 0
       ? cfg.vehicleOrder_Education.map(v => ({
           name: v.name,
@@ -390,10 +452,7 @@ const profileHelpers = {
       .filter(v => !(v.name === 'HSA' && !hsaElig))
       .concat({ name: 'Health Bank', capMonthly: Infinity });
 
-    const retirementOrder = cfg.vehicleOrder_Retirement
-      .map(v => ({ name: v.name, capMonthly: v.capMonthly }))
-      .filter(v => !(v.name === 'HSA' && !hsaElig))
-      .concat({ name: 'Family Bank', capMonthly: Infinity });
+    const retirementOrder = baseRetirementOrder.concat({ name: 'Family Bank', capMonthly: Infinity });
 
     return {
       seeds,
@@ -1498,6 +1557,7 @@ function createTestData(profileType, options = {}) {
   setTestValue(HEADERS.NET_MONTHLY_INCOME, data.netIncome);
   setTestValue(HEADERS.ALLOCATION_PERCENTAGE, data.userAddPct);
   setTestValue(HEADERS.PROFILE_ID, profileType);
+  setTestValue(HEADERS.TAX_MINIMIZATION, data.taxFocus || 'Both');
   
   // Profile-specific test data
   switch(profileType) {
@@ -1817,6 +1877,445 @@ function demonstrateResultInterpretation() {
   Logger.log('   • Missing vehicles that should be there');
   
   return result;
+}
+
+/**
+ * Step-by-step profile helper validation and tuning
+ */
+function validateProfileHelper(profileId, testScenarios = []) {
+  Logger.log(`\n🔍 VALIDATING PROFILE: ${profileId}`);
+  Logger.log('═'.repeat(80));
+  
+  const cfg = PROFILE_CONFIG[profileId];
+  if (!cfg) {
+    Logger.log(`❌ ERROR: No configuration found for ${profileId}`);
+    return false;
+  }
+  
+  Logger.log(`📋 Profile: ${cfg.title}`);
+  Logger.log(`📝 Description: ${cfg.description}`);
+  
+  // Default test scenarios if none provided
+  if (testScenarios.length === 0) {
+    testScenarios = [
+      { name: 'Standard Case', options: {} },
+      { name: 'No Kids', options: { numKids: 0 } },
+      { name: 'No HSA', options: { hsaEligible: false } },
+      { name: 'Age 55+', options: { age: 55 } },
+      { name: 'High Income', options: { netIncome: 20000 } }
+    ];
+  }
+  
+  let allPassed = true;
+  
+  testScenarios.forEach(scenario => {
+    Logger.log(`\n🧪 Testing Scenario: ${scenario.name}`);
+    Logger.log('─'.repeat(50));
+    
+    try {
+      const { mockRowArr, mockHdr } = createTestData(profileId, scenario.options);
+      const helper = profileHelpers[profileId];
+      const result = helper(mockRowArr, mockHdr);
+      
+      // Log scenario parameters
+      const age = getValue(mockHdr, mockRowArr, HEADERS.CURRENT_AGE);
+      const numKids = getValue(mockHdr, mockRowArr, HEADERS.P2_CESA_NUM_CHILDREN);
+      const hsaElig = getValue(mockHdr, mockRowArr, HEADERS.P2_HSA_ELIGIBILITY);
+      const filing = getValue(mockHdr, mockRowArr, HEADERS.FILING_STATUS);
+      
+      Logger.log(`Parameters: Age ${age}, Kids ${numKids}, HSA ${hsaElig}, Filing ${filing}`);
+      
+      // Validate the results
+      const validation = validateHelperResults(result, {
+        age: Number(age),
+        numKids: Number(numKids),
+        hsaEligible: hsaElig === 'Yes',
+        filing: filing,
+        profileId: profileId
+      });
+      
+      if (validation.passed) {
+        Logger.log('✅ Technical Tests PASSED');
+        
+        // Now run financial strategy validation
+        const strategyValidation = validateFinancialStrategy(profileId, result, {
+          age: Number(age),
+          numKids: Number(numKids),
+          hsaEligible: hsaElig === 'Yes',
+          filing: filing,
+          profileId: profileId,
+          netIncome: getValue(mockHdr, mockRowArr, HEADERS.NET_MONTHLY_INCOME)
+        });
+        
+        if (!strategyValidation.passed) {
+          Logger.log('❌ Strategic Validation FAILED');
+          allPassed = false;
+        }
+        
+      } else {
+        Logger.log('❌ Technical Tests FAILED:');
+        validation.errors.forEach(error => Logger.log(`   • ${error}`));
+        allPassed = false;
+      }
+      
+    } catch (error) {
+      Logger.log(`❌ ERROR in scenario: ${error.message}`);
+      allPassed = false;
+    }
+  });
+  
+  Logger.log(`\n📊 OVERALL RESULT: ${allPassed ? '✅ PASSED' : '❌ FAILED'}`);
+  return allPassed;
+}
+
+/**
+ * Validate helper results against expected behavior
+ */
+function validateHelperResults(result, params) {
+  const errors = [];
+  
+  // 1. Check basic structure
+  if (!result.seeds || !result.vehicleOrders) {
+    errors.push('Missing seeds or vehicleOrders in result');
+    return { passed: false, errors };
+  }
+  
+  // 2. Check domain structure
+  ['Education', 'Health', 'Retirement'].forEach(domain => {
+    if (!result.vehicleOrders[domain]) {
+      errors.push(`Missing ${domain} vehicleOrders`);
+    }
+    if (!result.seeds[domain]) {
+      errors.push(`Missing ${domain} seeds`);
+    }
+  });
+  
+  // 3. Check HSA logic
+  const hsaInHealth = result.vehicleOrders.Health?.some(v => v.name === 'HSA');
+  const hsaInRetirement = result.vehicleOrders.Retirement?.some(v => v.name === 'HSA');
+  
+  if (params.hsaEligible) {
+    if (!hsaInHealth && !hsaInRetirement) {
+      errors.push('HSA missing when eligible');
+    }
+  } else {
+    if (hsaInHealth || hsaInRetirement) {
+      errors.push('HSA present when not eligible');
+    }
+  }
+  
+  // 4. Check education logic
+  const hasEducationVehicles = result.vehicleOrders.Education?.some(v => v.name === 'Combined CESA');
+  
+  if (params.numKids > 0) {
+    if (!hasEducationVehicles) {
+      errors.push('Education vehicles missing when has children');
+    }
+  }
+  
+  // 5. Check CESA cap calculation
+  if (params.numKids > 0 && hasEducationVehicles) {
+    const cesaVehicle = result.vehicleOrders.Education.find(v => v.name === 'Combined CESA');
+    if (cesaVehicle) {
+      const expectedCap = (CONFIG.ANNUAL_CESA_LIMIT * params.numKids) / 12;
+      if (Math.abs(cesaVehicle.capMonthly - expectedCap) > 0.01) {
+        errors.push(`CESA cap incorrect: expected ${expectedCap}, got ${cesaVehicle.capMonthly}`);
+      }
+    }
+  }
+  
+  // 6. Check HSA cap calculation
+  if (params.hsaEligible) {
+    const hsaVehicle = result.vehicleOrders.Health?.find(v => v.name === 'HSA') ||
+                      result.vehicleOrders.Retirement?.find(v => v.name === 'HSA');
+    if (hsaVehicle) {
+      const hsaType = params.filing === 'Married Filing Jointly' ? 'FAMILY' : 'INDIVIDUAL';
+      const base = LIMITS.HEALTH.HSA[hsaType];
+      const catchup = params.age >= 55 ? LIMITS.HEALTH.HSA.CATCHUP : 0;
+      const expectedCap = (base + catchup) / 12;
+      
+      if (Math.abs(hsaVehicle.capMonthly - expectedCap) > 0.01) {
+        errors.push(`HSA cap incorrect: expected ${expectedCap}, got ${hsaVehicle.capMonthly}`);
+      }
+    }
+  }
+  
+  // 7. Check catch-up contributions for age 50+
+  if (params.age >= 50) {
+    // Look for catch-up vehicles or enhanced caps
+    const has401kCatchup = result.vehicleOrders.Retirement?.some(v => 
+      v.name.includes('Catch-Up') || v.name.includes('catch-up')
+    );
+    
+    // For profiles that should have catch-up but don't explicitly name it,
+    // check if employee 401k cap is enhanced
+    if (params.profileId === '5_Catch_Up' && !has401kCatchup) {
+      errors.push('Catch-up contributions missing for age 50+ profile');
+    }
+  }
+  
+  // 8. Check that Bank vehicles appear last
+  ['Education', 'Health', 'Retirement'].forEach(domain => {
+    const vehicles = result.vehicleOrders[domain];
+    if (vehicles && vehicles.length > 0) {
+      const bankIndex = vehicles.findIndex(v => v.name.includes('Bank'));
+      if (bankIndex >= 0 && bankIndex !== vehicles.length - 1) {
+        errors.push(`${domain} Bank vehicle should be last in priority order`);
+      }
+    }
+  });
+  
+  return { passed: errors.length === 0, errors };
+}
+
+/**
+ * Validate the financial strategy and optimization logic of helper results
+ */
+function validateFinancialStrategy(profileId, result, params) {
+  const strategy = [];
+  const warnings = [];
+  const errors = [];
+  
+  Logger.log(`\n💰 FINANCIAL STRATEGY ANALYSIS: ${profileId}`);
+  Logger.log('═'.repeat(60));
+  
+  const cfg = PROFILE_CONFIG[profileId];
+  
+  // Analyze retirement priority order
+  const retirementOrder = result.vehicleOrders.Retirement;
+  
+  switch(profileId) {
+    case '1A_ROBS_In_Use':
+      strategy.push('ROBS Strategy: Business profits → Solo 401k → tax-advantaged growth');
+      
+      // Check if profit distribution is prioritized (should be first)
+      const profitFirst = retirementOrder[0]?.name.includes('Profit Distribution');
+      if (!profitFirst) {
+        errors.push('ROBS profit distribution should be #1 priority for tax efficiency');
+      }
+      
+      // Check if traditional vs Roth makes sense
+      const rothIndex = retirementOrder.findIndex(v => v.name.includes('Roth'));
+      const tradIndex = retirementOrder.findIndex(v => v.name.includes('Traditional'));
+      
+      if (params.age < 40 && rothIndex > tradIndex) {
+        warnings.push('Young investor: Consider prioritizing Roth over Traditional for long-term tax-free growth');
+      }
+      break;
+      
+    case '2_Solo401k_Builder':
+      strategy.push('Solo 401k Strategy: Maximize employer deduction + employee deferral');
+      
+      // Employee vs Employer priority check
+      const empIndex = retirementOrder.findIndex(v => v.name.includes('Employee'));
+      const emplIndex = retirementOrder.findIndex(v => v.name.includes('Employer'));
+      
+      if (empIndex > emplIndex) {
+        errors.push('Employee deferrals should come before employer contributions for immediate tax benefit');
+      }
+      
+      // HSA priority check
+      const hsaIndex = retirementOrder.findIndex(v => v.name === 'HSA');
+      if (hsaIndex > 2 && params.hsaEligible) {
+        warnings.push('HSA offers triple tax advantage - consider higher priority than position #' + (hsaIndex + 1));
+      }
+      break;
+      
+    case '3_Roth_Reclaimer':
+      strategy.push('Roth Strategy: Backdoor conversions + tax diversification');
+      
+      const backdoorIndex = retirementOrder.findIndex(v => v.name.includes('Backdoor'));
+      if (backdoorIndex !== 0) {
+        errors.push('Backdoor Roth should be #1 priority for high earners locked out of direct Roth');
+      }
+      break;
+      
+    case '4_Bracket_Strategist':
+      strategy.push('Tax Strategy: Current deductions + future Roth flexibility');
+      
+      const traditionalIndex = retirementOrder.findIndex(v => v.name.includes('Traditional'));
+      if (traditionalIndex > 1) {
+        warnings.push('Traditional accounts should be prioritized for current tax reduction');
+      }
+      break;
+      
+    case '5_Catch_Up':
+      strategy.push('Catch-up Strategy: Maximize age 50+ contribution limits');
+      
+      const hasCatchup = retirementOrder.some(v => v.name.includes('Catch-Up'));
+      if (!hasCatchup) {
+        errors.push('Age 50+ should prioritize catch-up contributions for accelerated savings');
+      }
+      break;
+      
+    case '6_Foundation_Builder':
+      strategy.push('Foundation Strategy: Build tax-diversified base');
+      
+      const rothFirst = retirementOrder[0]?.name.includes('Roth');
+      if (!rothFirst && params.age < 35) {
+        warnings.push('Young investors typically benefit from Roth-first strategy for tax-free growth');
+      }
+      break;
+      
+    case '7_Biz_Owner_Group':
+      strategy.push('Business Owner Strategy: Group plan compliance + owner benefits');
+      
+      // Check for defined benefit if high income
+      const hasDB = retirementOrder.some(v => v.name.includes('Defined Benefit'));
+      if (!hasDB && params.netIncome > 15000) {
+        warnings.push('High-income business owners should consider defined benefit plans for maximum deferrals');
+      }
+      break;
+      
+    case '8_Late_Stage_Growth':
+      strategy.push('Late-stage Strategy: Alternative investments + tax optimization');
+      
+      // Should prioritize alternatives for growth
+      const hasAlts = retirementOrder.some(v => v.name.includes('Alternative'));
+      if (!hasAlts) {
+        warnings.push('Near-retirement investors should consider alternative investments for diversification');
+      }
+      break;
+  }
+  
+  // Universal strategic checks
+  
+  // 1. HSA Priority Check (Triple tax advantage)
+  if (params.hsaEligible) {
+    const hsaRetirementIndex = retirementOrder.findIndex(v => v.name === 'HSA');
+    if (hsaRetirementIndex > 3) {
+      warnings.push(`HSA has triple tax advantage but appears at position #${hsaRetirementIndex + 1} - consider higher priority`);
+    }
+  }
+  
+  // 2. Tax Diversification Check
+  const hasRoth = retirementOrder.some(v => v.name.includes('Roth'));
+  const hasTraditional = retirementOrder.some(v => v.name.includes('Traditional') || v.name.includes('401'));
+  
+  if (!hasRoth && params.age < 45) {
+    warnings.push('Young investors should consider some Roth contributions for tax diversification');
+  }
+  
+  if (!hasTraditional && params.netIncome > 10000) {
+    warnings.push('Higher earners should consider traditional contributions for current tax savings');
+  }
+  
+  // 3. Liquidity Check
+  const rothIraIndex = retirementOrder.findIndex(v => v.name === 'Roth IRA');
+  const rothBeforeHsa = params.hsaEligible && rothIraIndex >= 0 && 
+                        rothIraIndex < retirementOrder.findIndex(v => v.name === 'HSA');
+  
+  if (rothBeforeHsa) {
+    warnings.push('HSA offers contribution deduction + investment growth + tax-free withdrawals - may warrant priority over Roth IRA');
+  }
+  
+  // Log the analysis
+  strategy.forEach(s => Logger.log(`📊 ${s}`));
+  
+  if (warnings.length > 0) {
+    Logger.log('\n⚠️  STRATEGIC CONSIDERATIONS:');
+    warnings.forEach(w => Logger.log(`   • ${w}`));
+  }
+  
+  if (errors.length > 0) {
+    Logger.log('\n❌ STRATEGIC ERRORS:');
+    errors.forEach(e => Logger.log(`   • ${e}`));
+  }
+  
+  const strategicScore = errors.length === 0 ? (warnings.length === 0 ? 'OPTIMAL' : 'GOOD') : 'NEEDS_WORK';
+  Logger.log(`\n📈 STRATEGIC RATING: ${strategicScore}`);
+  
+  return {
+    strategicScore,
+    strategy,
+    warnings,
+    errors,
+    passed: errors.length === 0
+  };
+}
+
+/**
+ * Test all profiles systematically
+ */
+function validateAllProfiles() {
+  Logger.log('🔍 SYSTEMATIC VALIDATION OF ALL PROFILE HELPERS');
+  Logger.log('═'.repeat(80));
+  
+  const profiles = Object.keys(PROFILE_CONFIG);
+  const results = {};
+  let overallPassed = true;
+  
+  profiles.forEach(profileId => {
+    const passed = validateProfileHelper(profileId);
+    results[profileId] = passed;
+    if (!passed) overallPassed = false;
+    
+    Logger.log('\n' + '─'.repeat(80));
+  });
+  
+  Logger.log(`\n🏁 FINAL RESULTS:`);
+  Logger.log('═'.repeat(40));
+  
+  profiles.forEach(profileId => {
+    const status = results[profileId] ? '✅ PASS' : '❌ FAIL';
+    Logger.log(`${profileId}: ${status}`);
+  });
+  
+  Logger.log(`\nOverall Status: ${overallPassed ? '✅ ALL PASSED' : '❌ SOME FAILED'}`);
+  return results;
+}
+
+// Individual validation functions for easy testing
+function validate_1A_ROBS_In_Use() { return validateProfileHelper('1A_ROBS_In_Use'); }
+function validate_1B_ROBS_Curious() { return validateProfileHelper('1B_ROBS_Curious'); }
+function validate_2_Solo401k_Builder() { return validateProfileHelper('2_Solo401k_Builder'); }
+function validate_3_Roth_Reclaimer() { return validateProfileHelper('3_Roth_Reclaimer'); }
+function validate_4_Bracket_Strategist() { return validateProfileHelper('4_Bracket_Strategist'); }
+function validate_5_Catch_Up() { return validateProfileHelper('5_Catch_Up'); }
+function validate_6_Foundation_Builder() { return validateProfileHelper('6_Foundation_Builder'); }
+function validate_7_Biz_Owner_Group() { return validateProfileHelper('7_Biz_Owner_Group'); }
+function validate_8_Late_Stage_Growth() { return validateProfileHelper('8_Late_Stage_Growth'); }
+
+/**
+ * Test tax preference impact on vehicle ordering
+ */
+function testTaxPreferences(profileId = '1A_ROBS_In_Use') {
+  Logger.log(`\n🎯 TESTING TAX PREFERENCES: ${profileId}`);
+  Logger.log('═'.repeat(80));
+  
+  const taxPreferences = [
+    { name: 'Tax Savings NOW', value: 'Now' },
+    { name: 'Tax Savings LATER', value: 'Later' }, 
+    { name: 'BALANCED Approach', value: 'Both' }
+  ];
+  
+  taxPreferences.forEach(pref => {
+    Logger.log(`\n📊 Scenario: ${pref.name} (${pref.value})`);
+    Logger.log('─'.repeat(50));
+    
+    const { mockRowArr, mockHdr } = createTestData(profileId, { 
+      taxFocus: pref.value,
+      age: 35,
+      netIncome: 10000
+    });
+    
+    const helper = profileHelpers[profileId];
+    const result = helper(mockRowArr, mockHdr);
+    
+    Logger.log('\nRetirement Vehicle Priority Order:');
+    result.vehicleOrders.Retirement.forEach((vehicle, index) => {
+      const cap = vehicle.capMonthly === Infinity ? 'Unlimited' : `$${Math.round(vehicle.capMonthly)}/mo`;
+      const taxType = vehicle.name.includes('Roth') ? '🟢 Roth' : 
+                     vehicle.name.includes('Traditional') ? '🔵 Traditional' : 
+                     vehicle.name.includes('401') ? '🟡 401k' : '⚪ Other';
+      Logger.log(`  ${index + 1}. ${vehicle.name} (${cap}) ${taxType}`);
+    });
+  });
+  
+  Logger.log('\n💡 Key Insights:');
+  Logger.log('• "Now" should prioritize Traditional/401k accounts for current deductions');
+  Logger.log('• "Later" should prioritize Roth accounts for tax-free growth');
+  Logger.log('• "Both" should maintain balanced order');
 }
 
 /**
