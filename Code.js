@@ -1459,8 +1459,368 @@ function debugHeaders() {
 
 
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// TESTING AND DEBUGGING FUNCTIONS
+// ═══════════════════════════════════════════════════════════════════════════════
+
 /**
-*all the testing and debugging functions
+ * Test data factory - creates realistic example data for testing
+ */
+function createTestData(profileType, options = {}) {
+  const defaults = {
+    age: 35,
+    filing: 'Married Filing Jointly',
+    hsaEligible: true,
+    numKids: 2,
+    netIncome: 8000,
+    userAddPct: 5
+  };
+  
+  const data = { ...defaults, ...options };
+  
+  // Create mock row array with realistic data
+  const mockRowArr = new Array(200).fill(''); // Large enough array
+  const mockHdr = {};
+  
+  // Build header mapping and populate data
+  let colIndex = 1;
+  const setTestValue = (headerName, value) => {
+    mockHdr[headerName] = colIndex;
+    mockRowArr[colIndex - 1] = value;
+    colIndex++;
+  };
+  
+  // Set common test values
+  setTestValue(HEADERS.CURRENT_AGE, data.age);
+  setTestValue(HEADERS.FILING_STATUS, data.filing);
+  setTestValue(HEADERS.P2_HSA_ELIGIBILITY, data.hsaEligible ? 'Yes' : 'No');
+  setTestValue(HEADERS.P2_CESA_NUM_CHILDREN, data.numKids);
+  setTestValue(HEADERS.NET_MONTHLY_INCOME, data.netIncome);
+  setTestValue(HEADERS.ALLOCATION_PERCENTAGE, data.userAddPct);
+  setTestValue(HEADERS.PROFILE_ID, profileType);
+  
+  // Profile-specific test data
+  switch(profileType) {
+    case '2_Solo401k_Builder':
+      setTestValue(HEADERS.P2_EX_Q3, 'Yes'); // Has plan
+      setTestValue(HEADERS.P2_EX_Q4, 15000); // Employee contribution
+      setTestValue(HEADERS.P2_EX_Q5, 25000); // Employer contribution  
+      setTestValue(HEADERS.P2_EX_Q6, 40000); // Future contribution
+      break;
+      
+    case '1A_ROBS_In_Use':
+      setTestValue(HEADERS.P2_EX_Q1, 'C-corp with Solo 401(k) funded from business profits');
+      setTestValue(HEADERS.P2_EX_Q2, 'Monthly distributions based on cash flow');
+      break;
+      
+    case '3_Roth_Reclaimer':
+      setTestValue(HEADERS.P2_EX_Q1, 250000); // Traditional IRA balance
+      setTestValue(HEADERS.P2_EX_Q2, 'Yes'); // After-tax contributions
+      break;
+  }
+  
+  // Investment/time horizon data
+  setTestValue(HEADERS.P2_INV_INVOLVEMENT, 4);
+  setTestValue(HEADERS.P2_INV_TIME, 3);  
+  setTestValue(HEADERS.P2_INV_CONFIDENCE, 4);
+  setTestValue(HEADERS.P2_RETIREMENT_YEARS, 30);
+  setTestValue(HEADERS.P2_CESA_YEARS_UNTIL_FIRST, 10);
+  setTestValue(HEADERS.P2_HSA_YEARS_UNTIL_NEED, 20);
+  setTestValue(HEADERS.P2_RETIREMENT_IMPORTANCE, 7);
+  setTestValue(HEADERS.P2_EDUCATION_IMPORTANCE, 6);
+  setTestValue(HEADERS.P2_HEALTH_IMPORTANCE, 5);
+  
+  return { mockRowArr, mockHdr };
+}
+
+/**
+ * Test individual profile helper with example data
+ */
+function testProfileHelper(profileId, customOptions = {}) {
+  Logger.log(`\n🧪 TESTING PROFILE: ${profileId}`);
+  Logger.log('═'.repeat(60));
+  
+  try {
+    // Get the helper function
+    const helper = profileHelpers[profileId];
+    if (!helper) {
+      throw new Error(`Helper not found for profile: ${profileId}`);
+    }
+    
+    // Create test data
+    const { mockRowArr, mockHdr } = createTestData(profileId, customOptions);
+    
+    // Log test parameters
+    Logger.log('📋 Test Parameters:');
+    Logger.log(`  Age: ${getValue(mockHdr, mockRowArr, HEADERS.CURRENT_AGE)}`);
+    Logger.log(`  Filing: ${getValue(mockHdr, mockRowArr, HEADERS.FILING_STATUS)}`);
+    Logger.log(`  HSA Eligible: ${getValue(mockHdr, mockRowArr, HEADERS.P2_HSA_ELIGIBILITY)}`);
+    Logger.log(`  Children: ${getValue(mockHdr, mockRowArr, HEADERS.P2_CESA_NUM_CHILDREN)}`);
+    Logger.log(`  Net Income: $${getValue(mockHdr, mockRowArr, HEADERS.NET_MONTHLY_INCOME)}/month`);
+    
+    // Run the helper
+    const result = helper(mockRowArr, mockHdr);
+    
+    // Log results
+    Logger.log('\n📊 RESULTS:');
+    Logger.log('Seeds (pre-filled amounts):');
+    Logger.log(JSON.stringify(result.seeds, null, 2));
+    
+    Logger.log('\nVehicle Orders:');
+    ['Education', 'Health', 'Retirement'].forEach(domain => {
+      Logger.log(`\n${domain}:`);
+      result.vehicleOrders[domain].forEach((vehicle, index) => {
+        const cap = vehicle.capMonthly === Infinity ? 'Unlimited' : `$${vehicle.capMonthly}/mo`;
+        Logger.log(`  ${index + 1}. ${vehicle.name} (Cap: ${cap})`);
+      });
+    });
+    
+    return result;
+    
+  } catch (error) {
+    Logger.log(`❌ ERROR: ${error.message}`);
+    return null;
+  }
+}
+
+/**
+ * Test all profile helpers with default data
+ */
+function testAllProfileHelpers() {
+  Logger.log('🧪 TESTING ALL PROFILE HELPERS');
+  Logger.log('═'.repeat(80));
+  
+  const profiles = Object.keys(PROFILE_CONFIG);
+  const results = {};
+  
+  profiles.forEach(profileId => {
+    results[profileId] = testProfileHelper(profileId);
+    Logger.log('\n' + '─'.repeat(80) + '\n');
+  });
+  
+  Logger.log('✅ All profile helpers tested!');
+  return results;
+}
+
+/**
+ * Test specific scenarios for tuning
+ */
+function testScenarios() {
+  Logger.log('🎯 TESTING SPECIFIC SCENARIOS');
+  Logger.log('═'.repeat(80));
+  
+  // Scenario 1: Young high earner with no kids
+  Logger.log('\n📊 SCENARIO 1: Young High Earner, No Kids');
+  testProfileHelper('6_Foundation_Builder', {
+    age: 28,
+    netIncome: 12000,
+    numKids: 0,
+    hsaEligible: true
+  });
+  
+  // Scenario 2: Mid-career with kids, maxing retirement
+  Logger.log('\n📊 SCENARIO 2: Mid-Career, 3 Kids, High Savings');
+  testProfileHelper('2_Solo401k_Builder', {
+    age: 42,
+    netIncome: 15000,
+    numKids: 3,
+    userAddPct: 15
+  });
+  
+  // Scenario 3: Catch-up age, family coverage HSA
+  Logger.log('\n📊 SCENARIO 3: Catch-Up Age, Family HSA');
+  testProfileHelper('5_Catch_Up', {
+    age: 55,
+    netIncome: 10000,
+    filing: 'Married Filing Jointly',
+    hsaEligible: true,
+    numKids: 1
+  });
+  
+  // Scenario 4: No HSA eligibility
+  Logger.log('\n📊 SCENARIO 4: No HSA Eligibility');
+  testProfileHelper('3_Roth_Reclaimer', {
+    age: 45,
+    netIncome: 9000,
+    hsaEligible: false,
+    numKids: 2
+  });
+}
+
+/**
+ * Test the full allocation engine with mock data
+ */
+function testFullAllocationEngine(profileId = '2_Solo401k_Builder', customOptions = {}) {
+  Logger.log(`\n🚀 TESTING FULL ALLOCATION ENGINE`);
+  Logger.log('═'.repeat(80));
+  
+  try {
+    // Create test data  
+    const { mockRowArr, mockHdr } = createTestData(profileId, customOptions);
+    
+    // Get helper results
+    const helper = profileHelpers[profileId];
+    const { seeds, vehicleOrders } = helper(mockRowArr, mockHdr);
+    
+    // Calculate domain weights (simplified)
+    const domains = {
+      Education: { w: 0.2 },
+      Health: { w: 0.3 }, 
+      Retirement: { w: 0.5 }
+    };
+    
+    // Calculate net pool
+    const netIncome = Number(getValue(mockHdr, mockRowArr, HEADERS.NET_MONTHLY_INCOME));
+    const userAddPct = Number(getValue(mockHdr, mockRowArr, HEADERS.ALLOCATION_PERCENTAGE)) || 0;
+    const netPool = computeNetPool(netIncome, seeds, userAddPct, CONFIG.OPTIMIZED_SAVINGS_RATE);
+    
+    Logger.log(`💰 Net Income: $${netIncome}/month`);
+    Logger.log(`📈 Additional Savings: ${userAddPct}%`);
+    Logger.log(`🎯 Net Pool for Allocation: $${Math.round(netPool)}/month`);
+    
+    // Run allocation
+    const allocation = coreAllocate({ domains, pool: netPool, seeds, vehicleOrders });
+    
+    Logger.log('\n📊 FINAL ALLOCATION:');
+    ['Education', 'Health', 'Retirement'].forEach(domain => {
+      Logger.log(`\n${domain} (Weight: ${(domains[domain].w * 100).toFixed(1)}%):`);
+      Object.entries(allocation[domain]).forEach(([vehicle, amount]) => {
+        if (amount > 0) {
+          Logger.log(`  ${vehicle}: $${Math.round(amount)}/month`);
+        }
+      });
+    });
+    
+    return allocation;
+    
+  } catch (error) {
+    Logger.log(`❌ ERROR: ${error.message}`);
+    return null;
+  }
+}
+
+// Individual profile test functions - easy to select from dropdown
+function test_1A_ROBS_In_Use() { return testProfileHelper('1A_ROBS_In_Use'); }
+function test_1B_ROBS_Curious() { return testProfileHelper('1B_ROBS_Curious'); }
+function test_2_Solo401k_Builder() { return testProfileHelper('2_Solo401k_Builder'); }
+function test_3_Roth_Reclaimer() { return testProfileHelper('3_Roth_Reclaimer'); }
+function test_4_Bracket_Strategist() { return testProfileHelper('4_Bracket_Strategist'); }
+function test_5_Catch_Up() { return testProfileHelper('5_Catch_Up'); }
+function test_6_Foundation_Builder() { return testProfileHelper('6_Foundation_Builder'); }
+function test_7_Biz_Owner_Group() { return testProfileHelper('7_Biz_Owner_Group'); }
+function test_8_Late_Stage_Growth() { return testProfileHelper('8_Late_Stage_Growth'); }
+
+/**
+ * Demonstration function with detailed result interpretation
+ */
+function demonstrateResultInterpretation() {
+  Logger.log('🎓 HOW TO INTERPRET PROFILE HELPER RESULTS');
+  Logger.log('═'.repeat(80));
+  
+  // Run a test with known parameters
+  const profileId = '2_Solo401k_Builder';
+  const testOptions = {
+    age: 35,
+    filing: 'Married Filing Jointly',
+    hsaEligible: true,
+    numKids: 2,
+    netIncome: 8000,
+    userAddPct: 5
+  };
+  
+  Logger.log(`\n📊 EXAMPLE: Testing ${profileId}`);
+  Logger.log(`Parameters: Age ${testOptions.age}, Income $${testOptions.netIncome}/mo, ${testOptions.numKids} kids`);
+  
+  const { mockRowArr, mockHdr } = createTestData(profileId, testOptions);
+  const helper = profileHelpers[profileId];
+  const result = helper(mockRowArr, mockHdr);
+  
+  Logger.log('\n' + '─'.repeat(60));
+  Logger.log('🔍 INTERPRETING THE RESULTS:');
+  Logger.log('─'.repeat(60));
+  
+  // 1. Explain Seeds
+  Logger.log('\n1️⃣ SEEDS SECTION:');
+  Logger.log('   This shows PRE-EXISTING contributions the person is already making.');
+  Logger.log('   These amounts are SUBTRACTED from their available savings pool.');
+  Logger.log('\n   Raw Output:');
+  Logger.log(JSON.stringify(result.seeds, null, 4));
+  
+  Logger.log('\n   💡 What this means:');
+  Object.entries(result.seeds).forEach(([domain, vehicles]) => {
+    const domainTotal = Object.values(vehicles).reduce((sum, amt) => sum + (amt || 0), 0);
+    if (domainTotal > 0) {
+      Logger.log(`   ${domain}: Already contributing $${Math.round(domainTotal)}/month`);
+      Object.entries(vehicles).forEach(([vehicle, amount]) => {
+        if (amount > 0) {
+          Logger.log(`     • ${vehicle}: $${Math.round(amount)}/month`);
+        }
+      });
+    } else {
+      Logger.log(`   ${domain}: No existing contributions`);
+    }
+  });
+  
+  // 2. Explain Vehicle Orders
+  Logger.log('\n2️⃣ VEHICLE ORDERS SECTION:');
+  Logger.log('   This shows the PRIORITY ORDER for allocating NEW money.');
+  Logger.log('   Money flows top-to-bottom until each vehicle hits its monthly cap.');
+  
+  ['Education', 'Health', 'Retirement'].forEach(domain => {
+    Logger.log(`\n   🎯 ${domain.toUpperCase()} PRIORITY:`);
+    result.vehicleOrders[domain].forEach((vehicle, index) => {
+      const cap = vehicle.capMonthly === Infinity ? 'No Limit' : `$${Math.round(vehicle.capMonthly)}/mo max`;
+      const priority = index + 1;
+      Logger.log(`   ${priority}. ${vehicle.name} (${cap})`);
+      
+      // Add interpretation
+      if (vehicle.name.includes('Bank')) {
+        Logger.log(`      💡 This is a "catch-all" for overflow money`);
+      } else if (vehicle.capMonthly !== Infinity) {
+        Logger.log(`      💡 Will fill up to $${Math.round(vehicle.capMonthly)}/month, then overflow to next vehicle`);
+      }
+    });
+  });
+  
+  // 3. Calculate and explain caps
+  Logger.log('\n3️⃣ CONTRIBUTION LIMITS BREAKDOWN:');
+  Logger.log('   Here are the IRS/plan limits being applied:');
+  
+  const age = testOptions.age;
+  const filing = testOptions.filing;
+  const hsaType = (filing === 'Married Filing Jointly') ? 'FAMILY' : 'INDIVIDUAL';
+  
+  Logger.log(`\n   📋 For age ${age}, filing ${filing}:`);
+  Logger.log(`   • Solo 401(k) Employee: $${LIMITS.RETIREMENT.EMPLOYEE_401K}/year = $${Math.round(LIMITS.RETIREMENT.EMPLOYEE_401K/12)}/month`);
+  Logger.log(`   • HSA (${hsaType.toLowerCase()}): $${LIMITS.HEALTH.HSA[hsaType]}/year = $${Math.round(LIMITS.HEALTH.HSA[hsaType]/12)}/month`);
+  Logger.log(`   • Roth IRA: $${LIMITS.RETIREMENT.ROTH_IRA}/year = $${Math.round(LIMITS.RETIREMENT.ROTH_IRA/12)}/month`);
+  Logger.log(`   • CESA per child: $${CONFIG.ANNUAL_CESA_LIMIT}/year = $${Math.round(CONFIG.ANNUAL_CESA_LIMIT/12)}/month`);
+  Logger.log(`   • Combined CESA (${testOptions.numKids} kids): $${testOptions.numKids * CONFIG.ANNUAL_CESA_LIMIT}/year = $${Math.round((testOptions.numKids * CONFIG.ANNUAL_CESA_LIMIT)/12)}/month`);
+  
+  if (age >= 50) {
+    Logger.log(`   • Catch-up contributions available at age ${age}!`);
+  }
+  
+  Logger.log('\n4️⃣ WHAT TO LOOK FOR:');
+  Logger.log('   ✅ GOOD SIGNS:');
+  Logger.log('   • Vehicle caps match IRS limits');
+  Logger.log('   • Priority order makes sense for the profile');
+  Logger.log('   • HSA shows up if eligible, filtered out if not');
+  Logger.log('   • Education vehicles only appear if numKids > 0');
+  Logger.log('   • Bank vehicles appear last as overflow');
+  
+  Logger.log('\n   ⚠️  RED FLAGS:');
+  Logger.log('   • Vehicle caps are wrong (check LIMITS object)');
+  Logger.log('   • HSA appears when not eligible');
+  Logger.log('   • Education vehicles when no kids');
+  Logger.log('   • Priority order doesn\'t match profile strategy');
+  Logger.log('   • Missing vehicles that should be there');
+  
+  return result;
+}
+
+/**
+*original testing and debugging functions
  */
 function smokeTestEngine() {
   const testRow = 4;  // ← change this to the row number you prepared
@@ -1469,6 +1829,10 @@ function smokeTestEngine() {
   // Log the full allocations object
   Logger.log('Allocations for row ' + testRow + ':\n' +
              JSON.stringify(result.vehicles, null, 2));
+}
+
+function listProfileIDs() {
+  return Object.keys(PROFILE_CONFIG);
 }
 
 function logProfileIDs() {
