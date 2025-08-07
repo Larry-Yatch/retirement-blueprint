@@ -1,38 +1,46 @@
-/*** SETTINGS ***/
-const ADMIN_EMAIL         = 'Sarah.L@TruPathMastery.com';
-const SPREADSHEET_ID      = '104pHxIgsGAcOrktL75Hi7WlEd8j0BoeadntLR9PrGYo';
-const OPTIMIZED_SAVINGS_RATE = 0.20;
-// Coverdell ESA annual limit per beneficiary
-const ANNUAL_CESA_LIMIT = 2000;
+// ═══════════════════════════════════════════════════════════════════════════════
+// CONFIGURATION CONSTANTS
+// ═══════════════════════════════════════════════════════════════════════════════
 
+/**
+ * Application configuration settings
+ */
+const CONFIG = {
+  ADMIN_EMAIL: 'Sarah.L@TruPathMastery.com',
+  SPREADSHEET_ID: '104pHxIgsGAcOrktL75Hi7WlEd8j0BoeadntLR9PrGYo',
+  OPTIMIZED_SAVINGS_RATE: 0.20,
+  ANNUAL_CESA_LIMIT: 2000
+};
+
+/**
+ * IRS contribution limits for various investment vehicles
+ */
 const LIMITS = {
   RETIREMENT: {
-    // Employee elective deferral limits (annual)
-    EMPLOYEE_401K: 23500,         // 401(k), 403(b), most 457 plans
-    CATCHUP_401K_50: 7500,        // Catch-up at age 50+
-    CATCHUP_401K_60: 11250,       // Special catch-up ages 60-63
-    // Combined employer + employee contribution limits
-    TOTAL_401K_457_403B: 70000,   // Combined (any age)
-    TOTAL_50_59_64: 77500,        // Combined age 50-59 or 64+
-    TOTAL_60_63: 81250,           // Combined age 60-63
-    TRADITIONAL_IRA: 7000,        // Traditional IRA
-    ROTH_IRA: 7000,               // Roth IRA
-    CATCHUP_IRA: 1000             // IRA catch-up (Traditional or Roth) age 50+
+    EMPLOYEE_401K: 23500,
+    CATCHUP_401K_50: 7500,
+    CATCHUP_401K_60: 11250,
+    TOTAL_401K_457_403B: 70000,
+    TOTAL_50_59_64: 77500,
+    TOTAL_60_63: 81250,
+    TRADITIONAL_IRA: 7000,
+    ROTH_IRA: 7000,
+    CATCHUP_IRA: 1000,
+    DEFINED_BENEFIT: 280000
   },
   EDUCATION: {
-    // Combined CESA limit is calculated externally as ANNUAL_CESA_LIMIT * numberOfBeneficiaries
-    CESA_COMBINED: Infinity       // No hard cap here (computed at runtime using ANNUAL_CESA_LIMIT)
+    CESA_COMBINED: Infinity
   },
   HEALTH: {
     HSA: {
-      INDIVIDUAL: 4300,           // HSA self-only coverage limit
-      FAMILY: 8550,               // HSA family coverage limit
-      CATCHUP: 1000               // HSA catch-up contribution age 55+
+      INDIVIDUAL: 4300,
+      FAMILY: 8550,
+      CATCHUP: 1000
     }
   },
   OTHER: {
-    ALTERNATIVE_INVESTMENTS: Infinity, // No set IRS limit; client-determined
-    ROTH_CONVERSION: Infinity          // No limit on Roth conversions
+    ALTERNATIVE_INVESTMENTS: Infinity,
+    ROTH_CONVERSION: Infinity
   }
 };
 
@@ -296,7 +304,7 @@ const profileHelpers = {
     const catchup = age>=55 ? LIMITS.HEALTH.HSA.CATCHUP : 0;
     hsaCap = (base+catchup)/12;
   }
-  const cesaCap = (ANNUAL_CESA_LIMIT * numKids) / 12;
+  const cesaCap = (CONFIG.ANNUAL_CESA_LIMIT * numKids) / 12;
 
   // Seed map: decide which bucket to prefill
   const seeds = { Education: {}, Health: {}, Retirement: {} };
@@ -348,15 +356,390 @@ const profileHelpers = {
 
 
 
-  // Stub out the other profiles so you don’t call them by mistake yet
-  '1A_ROBS_In_Use': function() { throw new Error('helper not implemented'); },
-  '1B_ROBS_Curious': function() { throw new Error('helper not implemented'); },
-  '3_Roth_Reclaimer': function() { throw new Error('helper not implemented'); },
-  '4_Bracket_Strategist': function() { throw new Error('helper not implemented'); },
-  '5_Catch_Up': function() { throw new Error('helper not implemented'); },
-  '6_Foundation_Builder': function() { throw new Error('helper not implemented'); },
-  '7_Biz_Owner_Group': function() { throw new Error('helper not implemented'); },
-  '8_Late_Stage_Growth': function() { throw new Error('helper not implemented'); }
+  '1A_ROBS_In_Use': function(rowArr, hdr) {
+    const hsaElig = getValue(hdr, rowArr, HEADERS.P2_HSA_ELIGIBILITY) === 'Yes';
+    const numKids = Number(getValue(hdr, rowArr, HEADERS.P2_CESA_NUM_CHILDREN)) || 0;
+    const age = Number(getValue(hdr, rowArr, HEADERS.CURRENT_AGE));
+    const filing = getValue(hdr, rowArr, HEADERS.FILING_STATUS);
+    
+    let hsaCap = 0;
+    if (hsaElig) {
+      const type = (filing === 'Married Filing Jointly') ? 'FAMILY' : 'INDIVIDUAL';
+      const base = LIMITS.HEALTH.HSA[type];
+      const catchup = age >= 55 ? LIMITS.HEALTH.HSA.CATCHUP : 0;
+      hsaCap = (base + catchup) / 12;
+    }
+    const cesaCap = (CONFIG.ANNUAL_CESA_LIMIT * numKids) / 12;
+
+    const seeds = { Education: {}, Health: {}, Retirement: {} };
+    
+    const cfg = PROFILE_CONFIG['1A_ROBS_In_Use'];
+    const educationOrder = (numKids > 0
+      ? cfg.vehicleOrder_Education.map(v => ({
+          name: v.name,
+          capMonthly: v.name === 'Combined CESA' ? cesaCap : v.capMonthly
+        }))
+      : []
+    ).concat({ name: 'Education Bank', capMonthly: Infinity });
+
+    const healthOrder = cfg.vehicleOrder_Health
+      .map(v => ({
+        name: v.name,
+        capMonthly: v.name === 'HSA' ? hsaCap : v.capMonthly
+      }))
+      .filter(v => !(v.name === 'HSA' && !hsaElig))
+      .concat({ name: 'Health Bank', capMonthly: Infinity });
+
+    const retirementOrder = cfg.vehicleOrder_Retirement
+      .map(v => ({ name: v.name, capMonthly: v.capMonthly }))
+      .filter(v => !(v.name === 'HSA' && !hsaElig))
+      .concat({ name: 'Family Bank', capMonthly: Infinity });
+
+    return {
+      seeds,
+      vehicleOrders: {
+        Education: educationOrder,
+        Health: healthOrder,
+        Retirement: retirementOrder
+      }
+    };
+  },
+  '1B_ROBS_Curious': function(rowArr, hdr) {
+    const hsaElig = getValue(hdr, rowArr, HEADERS.P2_HSA_ELIGIBILITY) === 'Yes';
+    const numKids = Number(getValue(hdr, rowArr, HEADERS.P2_CESA_NUM_CHILDREN)) || 0;
+    const age = Number(getValue(hdr, rowArr, HEADERS.CURRENT_AGE));
+    const filing = getValue(hdr, rowArr, HEADERS.FILING_STATUS);
+    
+    let hsaCap = 0;
+    if (hsaElig) {
+      const type = (filing === 'Married Filing Jointly') ? 'FAMILY' : 'INDIVIDUAL';
+      const base = LIMITS.HEALTH.HSA[type];
+      const catchup = age >= 55 ? LIMITS.HEALTH.HSA.CATCHUP : 0;
+      hsaCap = (base + catchup) / 12;
+    }
+    const cesaCap = (CONFIG.ANNUAL_CESA_LIMIT * numKids) / 12;
+
+    const seeds = { Education: {}, Health: {}, Retirement: {} };
+    
+    const cfg = PROFILE_CONFIG['1B_ROBS_Curious'];
+    const educationOrder = (numKids > 0
+      ? cfg.vehicleOrder_Education.map(v => ({
+          name: v.name,
+          capMonthly: v.name === 'Combined CESA' ? cesaCap : v.capMonthly
+        }))
+      : []
+    ).concat({ name: 'Education Bank', capMonthly: Infinity });
+
+    const healthOrder = cfg.vehicleOrder_Health
+      .map(v => ({
+        name: v.name,
+        capMonthly: v.name === 'HSA' ? hsaCap : v.capMonthly
+      }))
+      .filter(v => !(v.name === 'HSA' && !hsaElig))
+      .concat({ name: 'Health Bank', capMonthly: Infinity });
+
+    const retirementOrder = cfg.vehicleOrder_Retirement
+      .map(v => ({ name: v.name, capMonthly: v.capMonthly }))
+      .filter(v => !(v.name === 'HSA' && !hsaElig))
+      .concat({ name: 'Family Bank', capMonthly: Infinity });
+
+    return {
+      seeds,
+      vehicleOrders: {
+        Education: educationOrder,
+        Health: healthOrder,
+        Retirement: retirementOrder
+      }
+    };
+  },
+  '3_Roth_Reclaimer': function(rowArr, hdr) {
+    const hsaElig = getValue(hdr, rowArr, HEADERS.P2_HSA_ELIGIBILITY) === 'Yes';
+    const numKids = Number(getValue(hdr, rowArr, HEADERS.P2_CESA_NUM_CHILDREN)) || 0;
+    const age = Number(getValue(hdr, rowArr, HEADERS.CURRENT_AGE));
+    const filing = getValue(hdr, rowArr, HEADERS.FILING_STATUS);
+    
+    let hsaCap = 0;
+    if (hsaElig) {
+      const type = (filing === 'Married Filing Jointly') ? 'FAMILY' : 'INDIVIDUAL';
+      const base = LIMITS.HEALTH.HSA[type];
+      const catchup = age >= 55 ? LIMITS.HEALTH.HSA.CATCHUP : 0;
+      hsaCap = (base + catchup) / 12;
+    }
+    const cesaCap = (CONFIG.ANNUAL_CESA_LIMIT * numKids) / 12;
+
+    const seeds = { Education: {}, Health: {}, Retirement: {} };
+    
+    const cfg = PROFILE_CONFIG['3_Roth_Reclaimer'];
+    const educationOrder = (numKids > 0
+      ? cfg.vehicleOrder_Education.map(v => ({
+          name: v.name,
+          capMonthly: v.name === 'Combined CESA' ? cesaCap : v.capMonthly
+        }))
+      : []
+    ).concat({ name: 'Education Bank', capMonthly: Infinity });
+
+    const healthOrder = cfg.vehicleOrder_Health
+      .map(v => ({
+        name: v.name,
+        capMonthly: v.name === 'HSA' ? hsaCap : v.capMonthly
+      }))
+      .filter(v => !(v.name === 'HSA' && !hsaElig))
+      .concat({ name: 'Health Bank', capMonthly: Infinity });
+
+    const retirementOrder = cfg.vehicleOrder_Retirement
+      .map(v => ({ name: v.name, capMonthly: v.capMonthly }))
+      .filter(v => !(v.name === 'HSA' && !hsaElig))
+      .concat({ name: 'Family Bank', capMonthly: Infinity });
+
+    return {
+      seeds,
+      vehicleOrders: {
+        Education: educationOrder,
+        Health: healthOrder,
+        Retirement: retirementOrder
+      }
+    };
+  },
+  '4_Bracket_Strategist': function(rowArr, hdr) {
+    const hsaElig = getValue(hdr, rowArr, HEADERS.P2_HSA_ELIGIBILITY) === 'Yes';
+    const numKids = Number(getValue(hdr, rowArr, HEADERS.P2_CESA_NUM_CHILDREN)) || 0;
+    const age = Number(getValue(hdr, rowArr, HEADERS.CURRENT_AGE));
+    const filing = getValue(hdr, rowArr, HEADERS.FILING_STATUS);
+    
+    let hsaCap = 0;
+    if (hsaElig) {
+      const type = (filing === 'Married Filing Jointly') ? 'FAMILY' : 'INDIVIDUAL';
+      const base = LIMITS.HEALTH.HSA[type];
+      const catchup = age >= 55 ? LIMITS.HEALTH.HSA.CATCHUP : 0;
+      hsaCap = (base + catchup) / 12;
+    }
+    const cesaCap = (CONFIG.ANNUAL_CESA_LIMIT * numKids) / 12;
+
+    const seeds = { Education: {}, Health: {}, Retirement: {} };
+    
+    const cfg = PROFILE_CONFIG['4_Bracket_Strategist'];
+    const educationOrder = (numKids > 0
+      ? cfg.vehicleOrder_Education.map(v => ({
+          name: v.name,
+          capMonthly: v.name === 'Combined CESA' ? cesaCap : v.capMonthly
+        }))
+      : []
+    ).concat({ name: 'Education Bank', capMonthly: Infinity });
+
+    const healthOrder = cfg.vehicleOrder_Health
+      .map(v => ({
+        name: v.name,
+        capMonthly: v.name === 'HSA' ? hsaCap : v.capMonthly
+      }))
+      .filter(v => !(v.name === 'HSA' && !hsaElig))
+      .concat({ name: 'Health Bank', capMonthly: Infinity });
+
+    const retirementOrder = cfg.vehicleOrder_Retirement
+      .map(v => ({ name: v.name, capMonthly: v.capMonthly }))
+      .filter(v => !(v.name === 'HSA' && !hsaElig))
+      .concat({ name: 'Family Bank', capMonthly: Infinity });
+
+    return {
+      seeds,
+      vehicleOrders: {
+        Education: educationOrder,
+        Health: healthOrder,
+        Retirement: retirementOrder
+      }
+    };
+  },
+  '5_Catch_Up': function(rowArr, hdr) {
+    const hsaElig = getValue(hdr, rowArr, HEADERS.P2_HSA_ELIGIBILITY) === 'Yes';
+    const numKids = Number(getValue(hdr, rowArr, HEADERS.P2_CESA_NUM_CHILDREN)) || 0;
+    const age = Number(getValue(hdr, rowArr, HEADERS.CURRENT_AGE));
+    const filing = getValue(hdr, rowArr, HEADERS.FILING_STATUS);
+    
+    let hsaCap = 0;
+    if (hsaElig) {
+      const type = (filing === 'Married Filing Jointly') ? 'FAMILY' : 'INDIVIDUAL';
+      const base = LIMITS.HEALTH.HSA[type];
+      const catchup = age >= 55 ? LIMITS.HEALTH.HSA.CATCHUP : 0;
+      hsaCap = (base + catchup) / 12;
+    }
+    const cesaCap = (CONFIG.ANNUAL_CESA_LIMIT * numKids) / 12;
+
+    const seeds = { Education: {}, Health: {}, Retirement: {} };
+    
+    const cfg = PROFILE_CONFIG['5_Catch_Up'];
+    const educationOrder = (numKids > 0
+      ? cfg.vehicleOrder_Education.map(v => ({
+          name: v.name,
+          capMonthly: v.name === 'Combined CESA' ? cesaCap : v.capMonthly
+        }))
+      : []
+    ).concat({ name: 'Education Bank', capMonthly: Infinity });
+
+    const healthOrder = cfg.vehicleOrder_Health
+      .map(v => ({
+        name: v.name,
+        capMonthly: v.name === 'HSA' ? hsaCap : v.capMonthly
+      }))
+      .filter(v => !(v.name === 'HSA' && !hsaElig))
+      .concat({ name: 'Health Bank', capMonthly: Infinity });
+
+    const retirementOrder = cfg.vehicleOrder_Retirement
+      .map(v => ({ name: v.name, capMonthly: v.capMonthly }))
+      .filter(v => !(v.name === 'HSA' && !hsaElig))
+      .concat({ name: 'Family Bank', capMonthly: Infinity });
+
+    return {
+      seeds,
+      vehicleOrders: {
+        Education: educationOrder,
+        Health: healthOrder,
+        Retirement: retirementOrder
+      }
+    };
+  },
+  '6_Foundation_Builder': function(rowArr, hdr) {
+    const hsaElig = getValue(hdr, rowArr, HEADERS.P2_HSA_ELIGIBILITY) === 'Yes';
+    const numKids = Number(getValue(hdr, rowArr, HEADERS.P2_CESA_NUM_CHILDREN)) || 0;
+    const age = Number(getValue(hdr, rowArr, HEADERS.CURRENT_AGE));
+    const filing = getValue(hdr, rowArr, HEADERS.FILING_STATUS);
+    
+    let hsaCap = 0;
+    if (hsaElig) {
+      const type = (filing === 'Married Filing Jointly') ? 'FAMILY' : 'INDIVIDUAL';
+      const base = LIMITS.HEALTH.HSA[type];
+      const catchup = age >= 55 ? LIMITS.HEALTH.HSA.CATCHUP : 0;
+      hsaCap = (base + catchup) / 12;
+    }
+    const cesaCap = (CONFIG.ANNUAL_CESA_LIMIT * numKids) / 12;
+
+    const seeds = { Education: {}, Health: {}, Retirement: {} };
+    
+    const cfg = PROFILE_CONFIG['6_Foundation_Builder'];
+    const educationOrder = (numKids > 0
+      ? cfg.vehicleOrder_Education.map(v => ({
+          name: v.name,
+          capMonthly: v.name === 'Combined CESA' ? cesaCap : v.capMonthly
+        }))
+      : []
+    ).concat({ name: 'Education Bank', capMonthly: Infinity });
+
+    const healthOrder = cfg.vehicleOrder_Health
+      .map(v => ({
+        name: v.name,
+        capMonthly: v.name === 'HSA' ? hsaCap : v.capMonthly
+      }))
+      .filter(v => !(v.name === 'HSA' && !hsaElig))
+      .concat({ name: 'Health Bank', capMonthly: Infinity });
+
+    const retirementOrder = cfg.vehicleOrder_Retirement
+      .map(v => ({ name: v.name, capMonthly: v.capMonthly }))
+      .filter(v => !(v.name === 'HSA' && !hsaElig))
+      .concat({ name: 'Family Bank', capMonthly: Infinity });
+
+    return {
+      seeds,
+      vehicleOrders: {
+        Education: educationOrder,
+        Health: healthOrder,
+        Retirement: retirementOrder
+      }
+    };
+  },
+  '7_Biz_Owner_Group': function(rowArr, hdr) {
+    const hsaElig = getValue(hdr, rowArr, HEADERS.P2_HSA_ELIGIBILITY) === 'Yes';
+    const numKids = Number(getValue(hdr, rowArr, HEADERS.P2_CESA_NUM_CHILDREN)) || 0;
+    const age = Number(getValue(hdr, rowArr, HEADERS.CURRENT_AGE));
+    const filing = getValue(hdr, rowArr, HEADERS.FILING_STATUS);
+    
+    let hsaCap = 0;
+    if (hsaElig) {
+      const type = (filing === 'Married Filing Jointly') ? 'FAMILY' : 'INDIVIDUAL';
+      const base = LIMITS.HEALTH.HSA[type];
+      const catchup = age >= 55 ? LIMITS.HEALTH.HSA.CATCHUP : 0;
+      hsaCap = (base + catchup) / 12;
+    }
+    const cesaCap = (CONFIG.ANNUAL_CESA_LIMIT * numKids) / 12;
+
+    const seeds = { Education: {}, Health: {}, Retirement: {} };
+    
+    const cfg = PROFILE_CONFIG['7_Biz_Owner_Group'];
+    const educationOrder = (numKids > 0
+      ? cfg.vehicleOrder_Education.map(v => ({
+          name: v.name,
+          capMonthly: v.name === 'Combined CESA' ? cesaCap : v.capMonthly
+        }))
+      : []
+    ).concat({ name: 'Education Bank', capMonthly: Infinity });
+
+    const healthOrder = cfg.vehicleOrder_Health
+      .map(v => ({
+        name: v.name,
+        capMonthly: v.name === 'HSA' ? hsaCap : v.capMonthly
+      }))
+      .filter(v => !(v.name === 'HSA' && !hsaElig))
+      .concat({ name: 'Health Bank', capMonthly: Infinity });
+
+    const retirementOrder = cfg.vehicleOrder_Retirement
+      .map(v => ({ name: v.name, capMonthly: v.capMonthly }))
+      .filter(v => !(v.name === 'HSA' && !hsaElig))
+      .concat({ name: 'Family Bank', capMonthly: Infinity });
+
+    return {
+      seeds,
+      vehicleOrders: {
+        Education: educationOrder,
+        Health: healthOrder,
+        Retirement: retirementOrder
+      }
+    };
+  },
+  '8_Late_Stage_Growth': function(rowArr, hdr) {
+    const hsaElig = getValue(hdr, rowArr, HEADERS.P2_HSA_ELIGIBILITY) === 'Yes';
+    const numKids = Number(getValue(hdr, rowArr, HEADERS.P2_CESA_NUM_CHILDREN)) || 0;
+    const age = Number(getValue(hdr, rowArr, HEADERS.CURRENT_AGE));
+    const filing = getValue(hdr, rowArr, HEADERS.FILING_STATUS);
+    
+    let hsaCap = 0;
+    if (hsaElig) {
+      const type = (filing === 'Married Filing Jointly') ? 'FAMILY' : 'INDIVIDUAL';
+      const base = LIMITS.HEALTH.HSA[type];
+      const catchup = age >= 55 ? LIMITS.HEALTH.HSA.CATCHUP : 0;
+      hsaCap = (base + catchup) / 12;
+    }
+    const cesaCap = (CONFIG.ANNUAL_CESA_LIMIT * numKids) / 12;
+
+    const seeds = { Education: {}, Health: {}, Retirement: {} };
+    
+    const cfg = PROFILE_CONFIG['8_Late_Stage_Growth'];
+    const educationOrder = (numKids > 0
+      ? cfg.vehicleOrder_Education.map(v => ({
+          name: v.name,
+          capMonthly: v.name === 'Combined CESA' ? cesaCap : v.capMonthly
+        }))
+      : []
+    ).concat({ name: 'Education Bank', capMonthly: Infinity });
+
+    const healthOrder = cfg.vehicleOrder_Health
+      .map(v => ({
+        name: v.name,
+        capMonthly: v.name === 'HSA' ? hsaCap : v.capMonthly
+      }))
+      .filter(v => !(v.name === 'HSA' && !hsaElig))
+      .concat({ name: 'Health Bank', capMonthly: Infinity });
+
+    const retirementOrder = cfg.vehicleOrder_Retirement
+      .map(v => ({ name: v.name, capMonthly: v.capMonthly }))
+      .filter(v => !(v.name === 'HSA' && !hsaElig))
+      .concat({ name: 'Family Bank', capMonthly: Infinity });
+
+    return {
+      seeds,
+      vehicleOrders: {
+        Education: educationOrder,
+        Health: healthOrder,
+        Retirement: retirementOrder
+      }
+    };
+  }
 };
 
 
@@ -604,7 +987,7 @@ function cascadeRoundRobin(order, total, initialAlloc = {}) {
 
 /**
  * Initialize Working Sheet and header map
- * @returns {{sheet: Sheet, hdr: Object}}
+ * @returns {{sheet: Object, hdr: Object}}
  */
 function initWS() {
   const ss    = SpreadsheetApp.getActiveSpreadsheet();
@@ -671,12 +1054,12 @@ function handlePhase1(e) {
     srcSheetName:       'Form Responses 1',
     destSheetName:      'Working Sheet',
     highlightColor:     '#FFCCCC',
-    notificationEmail:  ADMIN_EMAIL,
+    notificationEmail:  CONFIG.ADMIN_EMAIL,
     successSubject:     'New ISL Retirement Blueprint Phase 1 Submission',
     successBody:        'A student has completed Phase 1 and been marked in the tracker.',
     failureSubject:     'Phase 1 Submission ⚠️ Student Identifier Not Found',
     failureBody:        'The submitted Student Identifier could not be found; please handle updating the tracker manually.',
-    trackingSpreadsheetId: SPREADSHEET_ID,
+    trackingSpreadsheetId: CONFIG.SPREADSHEET_ID,
     trackingSheetName:    'Financial',
     lookupColumn:         'G',
     markColumn:           'AH',
@@ -701,7 +1084,7 @@ function handlePhase1(e) {
   const cfg = PROFILE_CONFIG[profileId];
   if (!cfg || !cfg.formId || !cfg.entryToken) {
     MailApp.sendEmail({
-      to:      ADMIN_EMAIL,
+      to:      CONFIG.ADMIN_EMAIL,
       subject: '⚠️ Missing Phase 2 config for ' + profileId,
       body:    `Profile ${profileId} is not configured in PROFILE_CONFIG.`
     });
@@ -826,12 +1209,12 @@ function handlePhase2(e) {
     srcSheetName:      srcName,
     destSheetName:     'RawPhase2',
     highlightColor:    '#CCFFCC',
-    notificationEmail: ADMIN_EMAIL,
+    notificationEmail: CONFIG.ADMIN_EMAIL,
     successSubject:    'Phase 2 Complete',
     successBody:       `Copied from "${srcName}" & marked attendance.`,
     failureSubject:    'Phase 2 ⚠️ Student ID Not Found',
     failureBody:       `ID from "${srcName}" not in tracker!`,
-    trackingSpreadsheetId: SPREADSHEET_ID,
+    trackingSpreadsheetId: CONFIG.SPREADSHEET_ID,
     trackingSheetName:    'Financial',
     lookupColumn:         'G',
     markColumn:           'AI',
@@ -907,7 +1290,7 @@ function handlePhase2(e) {
 
   // 9) Dump leftover into single family_bank_ideal
   const totalPool = Number(getValue(hdr,rowArr,HEADERS.NET_MONTHLY_INCOME)) 
-                    * OPTIMIZED_SAVINGS_RATE;
+                    * CONFIG.OPTIMIZED_SAVINGS_RATE;
   const leftover  = Math.max(0, Math.round(totalPool - sumIdeal));
   const fbCol = hdr['family_bank_ideal'];
   if (fbCol) {
@@ -1064,7 +1447,7 @@ function testPhase2() {
 }
 
 function dumpHeaders() {
-  const { sheet, hdr } = initWS();
+  const { hdr } = initWS();
   Logger.log(Object.keys(hdr).join(', '));
 }
 
@@ -1094,9 +1477,8 @@ function logProfileIDs() {
 }
 
 function checkHeaderAlignment() {
-  const { sheet, hdr } = initWS();
+  const { hdr } = initWS();
   const defined = Object.entries(HEADERS).map(([key, name]) => ({ key, name }));
-  const found    = Object.values(hdr);
   const namesFound = Object.keys(hdr);
 
   // 1a) Find missing constants
@@ -1156,7 +1538,7 @@ function runUniversalEngine(rowNum) {
   const { seeds, vehicleOrders } = helper(rowArr, hdr);
 
   // 5) Net‐pool calculation
-  const netPool = computeNetPool(netIncome, seeds, userAddPct, OPTIMIZED_SAVINGS_RATE);
+  const netPool = computeNetPool(netIncome, seeds, userAddPct, CONFIG.OPTIMIZED_SAVINGS_RATE);
 
   // 6) Allocate and round
   const raw = coreAllocate({ domains, pool: netPool, seeds, vehicleOrders });
