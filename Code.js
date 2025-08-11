@@ -65,7 +65,7 @@ const PROFILE_CONFIG = {
       'How are your business profits routed into your Solo 401(k)?',
       'Which type of contributions are you making? (Roth only / Traditional only / Both)',
       'How often do you contribute to your Solo 401(k)? (Monthly, Quarterly, etc.)',
-      'Do you also contribute to a Roth IRA, HSA, or CESA? If yes, how much per year to each?',
+      'Do you also contribute to a Roth IRA? If yes, how much per year to each?',
       'Approximately how much do you expect your business to distribute to your Solo 401(k) each year?'
     ],
     formId:     '1FAIpQLSfnAJLDoJHGOJx0LdAVrue-6vn00enirAx4Wz_mWcjnELoRCw',
