@@ -281,7 +281,7 @@ const PROFILE_CONFIG = {
 // CURRENT FORMS SUMMARY - OPTIMIZATION DATA
 // ═══════════════════════════════════════════════════════════════════════════════
 // Key questions and metadata for form optimization work.
-// Complete form data is available in Current_Forms_Full.js
+// Complete form data is available below and in Current_Forms_Full.js
 
 const CURRENT_FORMS_SUMMARY = {
   lastAnalyzed: "2025-08-12T06:18:55.748Z",
@@ -312,18 +312,17 @@ const CURRENT_FORMS_SUMMARY = {
   
   optimizationNotes: [
     "All forms use same 32+ P2_ fields extensively in processing engine",
-    "Current forms are comprehensive and well-integrated",
+    "Current forms are comprehensive and well-integrated", 
     "Focus optimization on profile-specific questions and logic",
     "Maintain universal question consistency across all profiles",
-    "Ensure tax preference logic is properly implemented"
+    "Ensure tax preference logic is properly implemented",
+    "Complete form data available in CURRENT_FORMS below and Current_Forms_Full.js"
   ]
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// CURRENT FORM DATA - EMBEDDED EXPORTS  
+// CURRENT FORM DATA - EMBEDDED EXPORTS
 // ═══════════════════════════════════════════════════════════════════════════════
-// Complete form export data moved to Current_Forms_Full.js for maintainability.
-// This embedded data remains for compatibility with existing functions.
 
 /**
  * Current form structures exported from Google Forms
