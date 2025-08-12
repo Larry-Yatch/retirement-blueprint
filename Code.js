@@ -293,18 +293,61 @@ const FORM_CONFIG = {
     type: 'phase1'
   },
   
-  // Phase 2 forms from PROFILE_CONFIG
-  ...Object.fromEntries(
-    Object.entries(PROFILE_CONFIG).map(([profileId, config]) => [
-      profileId,
-      {
-        formId: config.formId,
-        name: `Phase 2 - ${config.title}`,
-        type: 'phase2',
-        profileId: profileId
-      }
-    ])
-  )
+  // Phase 2 forms - using ACTUAL form IDs (not prefilled response IDs)
+  '1_ROBS_In_Use': {
+    formId: '1jv_rpG_i6O26BB0TcTtF_pxjYyvIXfA5qXTNPT8uzec',
+    name: 'Phase 2 - ROBS-In-Use Strategist',
+    type: 'phase2',
+    profileId: '1_ROBS_In_Use'
+  },
+  '2_ROBS_Curious': {
+    formId: '1XjpC0o75D4Lgu07hegkK1c5LD47TU6M78Kdywhj8Ao8',
+    name: 'Phase 2 - ROBS-Curious Builder',
+    type: 'phase2',
+    profileId: '2_ROBS_Curious'
+  },
+  '3_Solo401k_Builder': {
+    formId: '1ur5MAwKetidU52v1xQDZSMn5LjefpIQqGbngxLR8dOE',
+    name: 'Phase 2 - Solo 401(k) Builder',
+    type: 'phase2',
+    profileId: '3_Solo401k_Builder'
+  },
+  '4_Roth_Reclaimer': {
+    formId: '1B1VaZanAkzb6QB86knxk9eWhlNFpH-st65pdX__CvnE',
+    name: 'Phase 2 - Roth IRA Reclaimer',
+    type: 'phase2',
+    profileId: '4_Roth_Reclaimer'
+  },
+  '5_Bracket_Strategist': {
+    formId: '15clxf7SsHDxz05m5GetbCRToxb48eMrNk9Dpz4dVFO8',
+    name: 'Phase 2 - Bracket-Balanced Strategist',
+    type: 'phase2',
+    profileId: '5_Bracket_Strategist'
+  },
+  '6_Catch_Up': {
+    formId: '1_GPFDAOkM0QQuJxWfTRNJjLfIW8IwRxwQrfiMvqgJK4',
+    name: 'Phase 2 - Catch-Up Visionary',
+    type: 'phase2',
+    profileId: '6_Catch_Up'
+  },
+  '7_Foundation_Builder': {
+    formId: '1zv6LiVaeW0D9NbsKkCMgo40zcYhzSDlIQq5Zw7IXhuw',
+    name: 'Phase 2 - Foundation Builder',
+    type: 'phase2',
+    profileId: '7_Foundation_Builder'
+  },
+  '8_Biz_Owner_Group': {
+    formId: '1CXFEpBy4XA49CXA7R66lHAosEE5CzANH9Vl6B1opxYQ',
+    name: 'Phase 2 - Business Owner with Employee Group',
+    type: 'phase2',
+    profileId: '8_Biz_Owner_Group'
+  },
+  '9_Late_Stage_Growth': {
+    formId: '1kGGt6z6dovWvzHkSPfmeTg3E5-Lv3gT1hhlDOwUyiik',
+    name: 'Phase 2 - Late-Stage Growth Strategist',
+    type: 'phase2',
+    profileId: '9_Late_Stage_Growth'
+  }
 };
 
 /**
