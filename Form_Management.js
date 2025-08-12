@@ -4,6 +4,23 @@
 // This file contains all functions for exporting, importing, comparing, and 
 // updating Google Forms programmatically. Extracted from Code.js for maintainability.
 
+// Import complete form data from Current_Forms_Full.js
+// In Google Apps Script, files share global scope, so we can access CURRENT_FORMS directly
+// For standalone use, uncomment the require statement below:
+// const { CURRENT_FORMS } = require('./Current_Forms_Full.js');
+
+// Helper function to get complete form data
+function getCurrentFormsData() {
+  // In Google Apps Script, this will be available from Current_Forms_Full.js
+  // which is deployed alongside this file
+  if (typeof CURRENT_FORMS !== 'undefined' && CURRENT_FORMS.formsData) {
+    return CURRENT_FORMS;
+  }
+  
+  // Fallback error message
+  throw new Error('CURRENT_FORMS data not available. Ensure Current_Forms_Full.js is deployed.');
+}
+
 // Form Export Functions
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -155,8 +172,11 @@ function updateEmbeddedFormData() {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function analyzeFormGaps() {
-  if (!CURRENT_FORMS || !CURRENT_FORMS.formsData) {
-    Logger.log('❌ No current forms data available. Run updateEmbeddedFormData() first.');
+  let CURRENT_FORMS;
+  try {
+    CURRENT_FORMS = getCurrentFormsData();
+  } catch (error) {
+    Logger.log('❌ No current forms data available. Ensure Current_Forms_Full.js is deployed.');
     return;
   }
   
@@ -219,8 +239,11 @@ function analyzeFormGaps() {
 }
 
 function showFormComparison(profileId) {
-  if (!CURRENT_FORMS || !CURRENT_FORMS.formsData) {
-    Logger.log('❌ No current forms data available. Run updateEmbeddedFormData() first.');
+  let CURRENT_FORMS;
+  try {
+    CURRENT_FORMS = getCurrentFormsData();
+  } catch (error) {
+    Logger.log('❌ No current forms data available. Ensure Current_Forms_Full.js is deployed.');
     return;
   }
   
@@ -265,6 +288,14 @@ function exportAllFormsToJSON() {
   
   // Export Phase 1
   try {
+    let CURRENT_FORMS;
+    try {
+      CURRENT_FORMS = getCurrentFormsData();
+    } catch (error) {
+      Logger.log('❌ No current forms data available. Ensure Current_Forms_Full.js is deployed.');
+      return;
+    }
+    
     if (!CURRENT_FORMS?.formsData?.PHASE_1?.metadata?.formId) {
       Logger.log('❌ Phase 1 form ID not found');
       return;
@@ -321,6 +352,14 @@ function exportAllFormsToJSON() {
 }
 
 function analyzeFormStructure(formKey) {
+  let CURRENT_FORMS;
+  try {
+    CURRENT_FORMS = getCurrentFormsData();
+  } catch (error) {
+    Logger.log('❌ No current forms data available. Ensure Current_Forms_Full.js is deployed.');
+    return;
+  }
+  
   if (!CURRENT_FORMS?.formsData?.[formKey]) {
     Logger.log(`❌ No form data found for ${formKey}`);
     return;
@@ -348,6 +387,14 @@ function analyzeFormStructure(formKey) {
 
 function compareAllFormsToTemplates() {
   Logger.log('🔍 Comparing all current forms to ideal templates...\n');
+  
+  let CURRENT_FORMS;
+  try {
+    CURRENT_FORMS = getCurrentFormsData();
+  } catch (error) {
+    Logger.log('❌ No current forms data available. Ensure Current_Forms_Full.js is deployed.');
+    return;
+  }
   
   Object.keys(PROFILE_CONFIG).forEach(profileId => {
     if (CURRENT_FORMS?.formsData?.[profileId]) {
