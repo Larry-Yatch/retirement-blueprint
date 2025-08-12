@@ -278,8 +278,52 @@ const PROFILE_CONFIG = {
 // end PROFILE_CONFIG
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// CURRENT FORM DATA - EMBEDDED EXPORTS
+// CURRENT FORMS SUMMARY - OPTIMIZATION DATA
 // ═══════════════════════════════════════════════════════════════════════════════
+// Key questions and metadata for form optimization work.
+// Complete form data is available in Current_Forms_Full.js
+
+const CURRENT_FORMS_SUMMARY = {
+  lastAnalyzed: "2025-08-12T06:18:55.748Z",
+  totalForms: 10,
+  phase1Questions: 46,
+  phase2QuestionsPerProfile: "46-50 questions each",
+  
+  universalQuestions: [
+    "Full Name", "Email", "Student Identifier", "Current Age", "Gross Annual Income",
+    "Net Monthly Income", "Filing Status", "Tax Minimization Preference",
+    "HSA Eligibility", "Number of Children", "Retirement Catch-up Eligibility",
+    "Investment Involvement", "Investment Time Horizon", "Investment Confidence",
+    "Retirement Importance", "Years Until Retirement", "Education Importance",
+    "Years Until Education Need", "Health Importance", "Years Until Health Need"
+  ],
+  
+  profileSpecificSeeds: {
+    "1_ROBS_In_Use": ["Current ROBS Profit", "Monthly HSA Contribution", "Monthly CESA Contribution"],
+    "2_ROBS_Curious": ["Monthly HSA Contribution", "Monthly CESA Contribution"],
+    "3_Solo401k_Builder": ["Solo 401k Employee Contribution", "Monthly HSA Contribution"],
+    "4_Roth_Reclaimer": ["Current Roth IRA Balance", "Monthly HSA Contribution"],
+    "5_Bracket_Strategist": ["Current 401k Balance", "Monthly HSA Contribution", "Monthly CESA Contribution"],
+    "6_Catch_Up": ["Current Retirement Balance", "Monthly HSA Contribution"],
+    "7_Foundation_Builder": ["Emergency Fund Amount", "Monthly HSA Contribution"],
+    "8_Biz_Owner_Group": ["Business Retirement Plan", "Monthly HSA Contribution", "Monthly CESA Contribution"],
+    "9_Late_Stage_Growth": ["Total Retirement Assets", "Monthly HSA Contribution", "Monthly CESA Contribution"]
+  },
+  
+  optimizationNotes: [
+    "All forms use same 32+ P2_ fields extensively in processing engine",
+    "Current forms are comprehensive and well-integrated",
+    "Focus optimization on profile-specific questions and logic",
+    "Maintain universal question consistency across all profiles",
+    "Ensure tax preference logic is properly implemented"
+  ]
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CURRENT FORM DATA - EMBEDDED EXPORTS  
+// ═══════════════════════════════════════════════════════════════════════════════
+// Complete form export data moved to Current_Forms_Full.js for maintainability.
+// This embedded data remains for compatibility with existing functions.
 
 /**
  * Current form structures exported from Google Forms
