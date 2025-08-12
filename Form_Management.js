@@ -218,7 +218,6 @@ function analyzeFormGaps() {
     }
     
     // Check profile-specific questions
-    const profileConfig = PROFILE_CONFIG[profileId];
     if (profileConfig && profileConfig.specificQuestions) {
       const missingSpecific = [];
       profileConfig.specificQuestions.forEach(q => {

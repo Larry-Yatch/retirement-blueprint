@@ -749,7 +749,7 @@ const profileHelpers = {
   }
 
   // Build vehicleOrders + banks (same as before)…
-  const cfg = PROFILE_CONFIG['2_Solo401k_Builder'];
+  const cfg = PROFILE_CONFIG['3_Solo401k_Builder'];
   const educationOrder = (numKids>0
     ? cfg.vehicleOrder_Education.map(v=>({
         name:v.name,
@@ -1598,19 +1598,19 @@ function classifyClientProfileFromWorkingSheet() {
   ) {
     profile = '2_ROBS_Curious';
   } else if (hasEmployees === 'Yes') {
-    profile = '7_Biz_Owner_Group';
+    profile = '8_Biz_Owner_Group';
   } else if ((workSituation === 'Self-employed' || workSituation === 'Both') && hasEmployees === 'No') {
-    profile = '2_Solo401k_Builder';
+    profile = '3_Solo401k_Builder';
   } else if (hasTradIRA === 'Yes') {
-    profile = '3_Roth_Reclaimer';
+    profile = '4_Roth_Reclaimer';
   } else if (age >= 55 || String(nearRetire).startsWith('Yes')) {
-    profile = '8_Late_Stage_Growth';
+    profile = '9_Late_Stage_Growth';
   } else if (age >= 50 && catchUpFeeling === 'Yes') {
-    profile = '5_Catch_Up';
+    profile = '6_Catch_Up';
   } else if (['Now','Both'].includes(taxFocus)) {
-    profile = '4_Bracket_Strategist';
+    profile = '5_Bracket_Strategist';
   } else {
-    profile = '6_Foundation_Builder';
+    profile = '7_Foundation_Builder';
   }
 
   // Write ProfileID
