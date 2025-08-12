@@ -899,7 +899,7 @@ const profileHelpers = {
       }
     };
   },
-  '3_Roth_Reclaimer': function(rowArr, hdr) {
+  '4_Roth_Reclaimer': function(rowArr, hdr) {
     const hsaElig = getValue(hdr, rowArr, HEADERS.P2_HSA_ELIGIBILITY) === 'Yes';
     const numKids = Number(getValue(hdr, rowArr, HEADERS.P2_CESA_NUM_CHILDREN)) || 0;
     const age = Number(getValue(hdr, rowArr, HEADERS.CURRENT_AGE));
@@ -916,7 +916,7 @@ const profileHelpers = {
 
     const seeds = { Education: {}, Health: {}, Retirement: {} };
     
-    const cfg = PROFILE_CONFIG['3_Roth_Reclaimer'];
+    const cfg = PROFILE_CONFIG['4_Roth_Reclaimer'];
     const educationOrder = (numKids > 0
       ? cfg.vehicleOrder_Education.map(v => ({
           name: v.name,
@@ -947,7 +947,7 @@ const profileHelpers = {
       }
     };
   },
-  '4_Bracket_Strategist': function(rowArr, hdr) {
+  '5_Bracket_Strategist': function(rowArr, hdr) {
     const hsaElig = getValue(hdr, rowArr, HEADERS.P2_HSA_ELIGIBILITY) === 'Yes';
     const numKids = Number(getValue(hdr, rowArr, HEADERS.P2_CESA_NUM_CHILDREN)) || 0;
     const age = Number(getValue(hdr, rowArr, HEADERS.CURRENT_AGE));
@@ -964,7 +964,7 @@ const profileHelpers = {
 
     const seeds = { Education: {}, Health: {}, Retirement: {} };
     
-    const cfg = PROFILE_CONFIG['4_Bracket_Strategist'];
+    const cfg = PROFILE_CONFIG['5_Bracket_Strategist'];
     const educationOrder = (numKids > 0
       ? cfg.vehicleOrder_Education.map(v => ({
           name: v.name,
@@ -995,7 +995,7 @@ const profileHelpers = {
       }
     };
   },
-  '5_Catch_Up': function(rowArr, hdr) {
+  '6_Catch_Up': function(rowArr, hdr) {
     const hsaElig = getValue(hdr, rowArr, HEADERS.P2_HSA_ELIGIBILITY) === 'Yes';
     const numKids = Number(getValue(hdr, rowArr, HEADERS.P2_CESA_NUM_CHILDREN)) || 0;
     const age = Number(getValue(hdr, rowArr, HEADERS.CURRENT_AGE));
@@ -1012,7 +1012,7 @@ const profileHelpers = {
 
     const seeds = { Education: {}, Health: {}, Retirement: {} };
     
-    const cfg = PROFILE_CONFIG['5_Catch_Up'];
+    const cfg = PROFILE_CONFIG['6_Catch_Up'];
     const educationOrder = (numKids > 0
       ? cfg.vehicleOrder_Education.map(v => ({
           name: v.name,
@@ -1043,7 +1043,7 @@ const profileHelpers = {
       }
     };
   },
-  '6_Foundation_Builder': function(rowArr, hdr) {
+  '7_Foundation_Builder': function(rowArr, hdr) {
     const hsaElig = getValue(hdr, rowArr, HEADERS.P2_HSA_ELIGIBILITY) === 'Yes';
     const numKids = Number(getValue(hdr, rowArr, HEADERS.P2_CESA_NUM_CHILDREN)) || 0;
     const age = Number(getValue(hdr, rowArr, HEADERS.CURRENT_AGE));
@@ -1060,7 +1060,7 @@ const profileHelpers = {
 
     const seeds = { Education: {}, Health: {}, Retirement: {} };
     
-    const cfg = PROFILE_CONFIG['6_Foundation_Builder'];
+    const cfg = PROFILE_CONFIG['7_Foundation_Builder'];
     const educationOrder = (numKids > 0
       ? cfg.vehicleOrder_Education.map(v => ({
           name: v.name,
@@ -1091,7 +1091,7 @@ const profileHelpers = {
       }
     };
   },
-  '7_Biz_Owner_Group': function(rowArr, hdr) {
+  '8_Biz_Owner_Group': function(rowArr, hdr) {
     const hsaElig = getValue(hdr, rowArr, HEADERS.P2_HSA_ELIGIBILITY) === 'Yes';
     const numKids = Number(getValue(hdr, rowArr, HEADERS.P2_CESA_NUM_CHILDREN)) || 0;
     const age = Number(getValue(hdr, rowArr, HEADERS.CURRENT_AGE));
@@ -1108,7 +1108,7 @@ const profileHelpers = {
 
     const seeds = { Education: {}, Health: {}, Retirement: {} };
     
-    const cfg = PROFILE_CONFIG['7_Biz_Owner_Group'];
+    const cfg = PROFILE_CONFIG['8_Biz_Owner_Group'];
     const educationOrder = (numKids > 0
       ? cfg.vehicleOrder_Education.map(v => ({
           name: v.name,
@@ -1139,7 +1139,7 @@ const profileHelpers = {
       }
     };
   },
-  '8_Late_Stage_Growth': function(rowArr, hdr) {
+  '9_Late_Stage_Growth': function(rowArr, hdr) {
     const hsaElig = getValue(hdr, rowArr, HEADERS.P2_HSA_ELIGIBILITY) === 'Yes';
     const numKids = Number(getValue(hdr, rowArr, HEADERS.P2_CESA_NUM_CHILDREN)) || 0;
     const age = Number(getValue(hdr, rowArr, HEADERS.CURRENT_AGE));
@@ -1156,7 +1156,7 @@ const profileHelpers = {
 
     const seeds = { Education: {}, Health: {}, Retirement: {} };
     
-    const cfg = PROFILE_CONFIG['8_Late_Stage_Growth'];
+    const cfg = PROFILE_CONFIG['9_Late_Stage_Growth'];
     const educationOrder = (numKids > 0
       ? cfg.vehicleOrder_Education.map(v => ({
           name: v.name,

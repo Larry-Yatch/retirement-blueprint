@@ -284,7 +284,7 @@ function testScenarios() {
   });
 }
 
-function testFullAllocationEngine(profileId = '2_Solo401k_Builder', customOptions = {}) {
+function testFullAllocationEngine(profileId = '3_Solo401k_Builder', customOptions = {}) {
   try {
     Logger.log(`🧪 Testing full allocation engine for ${profileId}...`);
     
@@ -327,13 +327,13 @@ function testFullAllocationEngine(profileId = '2_Solo401k_Builder', customOption
 // Individual profile test functions - easy to select from dropdown
 function test_1_ROBS_In_Use() { return testProfileHelper('1_ROBS_In_Use'); }
 function test_2_ROBS_Curious() { return testProfileHelper('2_ROBS_Curious'); }
-function test_2_Solo401k_Builder() { return testProfileHelper('2_Solo401k_Builder'); }
-function test_3_Roth_Reclaimer() { return testProfileHelper('3_Roth_Reclaimer'); }
-function test_4_Bracket_Strategist() { return testProfileHelper('4_Bracket_Strategist'); }
-function test_5_Catch_Up() { return testProfileHelper('5_Catch_Up'); }
-function test_6_Foundation_Builder() { return testProfileHelper('6_Foundation_Builder'); }
-function test_7_Biz_Owner_Group() { return testProfileHelper('7_Biz_Owner_Group'); }
-function test_8_Late_Stage_Growth() { return testProfileHelper('8_Late_Stage_Growth'); }
+function test_3_Solo401k_Builder() { return testProfileHelper('3_Solo401k_Builder'); }
+function test_4_Roth_Reclaimer() { return testProfileHelper('4_Roth_Reclaimer'); }
+function test_5_Bracket_Strategist() { return testProfileHelper('5_Bracket_Strategist'); }
+function test_6_Catch_Up() { return testProfileHelper('6_Catch_Up'); }
+function test_7_Foundation_Builder() { return testProfileHelper('7_Foundation_Builder'); }
+function test_8_Biz_Owner_Group() { return testProfileHelper('8_Biz_Owner_Group'); }
+function test_9_Late_Stage_Growth() { return testProfileHelper('9_Late_Stage_Growth'); }
 
 // Validation Functions
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -622,13 +622,13 @@ function validateAllProfiles() {
 // Individual validation functions - easy to select from dropdown  
 function validate_1_ROBS_In_Use() { return validateProfileHelper('1_ROBS_In_Use'); }
 function validate_2_ROBS_Curious() { return validateProfileHelper('2_ROBS_Curious'); }
-function validate_2_Solo401k_Builder() { return validateProfileHelper('2_Solo401k_Builder'); }
-function validate_3_Roth_Reclaimer() { return validateProfileHelper('3_Roth_Reclaimer'); }
-function validate_4_Bracket_Strategist() { return validateProfileHelper('4_Bracket_Strategist'); }
-function validate_5_Catch_Up() { return validateProfileHelper('5_Catch_Up'); }
-function validate_6_Foundation_Builder() { return validateProfileHelper('6_Foundation_Builder'); }
-function validate_7_Biz_Owner_Group() { return validateProfileHelper('7_Biz_Owner_Group'); }
-function validate_8_Late_Stage_Growth() { return validateProfileHelper('8_Late_Stage_Growth'); }
+function validate_3_Solo401k_Builder() { return validateProfileHelper('3_Solo401k_Builder'); }
+function validate_4_Roth_Reclaimer() { return validateProfileHelper('4_Roth_Reclaimer'); }
+function validate_5_Bracket_Strategist() { return validateProfileHelper('5_Bracket_Strategist'); }
+function validate_6_Catch_Up() { return validateProfileHelper('6_Catch_Up'); }
+function validate_7_Foundation_Builder() { return validateProfileHelper('7_Foundation_Builder'); }
+function validate_8_Biz_Owner_Group() { return validateProfileHelper('8_Biz_Owner_Group'); }
+function validate_9_Late_Stage_Growth() { return validateProfileHelper('9_Late_Stage_Growth'); }
 
 // Tax Preference Testing
 function testTaxPreferences(profileId = '1_ROBS_In_Use') {
