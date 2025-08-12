@@ -14,9 +14,9 @@ function createTestDataTab() {
 
   // 3) Define one varied test-row object per profile, using exact header names:
   const testRows = [
-    // 1A: ROBS profit seeded, no kids/HSA, Roth-phase-out check
+    // 1: ROBS profit seeded, no kids/HSA, Roth-phase-out check
     {
-      ProfileID:                 '1A_ROBS_In_Use',
+      ProfileID:                 '1_ROBS_In_Use',
       Net_Monthly_Income:        6000,
       gross_annual_income:       72000,
       filing_status:             'Married Filing Jointly',
@@ -36,9 +36,9 @@ function createTestDataTab() {
       hsa_years_until_need:      5,
       ex_q6:                     12000
     },
-    // 1B: ROBS curious, has kids & HSA, later-tax focus
+    // 2: ROBS curious, has kids & HSA, later-tax focus
     {
-      ProfileID:                 '1B_ROBS_Curious',
+      ProfileID:                 '2_ROBS_Curious',
       Net_Monthly_Income:        8000,
       gross_annual_income:       90000,
       filing_status:             'Single',
@@ -58,9 +58,9 @@ function createTestDataTab() {
       hsa_years_until_need:      10,
       ex_q6:                     0
     },
-    // 2: Solo401k Builder, now-tax focus, one kid, HSA eligible
+    // 3: Solo401k Builder, now-tax focus, one kid, HSA eligible
     {
-      ProfileID:                 '2_Solo401k_Builder',
+      ProfileID:                 '3_Solo401k_Builder',
       Net_Monthly_Income:        7000,
       gross_annual_income:       84000,
       filing_status:             'Married Filing Jointly',
@@ -80,9 +80,9 @@ function createTestDataTab() {
       hsa_years_until_need:      8,
       ex_q6:                     0
     },
-    // 3: Roth Reclaimer, catch-up allowed at age 50, no HSA
+    // 4: Roth Reclaimer, catch-up allowed at age 50, no HSA
     {
-      ProfileID:                 '3_Roth_Reclaimer',
+      ProfileID:                 '4_Roth_Reclaimer',
       Net_Monthly_Income:        9000,
       gross_annual_income:       95000,
       filing_status:             'Single',
@@ -102,9 +102,9 @@ function createTestDataTab() {
       hsa_years_until_need:      12,
       ex_q6:                     0
     },
-    // 4: Bracket Strategist, now-tax focus, HSA & CESA
+    // 5: Bracket Strategist, now-tax focus, HSA & CESA
     {
-      ProfileID:                 '4_Bracket_Strategist',
+      ProfileID:                 '5_Bracket_Strategist',
       Net_Monthly_Income:        5500,
       gross_annual_income:       65000,
       filing_status:             'Married Filing Jointly',
@@ -124,9 +124,9 @@ function createTestDataTab() {
       hsa_years_until_need:      6,
       ex_q6:                     0
     },
-    // 5: Catch-Up Visionary, age 55+, catch-up + HSA
+    // 6: Catch-Up Visionary, age 55+, catch-up + HSA
     {
-      ProfileID:                 '5_Catch_Up',
+      ProfileID:                 '6_Catch_Up',
       Net_Monthly_Income:        6500,
       gross_annual_income:       78000,
       filing_status:             'Single',
@@ -146,9 +146,9 @@ function createTestDataTab() {
       hsa_years_until_need:      5,
       ex_q6:                     0
     },
-    // 6: Foundation Builder, young, no HSA/CESA, low scores
+    // 7: Foundation Builder, young, no HSA/CESA, low scores
     {
-      ProfileID:                 '6_Foundation_Builder',
+      ProfileID:                 '7_Foundation_Builder',
       Net_Monthly_Income:        4000,
       gross_annual_income:       48000,
       filing_status:             'Single',
@@ -168,9 +168,9 @@ function createTestDataTab() {
       hsa_years_until_need:      15,
       ex_q6:                     0
     },
-    // 7: Business Owner Group, complex, many kids, HSA
+    // 8: Business Owner Group, complex, many kids, HSA
     {
-      ProfileID:                 '7_Biz_Owner_Group',
+      ProfileID:                 '8_Biz_Owner_Group',
       Net_Monthly_Income:        12000,
       gross_annual_income:       144000,
       filing_status:             'Married Filing Jointly',
@@ -190,9 +190,9 @@ function createTestDataTab() {
       hsa_years_until_need:      8,
       ex_q6:                     0
     },
-    // 8: Late-Stage Growth, near retirement, catch-up + HSA + CESA
+    // 9: Late-Stage Growth, near retirement, catch-up + HSA + CESA
     {
-      ProfileID:                 '8_Late_Stage_Growth',
+      ProfileID:                 '9_Late_Stage_Growth',
       Net_Monthly_Income:        10000,
       gross_annual_income:       110000,
       filing_status:             'Single',

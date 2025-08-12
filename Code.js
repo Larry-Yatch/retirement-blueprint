@@ -57,7 +57,7 @@ const LIMITS = {
 // === PROFILE CONFIGURATION ===
 /*** PROFILE CONFIGURATION ***/
 const PROFILE_CONFIG = {
-  '1A_ROBS_In_Use': {
+  '1_ROBS_In_Use': {
     title:       'ROBS-In-Use Strategist',
     description: 'Already has a C-corp + ROBS retirement plan, funding a Solo 401(k) with business revenue.',
     extraQuestions: [
@@ -87,7 +87,7 @@ const PROFILE_CONFIG = {
     ]
   },
 
-  '1B_ROBS_Curious': {
+  '2_ROBS_Curious': {
     title:       'ROBS-Curious Builder',
     description: 'Interested in ROBS but hasn’t implemented it yet; wants to leverage business income for retirement growth.',
     extraQuestions: [
@@ -111,7 +111,7 @@ const PROFILE_CONFIG = {
     ]
   },
 
-  '2_Solo401k_Builder': {
+  '3_Solo401k_Builder': {
     title:       'Solo 401(k) Builder',
     description: 'Self-employed or 1099 contractor who wants to set up or optimize a Solo 401(k).',
     extraQuestions: [
@@ -141,7 +141,7 @@ const PROFILE_CONFIG = {
     ]
   },
 
-  '3_Roth_Reclaimer': {
+  '4_Roth_Reclaimer': {
     title:       'Roth IRA Reclaimer',
     description: 'High-earner who seeks backdoor Roth or IRA consolidation.',
     extraQuestions: [
@@ -165,7 +165,7 @@ const PROFILE_CONFIG = {
     ]
   },
 
-  '4_Bracket_Strategist': {
+  '5_Bracket_Strategist': {
     title:       'Bracket-Balanced Strategist',
     description: 'Focus on current tax reduction with flexibility for future Roth conversions.',
     extraQuestions: [/* ... */],
@@ -189,7 +189,7 @@ const PROFILE_CONFIG = {
     ]
   },
 
-  '5_Catch_Up': {
+  '6_Catch_Up': {
     title:       'Catch-Up Visionary',
     description: 'Age 50+ who wants aggressive, tax-smart catch-up planning.',
     extraQuestions: [/* ... */],
@@ -209,7 +209,7 @@ const PROFILE_CONFIG = {
     ]
   },
 
-  '6_Foundation_Builder': {
+  '7_Foundation_Builder': {
     title:       'Foundation Builder',
     description: 'No current retirement accounts but ready to start with clear, simple steps.',
     extraQuestions: [/* ... */],
@@ -231,7 +231,7 @@ const PROFILE_CONFIG = {
     ]
   },
 
-  '7_Biz_Owner_Group': {
+  '8_Biz_Owner_Group': {
     title:       'Business Owner with Employee Group',
     description: 'Owns one or more businesses with W-2 employees; seeking advanced or defined-benefit strategies.',
     extraQuestions: [/* ... */],
@@ -253,7 +253,7 @@ const PROFILE_CONFIG = {
     ]
   },
 
-  '8_Late_Stage_Growth': {
+  '9_Late_Stage_Growth': {
     title:       'Late-Stage Growth Strategist',
     description: 'Near-retirement with sizable savings; interested in alts like real estate or private equity.',
     extraQuestions: [/* ... */],
@@ -276,6 +276,1167 @@ const PROFILE_CONFIG = {
 };
 
 // end PROFILE_CONFIG
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GOOGLE FORMS MANAGEMENT FUNCTIONS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Configuration for all forms in the system
+ * Add Phase 1 form ID and any additional Phase 2 forms here
+ */
+const FORM_CONFIG = {
+  // Phase 1 form
+  PHASE_1: {
+    formId: '1w4aPniYDM3oxiT-crPghmn9sYxYaw51sSexktoZJE8A',
+    name: 'Phase 1 - Profile Classification',
+    type: 'phase1'
+  },
+  
+  // Phase 2 forms from PROFILE_CONFIG
+  ...Object.fromEntries(
+    Object.entries(PROFILE_CONFIG).map(([profileId, config]) => [
+      profileId,
+      {
+        formId: config.formId,
+        name: `Phase 2 - ${config.title}`,
+        type: 'phase2',
+        profileId: profileId
+      }
+    ])
+  )
+};
+
+/**
+ * Export a single Google Form to JSON format
+ * @param {string} formId - The Google Form ID
+ * @param {string} formName - Descriptive name for the form
+ * @returns {Object} JSON representation of the form structure
+ */
+function exportFormToJSON(formId, formName) {
+  try {
+    const form = FormApp.openById(formId);
+    
+    const formData = {
+      metadata: {
+        formId: formId,
+        name: formName,
+        title: form.getTitle(),
+        description: form.getDescription(),
+        exportTimestamp: new Date().toISOString()
+      },
+      items: []
+    };
+    
+    const items = form.getItems();
+    
+    items.forEach((item, index) => {
+      const itemData = {
+        index: index,
+        title: item.getTitle(),
+        type: item.getType().toString(),
+        helpText: item.getHelpText() || '',
+        required: false
+      };
+      
+      // Handle different item types
+      switch (item.getType()) {
+        case FormApp.ItemType.MULTIPLE_CHOICE:
+          const mcItem = item.asMultipleChoiceItem();
+          itemData.required = mcItem.isRequired();
+          itemData.choices = mcItem.getChoices().map(choice => choice.getValue());
+          break;
+          
+        case FormApp.ItemType.CHECKBOX:
+          const cbItem = item.asCheckboxItem();
+          itemData.required = cbItem.isRequired();
+          itemData.choices = cbItem.getChoices().map(choice => choice.getValue());
+          break;
+          
+        case FormApp.ItemType.TEXT:
+          const textItem = item.asTextItem();
+          itemData.required = textItem.isRequired();
+          break;
+          
+        case FormApp.ItemType.PARAGRAPH_TEXT:
+          const paraItem = item.asParagraphTextItem();
+          itemData.required = paraItem.isRequired();
+          break;
+          
+        case FormApp.ItemType.LIST:
+          const listItem = item.asListItem();
+          itemData.required = listItem.isRequired();
+          itemData.choices = listItem.getChoices().map(choice => choice.getValue());
+          break;
+          
+        case FormApp.ItemType.SCALE:
+          const scaleItem = item.asScaleItem();
+          itemData.required = scaleItem.isRequired();
+          itemData.lowerBound = scaleItem.getLowerBound();
+          itemData.upperBound = scaleItem.getUpperBound();
+          itemData.leftLabel = scaleItem.getLeftLabel();
+          itemData.rightLabel = scaleItem.getRightLabel();
+          break;
+          
+        case FormApp.ItemType.GRID:
+          const gridItem = item.asGridItem();
+          itemData.required = gridItem.isRequired();
+          itemData.rows = gridItem.getRows();
+          itemData.columns = gridItem.getColumns();
+          break;
+          
+        case FormApp.ItemType.SECTION_HEADER:
+          // Section headers don't have required property
+          break;
+          
+        default:
+          Logger.log(`Unknown item type: ${item.getType()}`);
+      }
+      
+      formData.items.push(itemData);
+    });
+    
+    return formData;
+    
+  } catch (error) {
+    Logger.log(`Error exporting form ${formId}: ${error.message}`);
+    return {
+      error: error.message,
+      formId: formId,
+      name: formName
+    };
+  }
+}
+
+/**
+ * Export all forms to JSON and save to Google Drive
+ * Creates individual JSON files for each form
+ */
+function exportAllFormsToJSON() {
+  const results = [];
+  
+  Object.entries(FORM_CONFIG).forEach(([configKey, formConfig]) => {
+    if (!formConfig.formId) {
+      Logger.log(`Skipping ${configKey} - no form ID provided`);
+      return;
+    }
+    
+    Logger.log(`Exporting ${formConfig.name}...`);
+    const formData = exportFormToJSON(formConfig.formId, formConfig.name);
+    
+    if (formData.error) {
+      Logger.log(`Failed to export ${formConfig.name}: ${formData.error}`);
+      results.push({
+        configKey,
+        formConfig,
+        status: 'error',
+        error: formData.error
+      });
+      return;
+    }
+    
+    // Save to Google Drive as JSON file
+    const fileName = `${configKey}_form_export.json`;
+    const jsonString = JSON.stringify(formData, null, 2);
+    
+    try {
+      // Delete existing file if it exists
+      const existingFiles = DriveApp.getFilesByName(fileName);
+      while (existingFiles.hasNext()) {
+        const file = existingFiles.next();
+        DriveApp.removeFile(file);
+      }
+      
+      // Create new file
+      const blob = Utilities.newBlob(jsonString, 'application/json', fileName);
+      const file = DriveApp.createFile(blob);
+      
+      Logger.log(`Saved ${fileName} to Google Drive (${formData.items.length} questions)`);
+      
+      results.push({
+        configKey,
+        formConfig,
+        status: 'success',
+        fileName,
+        fileId: file.getId(),
+        questionCount: formData.items.length
+      });
+      
+    } catch (error) {
+      Logger.log(`Error saving ${fileName}: ${error.message}`);
+      results.push({
+        configKey,
+        formConfig,
+        status: 'save_error',
+        error: error.message
+      });
+    }
+  });
+  
+  // Print summary
+  Logger.log('\n=== EXPORT SUMMARY ===');
+  results.forEach(result => {
+    if (result.status === 'success') {
+      Logger.log(`✓ ${result.configKey}: ${result.questionCount} questions → ${result.fileName}`);
+    } else {
+      Logger.log(`✗ ${result.configKey}: ${result.error}`);
+    }
+  });
+  
+  return results;
+}
+
+/**
+ * Test function to export a single form
+ * Use this to test the export functionality
+ */
+function testExportSingleForm() {
+  // Test with the first available form
+  const firstProfile = Object.keys(PROFILE_CONFIG)[0];
+  const formConfig = PROFILE_CONFIG[firstProfile];
+  
+  if (formConfig.formId) {
+    Logger.log(`Testing export of ${firstProfile}...`);
+    const result = exportFormToJSON(formConfig.formId, formConfig.title);
+    Logger.log(JSON.stringify(result, null, 2));
+  } else {
+    Logger.log('No form ID available for testing');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GOOGLE FORMS UPDATE/MODIFICATION FUNCTIONS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Clear all items from a Google Form (except title/description)
+ * @param {string} formId - The Google Form ID
+ * @returns {boolean} Success status
+ */
+function clearFormItems(formId) {
+  try {
+    const form = FormApp.openById(formId);
+    const items = form.getItems();
+    
+    // Delete all items in reverse order to avoid index issues
+    for (let i = items.length - 1; i >= 0; i--) {
+      form.deleteItem(items[i]);
+    }
+    
+    Logger.log(`Cleared ${items.length} items from form ${formId}`);
+    return true;
+  } catch (error) {
+    Logger.log(`Error clearing form ${formId}: ${error.message}`);
+    return false;
+  }
+}
+
+/**
+ * Add a question to a Google Form based on question definition
+ * @param {Form} form - The Google Form object
+ * @param {Object} questionDef - Question definition object
+ * @returns {Item} The created form item
+ */
+function addQuestionToForm(form, questionDef) {
+  let item;
+  
+  switch (questionDef.type) {
+    case 'SECTION_HEADER':
+      item = form.addSectionHeaderItem();
+      item.setTitle(questionDef.title);
+      if (questionDef.helpText) {
+        item.setHelpText(questionDef.helpText);
+      }
+      break;
+      
+    case 'TEXT':
+      item = form.addTextItem();
+      item.setTitle(questionDef.title);
+      if (questionDef.helpText) {
+        item.setHelpText(questionDef.helpText);
+      }
+      if (questionDef.required) {
+        item.setRequired(questionDef.required);
+      }
+      break;
+      
+    case 'PARAGRAPH_TEXT':
+      item = form.addParagraphTextItem();
+      item.setTitle(questionDef.title);
+      if (questionDef.helpText) {
+        item.setHelpText(questionDef.helpText);
+      }
+      if (questionDef.required) {
+        item.setRequired(questionDef.required);
+      }
+      break;
+      
+    case 'MULTIPLE_CHOICE':
+      item = form.addMultipleChoiceItem();
+      item.setTitle(questionDef.title);
+      if (questionDef.helpText) {
+        item.setHelpText(questionDef.helpText);
+      }
+      if (questionDef.choices && questionDef.choices.length > 0) {
+        item.setChoices(questionDef.choices.map(choice => 
+          item.createChoice(choice)
+        ));
+      }
+      if (questionDef.required) {
+        item.setRequired(questionDef.required);
+      }
+      break;
+      
+    case 'CHECKBOX':
+      item = form.addCheckboxItem();
+      item.setTitle(questionDef.title);
+      if (questionDef.helpText) {
+        item.setHelpText(questionDef.helpText);
+      }
+      if (questionDef.choices && questionDef.choices.length > 0) {
+        item.setChoices(questionDef.choices.map(choice => 
+          item.createChoice(choice)
+        ));
+      }
+      if (questionDef.required) {
+        item.setRequired(questionDef.required);
+      }
+      break;
+      
+    case 'LIST':
+      item = form.addListItem();
+      item.setTitle(questionDef.title);
+      if (questionDef.helpText) {
+        item.setHelpText(questionDef.helpText);
+      }
+      if (questionDef.choices && questionDef.choices.length > 0) {
+        item.setChoices(questionDef.choices.map(choice => 
+          item.createChoice(choice)
+        ));
+      }
+      if (questionDef.required) {
+        item.setRequired(questionDef.required);
+      }
+      break;
+      
+    case 'SCALE':
+      item = form.addScaleItem();
+      item.setTitle(questionDef.title);
+      if (questionDef.helpText) {
+        item.setHelpText(questionDef.helpText);
+      }
+      if (questionDef.lowerBound !== undefined && questionDef.upperBound !== undefined) {
+        item.setBounds(questionDef.lowerBound, questionDef.upperBound);
+      }
+      if (questionDef.leftLabel) {
+        item.setLeftLabel(questionDef.leftLabel);
+      }
+      if (questionDef.rightLabel) {
+        item.setRightLabel(questionDef.rightLabel);
+      }
+      if (questionDef.required) {
+        item.setRequired(questionDef.required);
+      }
+      break;
+      
+    case 'GRID':
+      item = form.addGridItem();
+      item.setTitle(questionDef.title);
+      if (questionDef.helpText) {
+        item.setHelpText(questionDef.helpText);
+      }
+      if (questionDef.rows && questionDef.rows.length > 0) {
+        item.setRows(questionDef.rows);
+      }
+      if (questionDef.columns && questionDef.columns.length > 0) {
+        item.setColumns(questionDef.columns);
+      }
+      if (questionDef.required) {
+        item.setRequired(questionDef.required);
+      }
+      break;
+      
+    default:
+      Logger.log(`Unknown question type: ${questionDef.type}`);
+      return null;
+  }
+  
+  return item;
+}
+
+/**
+ * Update a Google Form with a new structure
+ * @param {string} formId - The Google Form ID
+ * @param {Object} formStructure - New form structure definition
+ * @returns {Object} Update result with status and details
+ */
+function updateFormStructure(formId, formStructure) {
+  try {
+    const form = FormApp.openById(formId);
+    
+    // Update form metadata
+    if (formStructure.title) {
+      form.setTitle(formStructure.title);
+    }
+    if (formStructure.description) {
+      form.setDescription(formStructure.description);
+    }
+    
+    // Clear existing items
+    const clearSuccess = clearFormItems(formId);
+    if (!clearSuccess) {
+      return {
+        success: false,
+        error: 'Failed to clear existing form items'
+      };
+    }
+    
+    // Add new items
+    const addedItems = [];
+    if (formStructure.questions && formStructure.questions.length > 0) {
+      formStructure.questions.forEach((questionDef, index) => {
+        try {
+          const item = addQuestionToForm(form, questionDef);
+          if (item) {
+            addedItems.push({
+              index: index,
+              title: questionDef.title,
+              type: questionDef.type,
+              success: true
+            });
+          } else {
+            addedItems.push({
+              index: index,
+              title: questionDef.title,
+              type: questionDef.type,
+              success: false,
+              error: 'Failed to create item'
+            });
+          }
+        } catch (error) {
+          addedItems.push({
+            index: index,
+            title: questionDef.title || 'Unknown',
+            type: questionDef.type || 'Unknown',
+            success: false,
+            error: error.message
+          });
+        }
+      });
+    }
+    
+    const successCount = addedItems.filter(item => item.success).length;
+    const errorCount = addedItems.filter(item => !item.success).length;
+    
+    Logger.log(`Form ${formId} updated: ${successCount} items added, ${errorCount} errors`);
+    
+    return {
+      success: errorCount === 0,
+      formId: formId,
+      itemsAdded: successCount,
+      errors: errorCount,
+      details: addedItems
+    };
+    
+  } catch (error) {
+    Logger.log(`Error updating form ${formId}: ${error.message}`);
+    return {
+      success: false,
+      formId: formId,
+      error: error.message
+    };
+  }
+}
+
+/**
+ * Batch update multiple forms
+ * @param {Object} formUpdates - Map of formId to formStructure
+ * @returns {Array} Array of update results
+ */
+function batchUpdateForms(formUpdates) {
+  const results = [];
+  
+  Object.entries(formUpdates).forEach(([formId, formStructure]) => {
+    Logger.log(`Updating form ${formId}...`);
+    const result = updateFormStructure(formId, formStructure);
+    results.push(result);
+  });
+  
+  // Print summary
+  Logger.log('\n=== BATCH UPDATE SUMMARY ===');
+  results.forEach(result => {
+    if (result.success) {
+      Logger.log(`✓ ${result.formId}: ${result.itemsAdded} items added`);
+    } else {
+      Logger.log(`✗ ${result.formId}: ${result.error}`);
+    }
+  });
+  
+  return results;
+}
+
+/**
+ * Test function to update a single form
+ * Use this to test the update functionality
+ */
+function testUpdateSingleForm() {
+  // Test with the first available form (BE CAREFUL - this will modify the actual form!)
+  const firstProfile = Object.keys(PROFILE_CONFIG)[0];
+  const formConfig = PROFILE_CONFIG[firstProfile];
+  
+  if (formConfig.formId) {
+    Logger.log(`WARNING: This will modify the actual form ${firstProfile}!`);
+    Logger.log('Uncomment the next line to proceed with test update');
+    // Uncomment the next lines to test:
+    // const testTemplate = generateFormTemplate('2_ROBS_Curious');
+    // const result = updateFormStructure(formConfig.formId, testTemplate);
+    // Logger.log(JSON.stringify(result, null, 2));
+  } else {
+    Logger.log('No form ID available for testing');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FORM TEMPLATE SYSTEM - DEFINE IDEAL FORM STRUCTURES
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Universal questions that appear in every Phase 2 form
+ * These map to the P2_* HEADERS and collect standard data for all profiles
+ */
+const UNIVERSAL_QUESTIONS = [
+  // Personal Information Section
+  {
+    type: 'SECTION_HEADER',
+    title: 'Personal Information',
+    helpText: 'Basic information to help us customize your recommendations'
+  },
+  {
+    type: 'TEXT',
+    title: 'Full Name',
+    helpText: 'Please enter your full name as it appears on your financial accounts',
+    required: true,
+    headerMapping: 'P2_FULL_NAME'
+  },
+  {
+    type: 'TEXT',
+    title: 'Email Address',
+    helpText: 'We\'ll use this to send your personalized recommendations',
+    required: true,
+    headerMapping: 'P2_EMAIL'
+  },
+  {
+    type: 'TEXT',
+    title: 'Student Identifier',
+    helpText: 'Your unique student identifier (last 4 digits)',
+    required: true,
+    headerMapping: 'P2_STUDENT_IDENTIFIER'
+  },
+  {
+    type: 'TEXT',
+    title: 'Current Age',
+    helpText: 'Your current age in years',
+    required: true,
+    headerMapping: 'P2_CURRENT_AGE'
+  },
+  {
+    type: 'TEXT',
+    title: 'Target Retirement Age',
+    helpText: 'At what age do you plan to retire?',
+    required: true,
+    headerMapping: 'P2_TARGET_RETIREMENT_AGE'
+  },
+
+  // Investment Profile Section
+  {
+    type: 'SECTION_HEADER',
+    title: 'Investment Profile',
+    helpText: 'Help us understand your investment approach and risk tolerance'
+  },
+  {
+    type: 'SCALE',
+    title: 'Investment Involvement',
+    helpText: 'How involved do you want to be in managing your investments? (1=Hands-off, 7=Very hands-on)',
+    lowerBound: 1,
+    upperBound: 7,
+    leftLabel: 'Hands-off',
+    rightLabel: 'Very hands-on',
+    required: true,
+    headerMapping: 'P2_INV_INVOLVEMENT'
+  },
+  {
+    type: 'SCALE',
+    title: 'Time for Investment Research',
+    helpText: 'How much time can you dedicate to investment research? (1=No time, 7=Lots of time)',
+    lowerBound: 1,
+    upperBound: 7,
+    leftLabel: 'No time',
+    rightLabel: 'Lots of time',
+    required: true,
+    headerMapping: 'P2_INV_TIME'
+  },
+  {
+    type: 'SCALE',
+    title: 'Investment Confidence',
+    helpText: 'How confident are you in making investment decisions? (1=Not confident, 7=Very confident)',
+    lowerBound: 1,
+    upperBound: 7,
+    leftLabel: 'Not confident',
+    rightLabel: 'Very confident',
+    required: true,
+    headerMapping: 'P2_INV_CONFIDENCE'
+  },
+
+  // Health Savings Account Section
+  {
+    type: 'SECTION_HEADER',
+    title: 'Health Savings Account (HSA)',
+    helpText: 'Information about your HSA eligibility and goals'
+  },
+  {
+    type: 'MULTIPLE_CHOICE',
+    title: 'HSA Eligibility',
+    helpText: 'Are you currently eligible for an HSA (High Deductible Health Plan)?',
+    choices: ['Yes', 'No', 'Not sure'],
+    required: true,
+    headerMapping: 'P2_HSA_ELIGIBILITY'
+  },
+  {
+    type: 'TEXT',
+    title: 'Current HSA Balance',
+    helpText: 'What is your current HSA balance? (Enter 0 if none)',
+    required: false,
+    headerMapping: 'P2_HSA_CURRENT_BALANCE'
+  },
+  {
+    type: 'TEXT',
+    title: 'Current Monthly HSA Contribution',
+    helpText: 'How much do you currently contribute to your HSA per month? (Enter 0 if none)',
+    required: false,
+    headerMapping: 'P2_HSA_MONTHLY_CONTRIB'
+  },
+  {
+    type: 'TEXT',
+    title: 'Years Until HSA Need',
+    helpText: 'In how many years do you expect to start using your HSA for medical expenses?',
+    required: false,
+    headerMapping: 'P2_HSA_YEARS_UNTIL_NEED'
+  },
+  {
+    type: 'TEXT',
+    title: 'HSA Target Balance',
+    helpText: 'What HSA balance would you like to have at retirement?',
+    required: false,
+    headerMapping: 'P2_HSA_TARGET_BALANCE'
+  },
+
+  // Education Savings Section
+  {
+    type: 'SECTION_HEADER',
+    title: 'Education Savings (CESA)',
+    helpText: 'Information about education savings for children'
+  },
+  {
+    type: 'MULTIPLE_CHOICE',
+    title: 'Children or Planning for Children',
+    helpText: 'Do you have children or plan to have children whose education you want to fund?',
+    choices: ['Yes', 'No'],
+    required: true,
+    headerMapping: 'P2_HAS_CHILDREN'
+  },
+  {
+    type: 'TEXT',
+    title: 'Number of Children',
+    helpText: 'How many children do you have or plan to have? (Enter 0 if none)',
+    required: false,
+    headerMapping: 'P2_CESA_NUM_CHILDREN'
+  },
+  {
+    type: 'TEXT',
+    title: 'Current CESA Balance',
+    helpText: 'What is your current Coverdell ESA balance? (Enter 0 if none)',
+    required: false,
+    headerMapping: 'P2_CESA_CURRENT_BALANCE'
+  },
+  {
+    type: 'TEXT',
+    title: 'Current Monthly CESA Contribution',
+    helpText: 'How much do you currently contribute to CESA per month? (Enter 0 if none)',
+    required: false,
+    headerMapping: 'P2_CESA_MONTHLY_CONTRIB'
+  },
+  {
+    type: 'TEXT',
+    title: 'Total Education Goal',
+    helpText: 'What is your total education savings goal across all children?',
+    required: false,
+    headerMapping: 'P2_CESA_TOTAL_GOAL'
+  },
+  {
+    type: 'TEXT',
+    title: 'Years Until First Education Need',
+    helpText: 'In how many years will you need to start using education funds?',
+    required: false,
+    headerMapping: 'P2_CESA_YEARS_UNTIL_FIRST'
+  },
+
+  // Retirement Savings Section
+  {
+    type: 'SECTION_HEADER',
+    title: 'Retirement Savings',
+    helpText: 'Information about your retirement planning and current savings'
+  },
+  {
+    type: 'TEXT',
+    title: 'Current Retirement Balance',
+    helpText: 'What is your current total retirement account balance? (Enter 0 if none)',
+    required: false,
+    headerMapping: 'P2_RETIREMENT_CURRENT_BAL'
+  },
+  {
+    type: 'TEXT',
+    title: 'Current Monthly Retirement Contribution',
+    helpText: 'How much do you currently contribute to retirement accounts per month? (Enter 0 if none)',
+    required: false,
+    headerMapping: 'P2_RETIREMENT_PERSONAL'
+  },
+  {
+    type: 'TEXT',
+    title: 'Years Until Retirement',
+    helpText: 'In how many years do you plan to retire?',
+    required: true,
+    headerMapping: 'P2_RETIREMENT_YEARS'
+  },
+  {
+    type: 'TEXT',
+    title: 'Desired Monthly Retirement Income',
+    helpText: 'What monthly income would you like to have in retirement?',
+    required: false,
+    headerMapping: 'P2_RETIREMENT_DESIRED_INC'
+  },
+
+  // Goal Importance Section
+  {
+    type: 'SECTION_HEADER',
+    title: 'Goal Priorities',
+    helpText: 'Help us understand how important each financial goal is to you'
+  },
+  {
+    type: 'SCALE',
+    title: 'Retirement Importance',
+    helpText: 'How important is retirement savings to you? (1=Not important, 7=Extremely important)',
+    lowerBound: 1,
+    upperBound: 7,
+    leftLabel: 'Not important',
+    rightLabel: 'Extremely important',
+    required: true,
+    headerMapping: 'P2_RETIREMENT_IMPORTANCE'
+  },
+  {
+    type: 'SCALE',
+    title: 'Education Importance',
+    helpText: 'How important is education savings to you? (1=Not important, 7=Extremely important)',
+    lowerBound: 1,
+    upperBound: 7,
+    leftLabel: 'Not important',
+    rightLabel: 'Extremely important',
+    required: true,
+    headerMapping: 'P2_EDUCATION_IMPORTANCE'
+  },
+  {
+    type: 'SCALE',
+    title: 'Health Importance',
+    helpText: 'How important is health savings to you? (1=Not important, 7=Extremely important)',
+    lowerBound: 1,
+    upperBound: 7,
+    leftLabel: 'Not important',
+    rightLabel: 'Extremely important',
+    required: true,
+    headerMapping: 'P2_HEALTH_IMPORTANCE'
+  }
+];
+
+/**
+ * Generate form template for a specific profile
+ * Combines universal questions with profile-specific questions
+ * @param {string} profileId - The profile identifier (e.g., '1_ROBS_In_Use')
+ * @returns {Object} Complete form structure
+ */
+function generateFormTemplate(profileId) {
+  const profileConfig = PROFILE_CONFIG[profileId];
+  if (!profileConfig) {
+    throw new Error(`Profile ${profileId} not found in PROFILE_CONFIG`);
+  }
+
+  const formStructure = {
+    title: `Phase 2 - ${profileConfig.title}`,
+    description: `${profileConfig.description}\n\nThis form will collect information specific to your profile to create a personalized investment strategy.`,
+    questions: [...UNIVERSAL_QUESTIONS] // Start with universal questions
+  };
+
+  // Add profile-specific section if there are extra questions
+  if (profileConfig.extraQuestions && profileConfig.extraQuestions.length > 0) {
+    // Add profile-specific section header
+    formStructure.questions.push({
+      type: 'SECTION_HEADER',
+      title: `${profileConfig.title} - Specific Questions`,
+      helpText: 'These questions are specifically tailored to your investment profile'
+    });
+
+    // Add each extra question as a paragraph text field
+    profileConfig.extraQuestions.forEach((question, index) => {
+      formStructure.questions.push({
+        type: 'PARAGRAPH_TEXT',
+        title: question,
+        helpText: 'Please provide as much detail as possible to help us customize your recommendations',
+        required: false,
+        headerMapping: `P2_EX_Q${index + 1}` // Maps to ex_q1, ex_q2, etc.
+      });
+    });
+  }
+
+  return formStructure;
+}
+
+/**
+ * Generate all form templates
+ * @returns {Object} Map of profileId to form structure
+ */
+function generateAllFormTemplates() {
+  const templates = {};
+  
+  // Generate Phase 2 profile templates
+  Object.keys(PROFILE_CONFIG).forEach(profileId => {
+    templates[profileId] = generateFormTemplate(profileId);
+  });
+  
+  // TODO: Add Phase 1 template when needed
+  
+  return templates;
+}
+
+/**
+ * Preview a form template (for debugging)
+ * @param {string} profileId - The profile to preview
+ */
+function previewFormTemplate(profileId) {
+  const template = generateFormTemplate(profileId);
+  
+  Logger.log(`\n=== FORM TEMPLATE PREVIEW: ${profileId} ===`);
+  Logger.log(`Title: ${template.title}`);
+  Logger.log(`Description: ${template.description}`);
+  Logger.log(`\nQuestions (${template.questions.length} total):`);
+  
+  template.questions.forEach((q, index) => {
+    Logger.log(`${index + 1}. [${q.type}] ${q.title}`);
+    if (q.headerMapping) {
+      Logger.log(`   → Maps to: ${q.headerMapping}`);
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FORM SYNC SYSTEM - COMPARE AND UPDATE FORMS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Compare current form structure with ideal template
+ * @param {Object} currentForm - Exported form structure
+ * @param {Object} idealTemplate - Generated template structure
+ * @returns {Object} Comparison result with differences
+ */
+function compareFormStructures(currentForm, idealTemplate) {
+  const comparison = {
+    identical: false,
+    differences: [],
+    summary: {
+      titleMatch: currentForm.metadata?.title === idealTemplate.title,
+      descriptionMatch: currentForm.metadata?.description === idealTemplate.description,
+      questionCountMatch: currentForm.items?.length === idealTemplate.questions?.length,
+      currentQuestionCount: currentForm.items?.length || 0,
+      idealQuestionCount: idealTemplate.questions?.length || 0
+    }
+  };
+
+  // Check title
+  if (!comparison.summary.titleMatch) {
+    comparison.differences.push({
+      type: 'title',
+      current: currentForm.metadata?.title || 'Unknown',
+      ideal: idealTemplate.title,
+      severity: 'minor'
+    });
+  }
+
+  // Check description
+  if (!comparison.summary.descriptionMatch) {
+    comparison.differences.push({
+      type: 'description',
+      current: currentForm.metadata?.description || 'Unknown',
+      ideal: idealTemplate.description,
+      severity: 'minor'
+    });
+  }
+
+  // Check question count
+  if (!comparison.summary.questionCountMatch) {
+    comparison.differences.push({
+      type: 'questionCount',
+      current: comparison.summary.currentQuestionCount,
+      ideal: comparison.summary.idealQuestionCount,
+      severity: 'major'
+    });
+  }
+
+  // Compare individual questions (basic comparison)
+  if (currentForm.items && idealTemplate.questions) {
+    const maxQuestions = Math.max(currentForm.items.length, idealTemplate.questions.length);
+    
+    for (let i = 0; i < maxQuestions; i++) {
+      const currentQ = currentForm.items[i];
+      const idealQ = idealTemplate.questions[i];
+      
+      if (!currentQ && idealQ) {
+        comparison.differences.push({
+          type: 'missingQuestion',
+          index: i,
+          ideal: idealQ.title,
+          severity: 'major'
+        });
+      } else if (currentQ && !idealQ) {
+        comparison.differences.push({
+          type: 'extraQuestion',
+          index: i,
+          current: currentQ.title,
+          severity: 'major'
+        });
+      } else if (currentQ && idealQ) {
+        // Compare question titles
+        if (currentQ.title !== idealQ.title) {
+          comparison.differences.push({
+            type: 'questionTitle',
+            index: i,
+            current: currentQ.title,
+            ideal: idealQ.title,
+            severity: 'major'
+          });
+        }
+        
+        // Compare question types
+        if (currentQ.type !== idealQ.type) {
+          comparison.differences.push({
+            type: 'questionType',
+            index: i,
+            current: currentQ.type,
+            ideal: idealQ.type,
+            severity: 'major'
+          });
+        }
+      }
+    }
+  }
+
+  // Determine if forms are identical
+  comparison.identical = comparison.differences.length === 0;
+
+  return comparison;
+}
+
+/**
+ * Sync a single form to match its ideal template
+ * @param {string} profileId - The profile to sync (or 'PHASE_1')
+ * @param {boolean} dryRun - If true, only analyze without making changes
+ * @returns {Object} Sync result
+ */
+function syncFormToTemplate(profileId, dryRun = true) {
+  try {
+    // Get the form configuration
+    let formConfig;
+    if (profileId === 'PHASE_1') {
+      formConfig = FORM_CONFIG.PHASE_1;
+    } else {
+      formConfig = FORM_CONFIG[profileId];
+    }
+
+    if (!formConfig || !formConfig.formId) {
+      return {
+        success: false,
+        profileId: profileId,
+        error: `Form configuration not found for ${profileId}`
+      };
+    }
+
+    // Export current form structure
+    Logger.log(`Exporting current structure for ${profileId}...`);
+    const currentForm = exportFormToJSON(formConfig.formId, formConfig.name);
+    
+    if (currentForm.error) {
+      return {
+        success: false,
+        profileId: profileId,
+        error: `Failed to export current form: ${currentForm.error}`
+      };
+    }
+
+    // Generate ideal template
+    Logger.log(`Generating ideal template for ${profileId}...`);
+    let idealTemplate;
+    if (profileId === 'PHASE_1') {
+      // TODO: Create Phase 1 template when needed
+      return {
+        success: false,
+        profileId: profileId,
+        error: 'Phase 1 template not implemented yet'
+      };
+    } else {
+      idealTemplate = generateFormTemplate(profileId);
+    }
+
+    // Compare structures
+    Logger.log(`Comparing current vs ideal for ${profileId}...`);
+    const comparison = compareFormStructures(currentForm, idealTemplate);
+
+    if (comparison.identical) {
+      return {
+        success: true,
+        profileId: profileId,
+        status: 'already_synced',
+        message: 'Form already matches ideal template',
+        differences: []
+      };
+    }
+
+    // If dry run, just return the comparison
+    if (dryRun) {
+      return {
+        success: true,
+        profileId: profileId,
+        status: 'dry_run',
+        message: `Found ${comparison.differences.length} differences (dry run mode)`,
+        differences: comparison.differences,
+        comparison: comparison
+      };
+    }
+
+    // Apply changes to the actual form
+    Logger.log(`Updating form ${profileId} to match template...`);
+    const updateResult = updateFormStructure(formConfig.formId, idealTemplate);
+
+    if (updateResult.success) {
+      return {
+        success: true,
+        profileId: profileId,
+        status: 'synced',
+        message: `Successfully synced form (${updateResult.itemsAdded} items)`,
+        differences: comparison.differences,
+        updateResult: updateResult
+      };
+    } else {
+      return {
+        success: false,
+        profileId: profileId,
+        error: `Failed to update form: ${updateResult.error}`,
+        differences: comparison.differences
+      };
+    }
+
+  } catch (error) {
+    return {
+      success: false,
+      profileId: profileId,
+      error: error.message
+    };
+  }
+}
+
+/**
+ * Sync all forms to match their ideal templates
+ * @param {boolean} dryRun - If true, only analyze without making changes
+ * @param {Array} profileFilter - Optional array of profiles to sync (default: all)
+ * @returns {Array} Array of sync results
+ */
+function syncAllFormsToTemplates(dryRun = true, profileFilter = null) {
+  const results = [];
+  
+  // Determine which profiles to sync
+  const profilesToSync = profileFilter || Object.keys(PROFILE_CONFIG);
+  
+  Logger.log(`\n=== SYNCING ${profilesToSync.length} FORMS ${dryRun ? '(DRY RUN)' : '(LIVE)'} ===`);
+  
+  profilesToSync.forEach(profileId => {
+    Logger.log(`\nSyncing ${profileId}...`);
+    const result = syncFormToTemplate(profileId, dryRun);
+    results.push(result);
+    
+    // Log summary
+    if (result.success) {
+      if (result.status === 'already_synced') {
+        Logger.log(`✓ ${profileId}: Already in sync`);
+      } else if (result.status === 'dry_run') {
+        Logger.log(`📋 ${profileId}: ${result.differences.length} differences found`);
+      } else if (result.status === 'synced') {
+        Logger.log(`✅ ${profileId}: Successfully synced`);
+      }
+    } else {
+      Logger.log(`❌ ${profileId}: ${result.error}`);
+    }
+  });
+  
+  // Print detailed summary
+  Logger.log('\n=== SYNC SUMMARY ===');
+  const alreadyInSync = results.filter(r => r.status === 'already_synced').length;
+  const needsSync = results.filter(r => r.status === 'dry_run' && r.differences?.length > 0).length;
+  const synced = results.filter(r => r.status === 'synced').length;
+  const errors = results.filter(r => !r.success).length;
+  
+  Logger.log(`Already in sync: ${alreadyInSync}`);
+  Logger.log(`Need sync: ${needsSync}`);
+  Logger.log(`Successfully synced: ${synced}`);
+  Logger.log(`Errors: ${errors}`);
+  
+  if (dryRun && needsSync > 0) {
+    Logger.log(`\n🔧 To apply changes, run: syncAllFormsToTemplates(false)`);
+  }
+  
+  return results;
+}
+
+/**
+ * Show detailed differences for a specific form
+ * @param {string} profileId - The profile to analyze
+ */
+function showFormDifferences(profileId) {
+  const result = syncFormToTemplate(profileId, true);
+  
+  if (!result.success) {
+    Logger.log(`Error analyzing ${profileId}: ${result.error}`);
+    return;
+  }
+  
+  if (result.status === 'already_synced') {
+    Logger.log(`✅ ${profileId} is already perfectly synced with its template`);
+    return;
+  }
+  
+  Logger.log(`\n=== DETAILED DIFFERENCES: ${profileId} ===`);
+  if (result.differences && result.differences.length > 0) {
+    result.differences.forEach((diff, index) => {
+      Logger.log(`${index + 1}. ${diff.type.toUpperCase()} [${diff.severity}]`);
+      if (diff.current !== undefined) {
+        Logger.log(`   Current: ${diff.current}`);
+      }
+      if (diff.ideal !== undefined) {
+        Logger.log(`   Ideal: ${diff.ideal}`);
+      }
+      if (diff.index !== undefined) {
+        Logger.log(`   Question #: ${diff.index + 1}`);
+      }
+      Logger.log('');
+    });
+  } else {
+    Logger.log('No differences found');
+  }
+}
 
 /**
  * Tax preference utility functions
@@ -328,7 +1489,7 @@ function prioritizeRothAccounts(vehicleOrder) {
  *  • vehicleOrders: { Education: [...], Health: [...], Retirement: [...] }
  */
 const profileHelpers = {
-'2_Solo401k_Builder': function(rowArr, hdr) {
+'3_Solo401k_Builder': function(rowArr, hdr) {
   // Read the “have plan?” flag and all three Solo‐401k fields
   const hasPlan       = getValue(hdr, rowArr, HEADERS.P2_EX_Q3) === 'Yes';
   const annualEmployee= Number(getValue(hdr, rowArr, HEADERS.P2_EX_Q4)) || 0;
