@@ -5948,7 +5948,7 @@ const profileHelpers = {
 
 
 
-  '1A_ROBS_In_Use': function(rowArr, hdr) {
+  '1_ROBS_In_Use': function(rowArr, hdr) {
     const hsaElig = getValue(hdr, rowArr, HEADERS.P2_HSA_ELIGIBILITY) === 'Yes';
     const numKids = Number(getValue(hdr, rowArr, HEADERS.P2_CESA_NUM_CHILDREN)) || 0;
     const age = Number(getValue(hdr, rowArr, HEADERS.CURRENT_AGE));
@@ -5968,7 +5968,7 @@ const profileHelpers = {
 
     const seeds = { Education: {}, Health: {}, Retirement: {} };
     
-    const cfg = PROFILE_CONFIG['1A_ROBS_In_Use'];
+    const cfg = PROFILE_CONFIG['1_ROBS_In_Use'];
     
     // Build base retirement order
     let baseRetirementOrder = cfg.vehicleOrder_Retirement
@@ -6012,7 +6012,7 @@ const profileHelpers = {
       }
     };
   },
-  '1B_ROBS_Curious': function(rowArr, hdr) {
+  '2_ROBS_Curious': function(rowArr, hdr) {
     const hsaElig = getValue(hdr, rowArr, HEADERS.P2_HSA_ELIGIBILITY) === 'Yes';
     const numKids = Number(getValue(hdr, rowArr, HEADERS.P2_CESA_NUM_CHILDREN)) || 0;
     const age = Number(getValue(hdr, rowArr, HEADERS.CURRENT_AGE));
@@ -6029,7 +6029,7 @@ const profileHelpers = {
 
     const seeds = { Education: {}, Health: {}, Retirement: {} };
     
-    const cfg = PROFILE_CONFIG['1B_ROBS_Curious'];
+    const cfg = PROFILE_CONFIG['2_ROBS_Curious'];
     const educationOrder = (numKids > 0
       ? cfg.vehicleOrder_Education.map(v => ({
           name: v.name,
@@ -6750,14 +6750,14 @@ function classifyClientProfileFromWorkingSheet() {
   // Determine ProfileID (unchanged) …
   let profile = '';
   if (robsInUse === 'Yes') {
-    profile = '1A_ROBS_In_Use';
+    profile = '1_ROBS_In_Use';
   } else if (
     robsInterest === 'Yes' &&
     robsNewBiz   === 'Yes' &&
     robsFunds    === 'Yes' &&
     robsSetup    === 'Yes'
   ) {
-    profile = '1B_ROBS_Curious';
+    profile = '2_ROBS_Curious';
   } else if (hasEmployees === 'Yes') {
     profile = '7_Biz_Owner_Group';
   } else if ((workSituation === 'Self-employed' || workSituation === 'Both') && hasEmployees === 'No') {
@@ -6780,7 +6780,7 @@ function classifyClientProfileFromWorkingSheet() {
   // Build & write tags in sheet order
   const tags = {
     USES_ROBS:           (robsInUse   === 'Yes'),
-    INTREST_ROBS:        (profile !== '1A_ROBS_In_Use' && robsInterest === 'Yes'),
+    INTREST_ROBS:        (profile !== '1_ROBS_In_Use' && robsInterest === 'Yes'),
     ROBS_READY:          (robsInterest === 'Yes' && robsNewBiz === 'Yes' && robsFunds === 'Yes' && robsSetup === 'Yes'),
     SELF_EMPLOYED:       (workSituation === 'Self-employed'),
     HAS_BIZ:             (ownsBiz      === 'Yes'),
@@ -7117,7 +7117,7 @@ function createTestData(profileType, options = {}) {
       setTestValue(HEADERS.P2_EX_Q6, 40000); // Future contribution
       break;
       
-    case '1A_ROBS_In_Use':
+    case '1_ROBS_In_Use':
       setTestValue(HEADERS.P2_EX_Q1, 'C-corp with Solo 401(k) funded from business profits');
       setTestValue(HEADERS.P2_EX_Q2, 'Monthly distributions based on cash flow');
       break;
@@ -7309,8 +7309,8 @@ function testFullAllocationEngine(profileId = '2_Solo401k_Builder', customOption
 }
 
 // Individual profile test functions - easy to select from dropdown
-function test_1A_ROBS_In_Use() { return testProfileHelper('1A_ROBS_In_Use'); }
-function test_1B_ROBS_Curious() { return testProfileHelper('1B_ROBS_Curious'); }
+function test_1_ROBS_In_Use() { return testProfileHelper('1_ROBS_In_Use'); }
+function test_2_ROBS_Curious() { return testProfileHelper('2_ROBS_Curious'); }
 function test_2_Solo401k_Builder() { return testProfileHelper('2_Solo401k_Builder'); }
 function test_3_Roth_Reclaimer() { return testProfileHelper('3_Roth_Reclaimer'); }
 function test_4_Bracket_Strategist() { return testProfileHelper('4_Bracket_Strategist'); }
@@ -7634,7 +7634,7 @@ function validateFinancialStrategy(profileId, result, params) {
   const retirementOrder = result.vehicleOrders.Retirement;
   
   switch(profileId) {
-    case '1A_ROBS_In_Use':
+    case '1_ROBS_In_Use':
       strategy.push('ROBS Strategy: Business profits → Solo 401k → tax-advantaged growth');
       
       // Check if profit distribution is prioritized (should be first)
@@ -7815,8 +7815,8 @@ function validateAllProfiles() {
 }
 
 // Individual validation functions for easy testing
-function validate_1A_ROBS_In_Use() { return validateProfileHelper('1A_ROBS_In_Use'); }
-function validate_1B_ROBS_Curious() { return validateProfileHelper('1B_ROBS_Curious'); }
+function validate_1_ROBS_In_Use() { return validateProfileHelper('1_ROBS_In_Use'); }
+function validate_2_ROBS_Curious() { return validateProfileHelper('2_ROBS_Curious'); }
 function validate_2_Solo401k_Builder() { return validateProfileHelper('2_Solo401k_Builder'); }
 function validate_3_Roth_Reclaimer() { return validateProfileHelper('3_Roth_Reclaimer'); }
 function validate_4_Bracket_Strategist() { return validateProfileHelper('4_Bracket_Strategist'); }
@@ -7828,7 +7828,7 @@ function validate_8_Late_Stage_Growth() { return validateProfileHelper('8_Late_S
 /**
  * Test tax preference impact on vehicle ordering
  */
-function testTaxPreferences(profileId = '1A_ROBS_In_Use') {
+function testTaxPreferences(profileId = '1_ROBS_In_Use') {
   Logger.log(`\n🎯 TESTING TAX PREFERENCES: ${profileId}`);
   Logger.log('═'.repeat(80));
   
