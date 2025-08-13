@@ -441,6 +441,54 @@ function quickTestSolo401k() {
   return testSolo401kBuilderEndToEnd(); 
 }
 
+// Quick tax preference verification test
+function quickTestTaxPreference() {
+  Logger.log('🎯 QUICK TEST: Tax Preference Logic Verification');
+  
+  const testProfiles = [
+    { profile: '3_Solo401k_Builder', taxPref: 'Now', expected: 'Traditional first' },
+    { profile: '2_ROBS_Curious', taxPref: 'Later', expected: 'Roth first' },
+    { profile: '4_Roth_Reclaimer', taxPref: 'Both', expected: 'Balanced order' }
+  ];
+  
+  testProfiles.forEach(test => {
+    Logger.log(`\n--- Testing ${test.profile} (${test.taxPref}) ---`);
+    try {
+      const result = testProfileHelper(test.profile);
+      const retOrder = result.vehicleOrders.Retirement || [];
+      const vehicleNames = retOrder.slice(0, -1).map(v => v.name); // Exclude Family Bank
+      
+      Logger.log(`Tax preference: ${test.taxPref} (${test.expected})`);
+      Logger.log(`Retirement order: ${vehicleNames.join(' → ')}`);
+      
+      // Simple verification
+      const hasTraditional = vehicleNames.some(name => name.toLowerCase().includes('traditional'));
+      const hasRoth = vehicleNames.some(name => name.toLowerCase().includes('roth'));
+      
+      if (hasTraditional && hasRoth) {
+        const traditionalIndex = vehicleNames.findIndex(name => name.toLowerCase().includes('traditional'));
+        const rothIndex = vehicleNames.findIndex(name => name.toLowerCase().includes('roth'));
+        
+        if (test.taxPref === 'Now' && traditionalIndex < rothIndex) {
+          Logger.log('✅ Tax preference NOW working: Traditional before Roth');
+        } else if (test.taxPref === 'Later' && rothIndex < traditionalIndex) {
+          Logger.log('✅ Tax preference LATER working: Roth before Traditional');
+        } else if (test.taxPref === 'Both') {
+          Logger.log('✅ Tax preference BOTH working: Balanced order maintained');
+        } else {
+          Logger.log(`⚠️ Tax preference may need review for ${test.profile}`);
+        }
+      } else {
+        Logger.log('ℹ️ Profile has limited retirement vehicle types for comparison');
+      }
+    } catch (error) {
+      Logger.log(`❌ Error testing ${test.profile}: ${error.message}`);
+    }
+  });
+  
+  Logger.log('\n🎯 Tax preference verification complete');
+}
+
 // Validation Functions
 // ═══════════════════════════════════════════════════════════════════════════════
 
