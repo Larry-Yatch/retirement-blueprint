@@ -1293,7 +1293,7 @@ const HEADERS = {
   P2_EX_Q8:                       'ex_q8',
   P2_EX_Q9:                       'ex_q9',
   P2_EX_Q10:                      'ex_q10',
-
+  
     // ── Phase 2 output columns ──
   // Retirement IRA top-ups (education piggy-backed here)
   RETIREMENT_TRADITIONAL_IRA_ACTUAL: 'retirement_traditional_ira_actual',
@@ -1739,7 +1739,7 @@ function handlePhase2(e) {
   const totalPool = Number(getValue(hdr,rowArr,HEADERS.NET_MONTHLY_INCOME)) 
                     * CONFIG.OPTIMIZED_SAVINGS_RATE;
   const leftover  = Math.max(0, Math.round(totalPool - sumIdeal));
-  const fbCol = hdr['family_bank_ideal'];
+  const fbCol = hdr[HEADERS.FAMILY_BANK_IDEAL];
   if (fbCol) {
     ws.getRange(rowNum, fbCol)
       .setValue(leftover)
