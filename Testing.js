@@ -4,6 +4,104 @@
 // This file contains all testing, validation, and smoke test functions
 // extracted from Code.js to improve maintainability.
 
+// Header Diagnostic Functions
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function diagnoseWorkingSheetHeaders() {
+  Logger.log('🔍 DIAGNOSING WORKING SHEET HEADERS');
+  Logger.log('═'.repeat(80));
+  
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ws = ss.getSheetByName('Working Sheet');
+  
+  if (!ws) {
+    Logger.log('❌ Working Sheet not found');
+    return;
+  }
+  
+  const lastCol = ws.getLastColumn();
+  Logger.log(`📊 Working Sheet has ${lastCol} columns`);
+  
+  // Read headers from row 2
+  const headers = ws.getRange(2, 1, 1, lastCol).getValues()[0];
+  Logger.log(`📋 Reading headers from Working Sheet row 2:`);
+  
+  headers.forEach((header, index) => {
+    Logger.log(`  Column ${index + 1}: "${header}"`);
+  });
+  
+  // Create header map like getHeaderMap() does
+  const headerMap = {};
+  headers.forEach((h, i) => {
+    if (h) headerMap[h.trim()] = i + 1;
+  });
+  
+  Logger.log(`\n🗺️ Header Map created by getHeaderMap():`);
+  Object.keys(headerMap).forEach(key => {
+    Logger.log(`  "${key}" → Column ${headerMap[key]}`);
+  });
+  
+  // Check for specific headers we need
+  const criticalHeaders = ['ex_q3', 'hsa_eligibility', 'cesa_num_children'];
+  Logger.log(`\n🎯 Checking for critical headers:`);
+  criticalHeaders.forEach(header => {
+    if (headerMap[header]) {
+      Logger.log(`  ✅ "${header}" found at column ${headerMap[header]}`);
+    } else {
+      Logger.log(`  ❌ "${header}" NOT found`);
+    }
+  });
+  
+  return headerMap;
+}
+
+function diagnoseProfileHelperContext() {
+  Logger.log('🔍 DIAGNOSING PROFILE HELPER CONTEXT');
+  Logger.log('═'.repeat(80));
+  
+  try {
+    // Simulate exactly what the Solo 401k Builder test does
+    Logger.log('📋 Step 1: Testing initWS() function...');
+    const { sheet, hdr } = initWS();
+    
+    Logger.log(`✅ initWS() successful`);
+    Logger.log(`📊 Sheet name: ${sheet.getName()}`);
+    Logger.log(`📊 Header map contains ${Object.keys(hdr).length} headers`);
+    
+    // Show first 10 headers in the map
+    Logger.log(`\n🗺️ First 10 headers in hdr object:`);
+    Object.keys(hdr).slice(0, 10).forEach(key => {
+      Logger.log(`  "${key}" → Column ${hdr[key]}`);
+    });
+    
+    // Check for the failing header
+    Logger.log(`\n🎯 Checking for the failing header:`);
+    const targetHeader = HEADERS.P2_EX_Q3; // This should be 'ex_q3'
+    Logger.log(`  Looking for: "${targetHeader}" (value of HEADERS.P2_EX_Q3)`);
+    
+    if (hdr[targetHeader]) {
+      Logger.log(`  ✅ Found "${targetHeader}" at column ${hdr[targetHeader]}`);
+    } else {
+      Logger.log(`  ❌ "${targetHeader}" NOT found in hdr object`);
+      Logger.log(`  Available headers: ${Object.keys(hdr).join(', ')}`);
+    }
+    
+    // Test the actual getValue call that's failing
+    Logger.log(`\n🧪 Testing the failing getValue call:`);
+    const rowData = sheet.getRange(4, 1, 1, sheet.getLastColumn()).getValues()[0];
+    
+    try {
+      const result = getValue(hdr, rowData, HEADERS.P2_EX_Q3);
+      Logger.log(`  ✅ getValue() succeeded: "${result}"`);
+    } catch (error) {
+      Logger.log(`  ❌ getValue() failed: ${error.message}`);
+    }
+    
+  } catch (error) {
+    Logger.log(`❌ Error in diagnosis: ${error.message}`);
+  }
+}
+
 // Form Testing Functions
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -791,6 +889,261 @@ function getTestDataRow(rowNumber) {
 }
 
 /**
+ * Diagnostic function to debug TestData sheet issues
+ * Reads and displays complete information about the test data setup
+ * @param {number} rowNumber - The row number to diagnose (default is 4 for Profile 3)
+ * @returns {object} Diagnostic results
+ */
+function diagnoseTestData(rowNumber = 4) {
+  Logger.log('🔍 Starting TestData Diagnostic for row ' + rowNumber);
+  Logger.log('═'.repeat(60));
+  
+  const results = {
+    success: false,
+    testDataSheetExists: false,
+    headers: [],
+    rowData: {},
+    expectedProfile: '',
+    actualProfile: '',
+    missingFields: [],
+    unexpectedFields: [],
+    fieldMismatches: [],
+    recommendations: []
+  };
+  
+  try {
+    // Step 1: Check if TestData sheet exists
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const testDataSheet = ss.getSheetByName('TestData');
+    
+    if (!testDataSheet) {
+      Logger.log('❌ TestData sheet not found!');
+      results.recommendations.push('Run createTestDataTab() to create the TestData sheet');
+      return results;
+    }
+    
+    results.testDataSheetExists = true;
+    Logger.log('✅ TestData sheet exists');
+    
+    // Step 2: Read all headers
+    const lastCol = testDataSheet.getLastColumn();
+    const headers = testDataSheet.getRange(1, 1, 1, lastCol).getValues()[0];
+    results.headers = headers;
+    
+    Logger.log('\n📋 Found ' + headers.length + ' headers:');
+    headers.forEach((header, index) => {
+      if (header) {
+        Logger.log('  Column ' + (index + 1) + ': ' + header);
+      }
+    });
+    
+    // Step 3: Read row data
+    const rowData = testDataSheet.getRange(rowNumber, 1, 1, lastCol).getValues()[0];
+    const testData = {};
+    headers.forEach((header, index) => {
+      if (header) {
+        testData[header] = rowData[index];
+      }
+    });
+    results.rowData = testData;
+    
+    Logger.log('\n📊 Row ' + rowNumber + ' data:');
+    Object.entries(testData).forEach(([key, value]) => {
+      if (value !== '' && value !== null && value !== undefined) {
+        Logger.log('  ' + key + ': ' + value);
+      }
+    });
+    
+    // Step 4: Check expected values for Profile 3 (row 4)
+    if (rowNumber === 4) {
+      results.expectedProfile = '3_Solo401k_Builder';
+      const expectedValues = {
+        ProfileID: '3_Solo401k_Builder',
+        Net_Monthly_Income: 7000,
+        gross_annual_income: 84000,
+        filing_status: 'Married Filing Jointly',
+        Current_Age: 38,
+        Retirement_Catchup: 'No',
+        Tax_Minimization: 'Now',
+        Using_ROBS: 'No',
+        Interested_in_ROBS: 'No',
+        Work_Situation: 'Self-employed',
+        W2_Employees: 'No',
+        hsa_eligibility: 'Yes',
+        cesa_num_children: 1,
+        investment_involvement: 2,
+        retirement_importance: 5,
+        retirement_years_until_target: 15
+      };
+      
+      Logger.log('\n🎯 Checking Profile 3 expected values:');
+      Object.entries(expectedValues).forEach(([key, expectedValue]) => {
+        const actualValue = testData[key];
+        if (actualValue === expectedValue) {
+          Logger.log('  ✅ ' + key + ': ' + actualValue + ' (matches)');
+        } else {
+          Logger.log('  ❌ ' + key + ': expected ' + expectedValue + ', got ' + actualValue);
+          results.fieldMismatches.push({
+            field: key,
+            expected: expectedValue,
+            actual: actualValue
+          });
+        }
+      });
+    }
+    
+    // Step 5: Check for required fields
+    const requiredFields = [
+      'ProfileID', 'Current_Age', 'Net_Monthly_Income', 'gross_annual_income',
+      'filing_status', 'Tax_Minimization', 'Using_ROBS', 'Interested_in_ROBS',
+      'Work_Situation', 'W2_Employees', 'hsa_eligibility', 'cesa_num_children',
+      'investment_involvement', 'retirement_importance', 'retirement_years_until_target'
+    ];
+    
+    Logger.log('\n🔍 Checking required fields:');
+    requiredFields.forEach(field => {
+      if (!testData.hasOwnProperty(field) || testData[field] === '' || testData[field] === null) {
+        Logger.log('  ❌ Missing: ' + field);
+        results.missingFields.push(field);
+      }
+    });
+    
+    // Step 6: Simulate classification
+    if (testData.Current_Age && testData.Using_ROBS !== undefined) {
+      try {
+        const classifiedProfile = simulatePhase1Classification(testData);
+        results.actualProfile = classifiedProfile;
+        
+        Logger.log('\n🎯 Classification result:');
+        Logger.log('  Expected: ' + results.expectedProfile);
+        Logger.log('  Actual: ' + classifiedProfile);
+        
+        if (classifiedProfile === results.expectedProfile) {
+          Logger.log('  ✅ Classification matches expected profile!');
+        } else {
+          Logger.log('  ❌ Classification mismatch!');
+          results.recommendations.push('Check classification logic in simulatePhase1Classification()');
+        }
+      } catch (error) {
+        Logger.log('  ❌ Classification error: ' + error.message);
+        results.recommendations.push('Fix classification errors: ' + error.message);
+      }
+    }
+    
+    // Step 7: Generate recommendations
+    if (results.missingFields.length > 0) {
+      results.recommendations.push('Run createTestDataTab() to recreate TestData with all required fields');
+    }
+    
+    if (results.fieldMismatches.length > 0) {
+      results.recommendations.push('TestData values don\'t match expected Profile 3 values - recreate TestData sheet');
+    }
+    
+    if (!results.testDataSheetExists) {
+      results.recommendations.push('Create TestData sheet first using createTestDataTab()');
+    }
+    
+    results.success = (results.missingFields.length === 0 && 
+                      results.fieldMismatches.length === 0 && 
+                      results.actualProfile === results.expectedProfile);
+    
+    // Final summary
+    Logger.log('\n📋 SUMMARY:');
+    Logger.log('  Test Data Sheet: ' + (results.testDataSheetExists ? 'Exists' : 'Missing'));
+    Logger.log('  Missing Fields: ' + results.missingFields.length);
+    Logger.log('  Field Mismatches: ' + results.fieldMismatches.length);
+    Logger.log('  Classification: ' + (results.actualProfile === results.expectedProfile ? 'Correct' : 'Incorrect'));
+    Logger.log('  Overall Status: ' + (results.success ? '✅ PASS' : '❌ FAIL'));
+    
+    if (results.recommendations.length > 0) {
+      Logger.log('\n💡 Recommendations:');
+      results.recommendations.forEach((rec, index) => {
+        Logger.log('  ' + (index + 1) + '. ' + rec);
+      });
+    }
+    
+    Logger.log('\n' + '═'.repeat(60));
+    
+  } catch (error) {
+    Logger.log('❌ Diagnostic error: ' + error.message);
+    results.recommendations.push('Fix diagnostic error: ' + error.message);
+  }
+  
+  return results;
+}
+
+/**
+ * Quick diagnostic check for all test profiles
+ * Checks if each profile row contains the expected ProfileID
+ */
+function diagnoseAllTestProfiles() {
+  Logger.log('🔍 Diagnosing all test profiles...\n');
+  
+  const expectedProfiles = [
+    { row: 2, profileId: '1_ROBS_In_Use' },
+    { row: 3, profileId: '2_ROBS_Curious' },
+    { row: 4, profileId: '3_Solo401k_Builder' },
+    { row: 5, profileId: '4_Roth_Reclaimer' },
+    { row: 6, profileId: '5_Bracket_Strategist' },
+    { row: 7, profileId: '6_Catch_Up' },
+    { row: 8, profileId: '7_Foundation_Builder' },
+    { row: 9, profileId: '8_Biz_Owner_Group' },
+    { row: 10, profileId: '9_Late_Stage_Growth' }
+  ];
+  
+  const results = [];
+  
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const testDataSheet = ss.getSheetByName('TestData');
+    
+    if (!testDataSheet) {
+      Logger.log('❌ TestData sheet not found! Run createTestDataTab() first.');
+      return;
+    }
+    
+    // Get headers
+    const headers = testDataSheet.getRange(1, 1, 1, testDataSheet.getLastColumn()).getValues()[0];
+    const profileIdCol = headers.indexOf('ProfileID') + 1;
+    
+    if (profileIdCol === 0) {
+      Logger.log('❌ ProfileID column not found in headers!');
+      return;
+    }
+    
+    // Check each profile
+    expectedProfiles.forEach(({ row, profileId }) => {
+      const actualProfileId = testDataSheet.getRange(row, profileIdCol).getValue();
+      const matches = actualProfileId === profileId;
+      
+      results.push({
+        row,
+        expected: profileId,
+        actual: actualProfileId,
+        matches
+      });
+      
+      Logger.log(
+        (matches ? '✅' : '❌') + 
+        ' Row ' + row + ': ' + 
+        (matches ? profileId : 'Expected ' + profileId + ', got ' + actualProfileId)
+      );
+    });
+    
+    // Summary
+    const passCount = results.filter(r => r.matches).length;
+    Logger.log('\n📊 Summary: ' + passCount + '/' + results.length + ' profiles match expected values');
+    
+    if (passCount < results.length) {
+      Logger.log('\n💡 Recommendation: Run createTestDataTab() to recreate the TestData sheet with correct values');
+    }
+    
+  } catch (error) {
+    Logger.log('❌ Error: ' + error.message);
+  }
+}
+
+/**
  * Simulates the Phase 1 classification logic from classifyClientProfileFromWorkingSheet()
  * Uses the exact same logic but works with test data object instead of spreadsheet
  * @param {object} testData - Test data object with all required fields
@@ -1132,7 +1485,8 @@ function testSolo401kBuilderEndToEnd() {
     
     // Convert test data to rowArr format for helper function
     const mockRowArr = convertTestDataToRowArray(testData);
-    const mockHdr = HEADERS;
+    const { sheet, hdr } = initWS(); // Get proper header map from Working Sheet
+    const mockHdr = hdr;
     
     // Execute the profile helper
     const helper = profileHelpers['3_Solo401k_Builder'];
@@ -1368,39 +1722,15 @@ function testSolo401kBuilderEndToEnd() {
  * Maps test data fields to the array positions expected by profile helper functions
  */
 function convertTestDataToRowArray(testData) {
-  const rowArr = new Array(50).fill(''); // Initialize with enough elements
+  const { sheet, hdr } = initWS(); // Get proper header map
+  const maxCol = Math.max(...Object.values(hdr));
+  const rowArr = new Array(maxCol).fill(''); // Initialize with correct size
   
-  // Map test data to rowArr using HEADERS constants
-  Object.entries(HEADERS).forEach(([headerKey, colIndex]) => {
-    // Convert header key to test data field name
-    let testDataKey = headerKey.toLowerCase();
-    
-    // Handle specific mappings
-    const keyMappings = {
-      'student_id': 'student_id',
-      'current_age': 'Current_Age',
-      'net_monthly_income': 'Net_Monthly_Income',
-      'gross_annual_income': 'gross_annual_income',
-      'filing_status': 'filing_status',
-      'tax_minimization': 'Tax_Minimization',
-      'p2_hsa_eligibility': 'hsa_eligibility',
-      'p2_cesa_num_children': 'cesa_num_children',
-      'p2_inv_involvement': 'investment_involvement',
-      'p2_inv_time': 'investment_time',
-      'p2_inv_confidence': 'investment_confidence',
-      'p2_retirement_importance': 'retirement_importance',
-      'p2_retirement_years_until_target': 'retirement_years_until_target',
-      'p2_education_importance': 'education_importance',
-      'p2_cesa_years_until_first_need': 'cesa_years_until_first_need',
-      'p2_health_importance': 'health_importance',
-      'p2_hsa_years_until_need': 'hsa_years_until_need',
-      'p2_ex_q6': 'ex_q6'
-    };
-    
-    const mappedKey = keyMappings[headerKey.toLowerCase()] || testDataKey;
-    
-    if (testData.hasOwnProperty(mappedKey)) {
-      rowArr[colIndex - 1] = testData[mappedKey]; // -1 because HEADERS uses 1-based indexing
+  // Direct mapping: testData field names should match header names exactly
+  Object.entries(testData).forEach(([testDataKey, value]) => {
+    const colIndex = hdr[testDataKey];
+    if (colIndex) {
+      rowArr[colIndex - 1] = value; // -1 because hdr uses 1-based indexing
     }
   });
   

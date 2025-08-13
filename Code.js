@@ -320,15 +320,10 @@ const CURRENT_FORMS_SUMMARY = {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// CURRENT FORMS - LIGHTWEIGHT REFERENCE
+// CURRENT FORMS - REFERENCE
 // ═══════════════════════════════════════════════════════════════════════════════
-
-const CURRENT_FORMS = {
-  lastExported: "2025-08-12T06:18:55.748Z",
-  dataLocation: "Current_Forms_Full.js",
-  note: "Complete form data (4,100+ lines) moved to separate file"
-};
-
+// Complete CURRENT_FORMS data is available from Current_Forms_Full.js
+// (In Google Apps Script, all files share global scope)
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // GOOGLE FORMS MANAGEMENT FUNCTIONS
@@ -717,7 +712,7 @@ function prioritizeRothAccounts(vehicleOrder) {
  */
 const profileHelpers = {
 '3_Solo401k_Builder': function(rowArr, hdr) {
-  // Read the “have plan?” flag and all three Solo‐401k fields
+  // Read the "have plan?" flag and all three Solo‐401k fields
   const hasPlan       = getValue(hdr, rowArr, HEADERS.P2_EX_Q3) === 'Yes';
   const annualEmployee= Number(getValue(hdr, rowArr, HEADERS.P2_EX_Q4)) || 0;
   const annualEmployer= Number(getValue(hdr, rowArr, HEADERS.P2_EX_Q5)) || 0;
