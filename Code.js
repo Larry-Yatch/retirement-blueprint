@@ -723,6 +723,10 @@ const profileHelpers = {
   const numKids = Number(getValue(hdr,rowArr,HEADERS.P2_CESA_NUM_CHILDREN))||0;
   const age     = Number(getValue(hdr,rowArr,HEADERS.CURRENT_AGE));
   const filing  = getValue(hdr,rowArr,HEADERS.FILING_STATUS);
+  
+  // Get tax preference for vehicle ordering
+  const taxFocus = getValue(hdr, rowArr, HEADERS.TAX_MINIMIZATION);
+  
   let hsaCap = 0;
   if (hsaElig) {
     const type    = (filing==='Married Filing Jointly') ? 'FAMILY' : 'INDIVIDUAL';
@@ -761,7 +765,8 @@ const profileHelpers = {
     .filter(v=>!(v.name==='HSA'&&!hsaElig))
     .concat({ name:'Health Bank', capMonthly:Infinity });
 
-  const retirementOrder = cfg.vehicleOrder_Retirement
+  // Build base retirement order with catch-up contributions
+  let baseRetirementOrder = cfg.vehicleOrder_Retirement
     .map(v => {
       let adjustedCap = v.capMonthly;
       
@@ -778,8 +783,19 @@ const profileHelpers = {
       }
       
       return { name: v.name, capMonthly: adjustedCap };
-    })
-    .concat({ name:'Family Bank', capMonthly:Infinity });
+    });
+  
+  // Adjust order based on tax preference
+  if (taxFocus === 'Now') {
+    // Prioritize Traditional over Roth for current tax savings
+    baseRetirementOrder = prioritizeTraditionalAccounts(baseRetirementOrder);
+  } else if (taxFocus === 'Later') {
+    // Prioritize Roth over Traditional for tax-free growth
+    baseRetirementOrder = prioritizeRothAccounts(baseRetirementOrder);
+  }
+  // For 'Both' or undefined, keep original order (balanced approach)
+  
+  const retirementOrder = baseRetirementOrder.concat({ name:'Family Bank', capMonthly:Infinity });
 
   return {
     seeds,
@@ -882,6 +898,9 @@ const profileHelpers = {
     const age = Number(getValue(hdr, rowArr, HEADERS.CURRENT_AGE));
     const filing = getValue(hdr, rowArr, HEADERS.FILING_STATUS);
     
+    // Get tax preference for vehicle ordering
+    const taxFocus = getValue(hdr, rowArr, HEADERS.TAX_MINIMIZATION);
+    
     let hsaCap = 0;
     if (hsaElig) {
       const type = (filing === 'Married Filing Jointly') ? 'FAMILY' : 'INDIVIDUAL';
@@ -910,7 +929,8 @@ const profileHelpers = {
       .filter(v => !(v.name === 'HSA' && !hsaElig))
       .concat({ name: 'Health Bank', capMonthly: Infinity });
 
-    const retirementOrder = cfg.vehicleOrder_Retirement
+    // Build base retirement order with catch-up contributions
+    let baseRetirementOrder = cfg.vehicleOrder_Retirement
       .map(v => {
         let adjustedCap = v.capMonthly;
         
@@ -927,8 +947,19 @@ const profileHelpers = {
         }
         
         return { name: v.name, capMonthly: adjustedCap };
-      })
-      .concat({ name: 'Family Bank', capMonthly: Infinity });
+      });
+    
+    // Adjust order based on tax preference
+    if (taxFocus === 'Now') {
+      // Prioritize Traditional over Roth for current tax savings
+      baseRetirementOrder = prioritizeTraditionalAccounts(baseRetirementOrder);
+    } else if (taxFocus === 'Later') {
+      // Prioritize Roth over Traditional for tax-free growth
+      baseRetirementOrder = prioritizeRothAccounts(baseRetirementOrder);
+    }
+    // For 'Both' or undefined, keep original order (balanced approach)
+    
+    const retirementOrder = baseRetirementOrder.concat({ name: 'Family Bank', capMonthly: Infinity });
 
     return {
       seeds,
@@ -944,6 +975,9 @@ const profileHelpers = {
     const numKids = Number(getValue(hdr, rowArr, HEADERS.P2_CESA_NUM_CHILDREN)) || 0;
     const age = Number(getValue(hdr, rowArr, HEADERS.CURRENT_AGE));
     const filing = getValue(hdr, rowArr, HEADERS.FILING_STATUS);
+    
+    // Get tax preference for vehicle ordering
+    const taxFocus = getValue(hdr, rowArr, HEADERS.TAX_MINIMIZATION);
     
     let hsaCap = 0;
     if (hsaElig) {
@@ -973,7 +1007,8 @@ const profileHelpers = {
       .filter(v => !(v.name === 'HSA' && !hsaElig))
       .concat({ name: 'Health Bank', capMonthly: Infinity });
 
-    const retirementOrder = cfg.vehicleOrder_Retirement
+    // Build base retirement order with catch-up logic
+    let baseRetirementOrder = cfg.vehicleOrder_Retirement
       .map(v => {
         let adjustedCap = v.capMonthly;
         
@@ -990,8 +1025,19 @@ const profileHelpers = {
         }
         
         return { name: v.name, capMonthly: adjustedCap };
-      })
-      .concat({ name: 'Family Bank', capMonthly: Infinity });
+      });
+    
+    // Adjust order based on tax preference
+    if (taxFocus === 'Now') {
+      // Prioritize Traditional over Roth for current tax savings
+      baseRetirementOrder = prioritizeTraditionalAccounts(baseRetirementOrder);
+    } else if (taxFocus === 'Later') {
+      // Prioritize Roth over Traditional for tax-free growth
+      baseRetirementOrder = prioritizeRothAccounts(baseRetirementOrder);
+    }
+    // For 'Both' or undefined, keep original order (balanced approach)
+    
+    const retirementOrder = baseRetirementOrder.concat({ name: 'Family Bank', capMonthly: Infinity });
 
     return {
       seeds,
@@ -1007,6 +1053,9 @@ const profileHelpers = {
     const numKids = Number(getValue(hdr, rowArr, HEADERS.P2_CESA_NUM_CHILDREN)) || 0;
     const age = Number(getValue(hdr, rowArr, HEADERS.CURRENT_AGE));
     const filing = getValue(hdr, rowArr, HEADERS.FILING_STATUS);
+    
+    // Get tax preference for vehicle ordering
+    const taxFocus = getValue(hdr, rowArr, HEADERS.TAX_MINIMIZATION);
     
     let hsaCap = 0;
     if (hsaElig) {
@@ -1036,7 +1085,8 @@ const profileHelpers = {
       .filter(v => !(v.name === 'HSA' && !hsaElig))
       .concat({ name: 'Health Bank', capMonthly: Infinity });
 
-    const retirementOrder = cfg.vehicleOrder_Retirement
+    // Build base retirement order with catch-up logic
+    let baseRetirementOrder = cfg.vehicleOrder_Retirement
       .map(v => {
         let adjustedCap = v.capMonthly;
         
@@ -1053,8 +1103,19 @@ const profileHelpers = {
         }
         
         return { name: v.name, capMonthly: adjustedCap };
-      })
-      .concat({ name: 'Family Bank', capMonthly: Infinity });
+      });
+    
+    // Adjust order based on tax preference
+    if (taxFocus === 'Now') {
+      // Prioritize Traditional over Roth for current tax savings
+      baseRetirementOrder = prioritizeTraditionalAccounts(baseRetirementOrder);
+    } else if (taxFocus === 'Later') {
+      // Prioritize Roth over Traditional for tax-free growth
+      baseRetirementOrder = prioritizeRothAccounts(baseRetirementOrder);
+    }
+    // For 'Both' or undefined, keep original order (balanced approach)
+    
+    const retirementOrder = baseRetirementOrder.concat({ name: 'Family Bank', capMonthly: Infinity });
 
     return {
       seeds,
@@ -1070,6 +1131,9 @@ const profileHelpers = {
     const numKids = Number(getValue(hdr, rowArr, HEADERS.P2_CESA_NUM_CHILDREN)) || 0;
     const age = Number(getValue(hdr, rowArr, HEADERS.CURRENT_AGE));
     const filing = getValue(hdr, rowArr, HEADERS.FILING_STATUS);
+    
+    // Get tax preference for vehicle ordering
+    const taxFocus = getValue(hdr, rowArr, HEADERS.TAX_MINIMIZATION);
     
     let hsaCap = 0;
     if (hsaElig) {
@@ -1099,7 +1163,8 @@ const profileHelpers = {
       .filter(v => !(v.name === 'HSA' && !hsaElig))
       .concat({ name: 'Health Bank', capMonthly: Infinity });
 
-    const retirementOrder = cfg.vehicleOrder_Retirement
+    // Build base retirement order with catch-up logic
+    let baseRetirementOrder = cfg.vehicleOrder_Retirement
       .map(v => {
         let adjustedCap = v.capMonthly;
         
@@ -1116,8 +1181,19 @@ const profileHelpers = {
         }
         
         return { name: v.name, capMonthly: adjustedCap };
-      })
-      .concat({ name: 'Family Bank', capMonthly: Infinity });
+      });
+    
+    // Adjust order based on tax preference
+    if (taxFocus === 'Now') {
+      // Prioritize Traditional over Roth for current tax savings
+      baseRetirementOrder = prioritizeTraditionalAccounts(baseRetirementOrder);
+    } else if (taxFocus === 'Later') {
+      // Prioritize Roth over Traditional for tax-free growth
+      baseRetirementOrder = prioritizeRothAccounts(baseRetirementOrder);
+    }
+    // For 'Both' or undefined, keep original order (balanced approach)
+    
+    const retirementOrder = baseRetirementOrder.concat({ name: 'Family Bank', capMonthly: Infinity });
 
     return {
       seeds,
@@ -1133,6 +1209,9 @@ const profileHelpers = {
     const numKids = Number(getValue(hdr, rowArr, HEADERS.P2_CESA_NUM_CHILDREN)) || 0;
     const age = Number(getValue(hdr, rowArr, HEADERS.CURRENT_AGE));
     const filing = getValue(hdr, rowArr, HEADERS.FILING_STATUS);
+    
+    // Get tax preference for vehicle ordering
+    const taxFocus = getValue(hdr, rowArr, HEADERS.TAX_MINIMIZATION);
     
     let hsaCap = 0;
     if (hsaElig) {
@@ -1162,7 +1241,8 @@ const profileHelpers = {
       .filter(v => !(v.name === 'HSA' && !hsaElig))
       .concat({ name: 'Health Bank', capMonthly: Infinity });
 
-    const retirementOrder = cfg.vehicleOrder_Retirement
+    // Build base retirement order with catch-up logic
+    let baseRetirementOrder = cfg.vehicleOrder_Retirement
       .map(v => {
         let adjustedCap = v.capMonthly;
         
@@ -1179,8 +1259,19 @@ const profileHelpers = {
         }
         
         return { name: v.name, capMonthly: adjustedCap };
-      })
-      .concat({ name: 'Family Bank', capMonthly: Infinity });
+      });
+    
+    // Adjust order based on tax preference
+    if (taxFocus === 'Now') {
+      // Prioritize Traditional over Roth for current tax savings
+      baseRetirementOrder = prioritizeTraditionalAccounts(baseRetirementOrder);
+    } else if (taxFocus === 'Later') {
+      // Prioritize Roth over Traditional for tax-free growth
+      baseRetirementOrder = prioritizeRothAccounts(baseRetirementOrder);
+    }
+    // For 'Both' or undefined, keep original order (balanced approach)
+    
+    const retirementOrder = baseRetirementOrder.concat({ name: 'Family Bank', capMonthly: Infinity });
 
     return {
       seeds,
@@ -1196,6 +1287,9 @@ const profileHelpers = {
     const numKids = Number(getValue(hdr, rowArr, HEADERS.P2_CESA_NUM_CHILDREN)) || 0;
     const age = Number(getValue(hdr, rowArr, HEADERS.CURRENT_AGE));
     const filing = getValue(hdr, rowArr, HEADERS.FILING_STATUS);
+    
+    // Get tax preference for vehicle ordering
+    const taxFocus = getValue(hdr, rowArr, HEADERS.TAX_MINIMIZATION);
     
     let hsaCap = 0;
     if (hsaElig) {
@@ -1225,7 +1319,8 @@ const profileHelpers = {
       .filter(v => !(v.name === 'HSA' && !hsaElig))
       .concat({ name: 'Health Bank', capMonthly: Infinity });
 
-    const retirementOrder = cfg.vehicleOrder_Retirement
+    // Build base retirement order with catch-up logic
+    let baseRetirementOrder = cfg.vehicleOrder_Retirement
       .map(v => {
         let adjustedCap = v.capMonthly;
         
@@ -1242,8 +1337,19 @@ const profileHelpers = {
         }
         
         return { name: v.name, capMonthly: adjustedCap };
-      })
-      .concat({ name: 'Family Bank', capMonthly: Infinity });
+      });
+    
+    // Adjust order based on tax preference
+    if (taxFocus === 'Now') {
+      // Prioritize Traditional over Roth for current tax savings
+      baseRetirementOrder = prioritizeTraditionalAccounts(baseRetirementOrder);
+    } else if (taxFocus === 'Later') {
+      // Prioritize Roth over Traditional for tax-free growth
+      baseRetirementOrder = prioritizeRothAccounts(baseRetirementOrder);
+    }
+    // For 'Both' or undefined, keep original order (balanced approach)
+    
+    const retirementOrder = baseRetirementOrder.concat({ name: 'Family Bank', capMonthly: Infinity });
 
     return {
       seeds,
@@ -1259,6 +1365,9 @@ const profileHelpers = {
     const numKids = Number(getValue(hdr, rowArr, HEADERS.P2_CESA_NUM_CHILDREN)) || 0;
     const age = Number(getValue(hdr, rowArr, HEADERS.CURRENT_AGE));
     const filing = getValue(hdr, rowArr, HEADERS.FILING_STATUS);
+    
+    // Get tax preference for vehicle ordering
+    const taxFocus = getValue(hdr, rowArr, HEADERS.TAX_MINIMIZATION);
     
     let hsaCap = 0;
     if (hsaElig) {
@@ -1288,7 +1397,8 @@ const profileHelpers = {
       .filter(v => !(v.name === 'HSA' && !hsaElig))
       .concat({ name: 'Health Bank', capMonthly: Infinity });
 
-    const retirementOrder = cfg.vehicleOrder_Retirement
+    // Build base retirement order with catch-up logic
+    let baseRetirementOrder = cfg.vehicleOrder_Retirement
       .map(v => {
         let adjustedCap = v.capMonthly;
         
@@ -1305,8 +1415,19 @@ const profileHelpers = {
         }
         
         return { name: v.name, capMonthly: adjustedCap };
-      })
-      .concat({ name: 'Family Bank', capMonthly: Infinity });
+      });
+    
+    // Adjust order based on tax preference
+    if (taxFocus === 'Now') {
+      // Prioritize Traditional over Roth for current tax savings
+      baseRetirementOrder = prioritizeTraditionalAccounts(baseRetirementOrder);
+    } else if (taxFocus === 'Later') {
+      // Prioritize Roth over Traditional for tax-free growth
+      baseRetirementOrder = prioritizeRothAccounts(baseRetirementOrder);
+    }
+    // For 'Both' or undefined, keep original order (balanced approach)
+    
+    const retirementOrder = baseRetirementOrder.concat({ name: 'Family Bank', capMonthly: Infinity });
 
     return {
       seeds,
