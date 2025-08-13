@@ -499,6 +499,43 @@ function quickTestTaxPreference() {
   Logger.log('\n🎯 Tax preference verification complete');
 }
 
+// Test HSA/CESA utility functions optimization
+function testHsaCesaOptimization() {
+  Logger.log('🔧 TESTING: HSA/CESA Utility Function Optimization');
+  
+  try {
+    // Test the utility functions directly
+    const testHsa1 = calculateHsaMonthlyCapacity(true, 30, 'Single');
+    const testHsa2 = calculateHsaMonthlyCapacity(true, 58, 'Married Filing Jointly');
+    const testHsa3 = calculateHsaMonthlyCapacity(false, 45, 'Single');
+    
+    const testCesa1 = calculateCesaMonthlyCapacity(0);
+    const testCesa2 = calculateCesaMonthlyCapacity(2);
+    
+    Logger.log('HSA utility function tests:');
+    Logger.log(`  Young Single HSA: $${testHsa1.toFixed(2)}/month`);
+    Logger.log(`  Older Married HSA: $${testHsa2.toFixed(2)}/month`);
+    Logger.log(`  HSA Ineligible: $${testHsa3.toFixed(2)}/month`);
+    
+    Logger.log('CESA utility function tests:');
+    Logger.log(`  0 children: $${testCesa1.toFixed(2)}/month`);
+    Logger.log(`  2 children: $${testCesa2.toFixed(2)}/month`);
+    
+    // Test that a profile helper still works
+    const result = testProfileHelperWithTestData('3_Solo401k_Builder', 4);
+    
+    if (result && result.vehicleOrders && result.vehicleOrders.Retirement) {
+      Logger.log('✅ HSA/CESA optimization successful: Profile helpers still working');
+      Logger.log('✅ Code duplication eliminated without breaking functionality');
+    } else {
+      Logger.log('❌ HSA/CESA optimization may have issues');
+    }
+    
+  } catch (error) {
+    Logger.log(`❌ Error testing HSA/CESA optimization: ${error.message}`);
+  }
+}
+
 // Comprehensive smoke test of all profiles 
 function smokeTestAllProfiles() {
   Logger.log('🔥 SMOKE TEST: All Profile Helpers');

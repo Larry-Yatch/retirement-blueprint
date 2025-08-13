@@ -703,6 +703,23 @@ function prioritizeRothAccounts(vehicleOrder) {
   return [...roth, ...other, ...traditional];
 }
 
+/**
+ * HSA/CESA calculation utility functions
+ */
+function calculateHsaMonthlyCapacity(hsaEligible, age, filingStatus) {
+  if (!hsaEligible) return 0;
+  
+  const type = (filingStatus === 'Married Filing Jointly') ? 'FAMILY' : 'INDIVIDUAL';
+  const base = LIMITS.HEALTH.HSA[type];
+  const catchup = age >= 55 ? LIMITS.HEALTH.HSA.CATCHUP : 0;
+  
+  return (base + catchup) / 12;
+}
+
+function calculateCesaMonthlyCapacity(numChildren) {
+  return (CONFIG.ANNUAL_CESA_LIMIT * numChildren) / 12;
+}
+
 // Stub helpers object—one entry per profileId
 /**
  * Per-profile configuration helpers.
@@ -727,14 +744,9 @@ const profileHelpers = {
   // Get tax preference for vehicle ordering
   const taxFocus = getValue(hdr, rowArr, HEADERS.TAX_MINIMIZATION);
   
-  let hsaCap = 0;
-  if (hsaElig) {
-    const type    = (filing==='Married Filing Jointly') ? 'FAMILY' : 'INDIVIDUAL';
-    const base    = LIMITS.HEALTH.HSA[type];
-    const catchup = age>=55 ? LIMITS.HEALTH.HSA.CATCHUP : 0;
-    hsaCap = (base+catchup)/12;
-  }
-  const cesaCap = (CONFIG.ANNUAL_CESA_LIMIT * numKids) / 12;
+  // Calculate monthly capacities using utility functions
+  const hsaCap = calculateHsaMonthlyCapacity(hsaElig, age, filing);
+  const cesaCap = calculateCesaMonthlyCapacity(numKids);
 
   // Seed map: decide which bucket to prefill
   const seeds = { Education: {}, Health: {}, Retirement: {} };
@@ -901,14 +913,9 @@ const profileHelpers = {
     // Get tax preference for vehicle ordering
     const taxFocus = getValue(hdr, rowArr, HEADERS.TAX_MINIMIZATION);
     
-    let hsaCap = 0;
-    if (hsaElig) {
-      const type = (filing === 'Married Filing Jointly') ? 'FAMILY' : 'INDIVIDUAL';
-      const base = LIMITS.HEALTH.HSA[type];
-      const catchup = age >= 55 ? LIMITS.HEALTH.HSA.CATCHUP : 0;
-      hsaCap = (base + catchup) / 12;
-    }
-    const cesaCap = (CONFIG.ANNUAL_CESA_LIMIT * numKids) / 12;
+    // Calculate monthly capacities using utility functions
+    const hsaCap = calculateHsaMonthlyCapacity(hsaElig, age, filing);
+    const cesaCap = calculateCesaMonthlyCapacity(numKids);
 
     const seeds = { Education: {}, Health: {}, Retirement: {} };
     
@@ -979,14 +986,9 @@ const profileHelpers = {
     // Get tax preference for vehicle ordering
     const taxFocus = getValue(hdr, rowArr, HEADERS.TAX_MINIMIZATION);
     
-    let hsaCap = 0;
-    if (hsaElig) {
-      const type = (filing === 'Married Filing Jointly') ? 'FAMILY' : 'INDIVIDUAL';
-      const base = LIMITS.HEALTH.HSA[type];
-      const catchup = age >= 55 ? LIMITS.HEALTH.HSA.CATCHUP : 0;
-      hsaCap = (base + catchup) / 12;
-    }
-    const cesaCap = (CONFIG.ANNUAL_CESA_LIMIT * numKids) / 12;
+    // Calculate monthly capacities using utility functions
+    const hsaCap = calculateHsaMonthlyCapacity(hsaElig, age, filing);
+    const cesaCap = calculateCesaMonthlyCapacity(numKids);
 
     const seeds = { Education: {}, Health: {}, Retirement: {} };
     
@@ -1057,14 +1059,9 @@ const profileHelpers = {
     // Get tax preference for vehicle ordering
     const taxFocus = getValue(hdr, rowArr, HEADERS.TAX_MINIMIZATION);
     
-    let hsaCap = 0;
-    if (hsaElig) {
-      const type = (filing === 'Married Filing Jointly') ? 'FAMILY' : 'INDIVIDUAL';
-      const base = LIMITS.HEALTH.HSA[type];
-      const catchup = age >= 55 ? LIMITS.HEALTH.HSA.CATCHUP : 0;
-      hsaCap = (base + catchup) / 12;
-    }
-    const cesaCap = (CONFIG.ANNUAL_CESA_LIMIT * numKids) / 12;
+    // Calculate monthly capacities using utility functions
+    const hsaCap = calculateHsaMonthlyCapacity(hsaElig, age, filing);
+    const cesaCap = calculateCesaMonthlyCapacity(numKids);
 
     const seeds = { Education: {}, Health: {}, Retirement: {} };
     
@@ -1135,14 +1132,9 @@ const profileHelpers = {
     // Get tax preference for vehicle ordering
     const taxFocus = getValue(hdr, rowArr, HEADERS.TAX_MINIMIZATION);
     
-    let hsaCap = 0;
-    if (hsaElig) {
-      const type = (filing === 'Married Filing Jointly') ? 'FAMILY' : 'INDIVIDUAL';
-      const base = LIMITS.HEALTH.HSA[type];
-      const catchup = age >= 55 ? LIMITS.HEALTH.HSA.CATCHUP : 0;
-      hsaCap = (base + catchup) / 12;
-    }
-    const cesaCap = (CONFIG.ANNUAL_CESA_LIMIT * numKids) / 12;
+    // Calculate monthly capacities using utility functions
+    const hsaCap = calculateHsaMonthlyCapacity(hsaElig, age, filing);
+    const cesaCap = calculateCesaMonthlyCapacity(numKids);
 
     const seeds = { Education: {}, Health: {}, Retirement: {} };
     
@@ -1213,14 +1205,9 @@ const profileHelpers = {
     // Get tax preference for vehicle ordering
     const taxFocus = getValue(hdr, rowArr, HEADERS.TAX_MINIMIZATION);
     
-    let hsaCap = 0;
-    if (hsaElig) {
-      const type = (filing === 'Married Filing Jointly') ? 'FAMILY' : 'INDIVIDUAL';
-      const base = LIMITS.HEALTH.HSA[type];
-      const catchup = age >= 55 ? LIMITS.HEALTH.HSA.CATCHUP : 0;
-      hsaCap = (base + catchup) / 12;
-    }
-    const cesaCap = (CONFIG.ANNUAL_CESA_LIMIT * numKids) / 12;
+    // Calculate monthly capacities using utility functions
+    const hsaCap = calculateHsaMonthlyCapacity(hsaElig, age, filing);
+    const cesaCap = calculateCesaMonthlyCapacity(numKids);
 
     const seeds = { Education: {}, Health: {}, Retirement: {} };
     
@@ -1291,14 +1278,9 @@ const profileHelpers = {
     // Get tax preference for vehicle ordering
     const taxFocus = getValue(hdr, rowArr, HEADERS.TAX_MINIMIZATION);
     
-    let hsaCap = 0;
-    if (hsaElig) {
-      const type = (filing === 'Married Filing Jointly') ? 'FAMILY' : 'INDIVIDUAL';
-      const base = LIMITS.HEALTH.HSA[type];
-      const catchup = age >= 55 ? LIMITS.HEALTH.HSA.CATCHUP : 0;
-      hsaCap = (base + catchup) / 12;
-    }
-    const cesaCap = (CONFIG.ANNUAL_CESA_LIMIT * numKids) / 12;
+    // Calculate monthly capacities using utility functions
+    const hsaCap = calculateHsaMonthlyCapacity(hsaElig, age, filing);
+    const cesaCap = calculateCesaMonthlyCapacity(numKids);
 
     const seeds = { Education: {}, Health: {}, Retirement: {} };
     
@@ -1369,14 +1351,9 @@ const profileHelpers = {
     // Get tax preference for vehicle ordering
     const taxFocus = getValue(hdr, rowArr, HEADERS.TAX_MINIMIZATION);
     
-    let hsaCap = 0;
-    if (hsaElig) {
-      const type = (filing === 'Married Filing Jointly') ? 'FAMILY' : 'INDIVIDUAL';
-      const base = LIMITS.HEALTH.HSA[type];
-      const catchup = age >= 55 ? LIMITS.HEALTH.HSA.CATCHUP : 0;
-      hsaCap = (base + catchup) / 12;
-    }
-    const cesaCap = (CONFIG.ANNUAL_CESA_LIMIT * numKids) / 12;
+    // Calculate monthly capacities using utility functions
+    const hsaCap = calculateHsaMonthlyCapacity(hsaElig, age, filing);
+    const cesaCap = calculateCesaMonthlyCapacity(numKids);
 
     const seeds = { Education: {}, Health: {}, Retirement: {} };
     
