@@ -762,7 +762,23 @@ const profileHelpers = {
     .concat({ name:'Health Bank', capMonthly:Infinity });
 
   const retirementOrder = cfg.vehicleOrder_Retirement
-    .map(v=>({ name:v.name, capMonthly:v.capMonthly }))
+    .map(v => {
+      let adjustedCap = v.capMonthly;
+      
+      // Apply catch-up contributions for age 50+
+      if (age >= 50) {
+        if (v.name.includes('401')) {
+          // 401(k) catch-up: $7,500 for 50-59, $11,250 for 60+
+          const catchup401k = age >= 60 ? LIMITS.RETIREMENT.CATCHUP_401K_60 : LIMITS.RETIREMENT.CATCHUP_401K_50;
+          adjustedCap = (v.capMonthly * 12 + catchup401k) / 12;
+        } else if (v.name.includes('IRA')) {
+          // IRA catch-up: $1,000 for 50+
+          adjustedCap = (v.capMonthly * 12 + LIMITS.RETIREMENT.CATCHUP_IRA) / 12;
+        }
+      }
+      
+      return { name: v.name, capMonthly: adjustedCap };
+    })
     .concat({ name:'Family Bank', capMonthly:Infinity });
 
   return {
@@ -805,7 +821,23 @@ const profileHelpers = {
     
     // Build base retirement order
     let baseRetirementOrder = cfg.vehicleOrder_Retirement
-      .map(v => ({ name: v.name, capMonthly: v.capMonthly }));
+      .map(v => {
+        let adjustedCap = v.capMonthly;
+        
+        // Apply catch-up contributions for age 50+
+        if (age >= 50) {
+          if (v.name.includes('401')) {
+            // 401(k) catch-up: $7,500 for 50-59, $11,250 for 60+
+            const catchup401k = age >= 60 ? LIMITS.RETIREMENT.CATCHUP_401K_60 : LIMITS.RETIREMENT.CATCHUP_401K_50;
+            adjustedCap = (v.capMonthly * 12 + catchup401k) / 12;
+          } else if (v.name.includes('IRA')) {
+            // IRA catch-up: $1,000 for 50+
+            adjustedCap = (v.capMonthly * 12 + LIMITS.RETIREMENT.CATCHUP_IRA) / 12;
+          }
+        }
+        
+        return { name: v.name, capMonthly: adjustedCap };
+      });
     
     // Adjust order based on tax preference
     if (taxFocus === 'Now') {
@@ -879,7 +911,23 @@ const profileHelpers = {
       .concat({ name: 'Health Bank', capMonthly: Infinity });
 
     const retirementOrder = cfg.vehicleOrder_Retirement
-      .map(v => ({ name: v.name, capMonthly: v.capMonthly }))
+      .map(v => {
+        let adjustedCap = v.capMonthly;
+        
+        // Apply catch-up contributions for age 50+
+        if (age >= 50) {
+          if (v.name.includes('401')) {
+            // 401(k) catch-up: $7,500 for 50-59, $11,250 for 60+
+            const catchup401k = age >= 60 ? LIMITS.RETIREMENT.CATCHUP_401K_60 : LIMITS.RETIREMENT.CATCHUP_401K_50;
+            adjustedCap = (v.capMonthly * 12 + catchup401k) / 12;
+          } else if (v.name.includes('IRA')) {
+            // IRA catch-up: $1,000 for 50+
+            adjustedCap = (v.capMonthly * 12 + LIMITS.RETIREMENT.CATCHUP_IRA) / 12;
+          }
+        }
+        
+        return { name: v.name, capMonthly: adjustedCap };
+      })
       .concat({ name: 'Family Bank', capMonthly: Infinity });
 
     return {
@@ -926,7 +974,23 @@ const profileHelpers = {
       .concat({ name: 'Health Bank', capMonthly: Infinity });
 
     const retirementOrder = cfg.vehicleOrder_Retirement
-      .map(v => ({ name: v.name, capMonthly: v.capMonthly }))
+      .map(v => {
+        let adjustedCap = v.capMonthly;
+        
+        // Apply catch-up contributions for age 50+
+        if (age >= 50) {
+          if (v.name.includes('401')) {
+            // 401(k) catch-up: $7,500 for 50-59, $11,250 for 60+
+            const catchup401k = age >= 60 ? LIMITS.RETIREMENT.CATCHUP_401K_60 : LIMITS.RETIREMENT.CATCHUP_401K_50;
+            adjustedCap = (v.capMonthly * 12 + catchup401k) / 12;
+          } else if (v.name.includes('IRA')) {
+            // IRA catch-up: $1,000 for 50+
+            adjustedCap = (v.capMonthly * 12 + LIMITS.RETIREMENT.CATCHUP_IRA) / 12;
+          }
+        }
+        
+        return { name: v.name, capMonthly: adjustedCap };
+      })
       .concat({ name: 'Family Bank', capMonthly: Infinity });
 
     return {
@@ -973,7 +1037,23 @@ const profileHelpers = {
       .concat({ name: 'Health Bank', capMonthly: Infinity });
 
     const retirementOrder = cfg.vehicleOrder_Retirement
-      .map(v => ({ name: v.name, capMonthly: v.capMonthly }))
+      .map(v => {
+        let adjustedCap = v.capMonthly;
+        
+        // Apply catch-up contributions for age 50+
+        if (age >= 50) {
+          if (v.name.includes('401')) {
+            // 401(k) catch-up: $7,500 for 50-59, $11,250 for 60+
+            const catchup401k = age >= 60 ? LIMITS.RETIREMENT.CATCHUP_401K_60 : LIMITS.RETIREMENT.CATCHUP_401K_50;
+            adjustedCap = (v.capMonthly * 12 + catchup401k) / 12;
+          } else if (v.name.includes('IRA')) {
+            // IRA catch-up: $1,000 for 50+
+            adjustedCap = (v.capMonthly * 12 + LIMITS.RETIREMENT.CATCHUP_IRA) / 12;
+          }
+        }
+        
+        return { name: v.name, capMonthly: adjustedCap };
+      })
       .concat({ name: 'Family Bank', capMonthly: Infinity });
 
     return {
@@ -1020,7 +1100,23 @@ const profileHelpers = {
       .concat({ name: 'Health Bank', capMonthly: Infinity });
 
     const retirementOrder = cfg.vehicleOrder_Retirement
-      .map(v => ({ name: v.name, capMonthly: v.capMonthly }))
+      .map(v => {
+        let adjustedCap = v.capMonthly;
+        
+        // Apply catch-up contributions for age 50+
+        if (age >= 50) {
+          if (v.name.includes('401')) {
+            // 401(k) catch-up: $7,500 for 50-59, $11,250 for 60+
+            const catchup401k = age >= 60 ? LIMITS.RETIREMENT.CATCHUP_401K_60 : LIMITS.RETIREMENT.CATCHUP_401K_50;
+            adjustedCap = (v.capMonthly * 12 + catchup401k) / 12;
+          } else if (v.name.includes('IRA')) {
+            // IRA catch-up: $1,000 for 50+
+            adjustedCap = (v.capMonthly * 12 + LIMITS.RETIREMENT.CATCHUP_IRA) / 12;
+          }
+        }
+        
+        return { name: v.name, capMonthly: adjustedCap };
+      })
       .concat({ name: 'Family Bank', capMonthly: Infinity });
 
     return {
@@ -1067,7 +1163,23 @@ const profileHelpers = {
       .concat({ name: 'Health Bank', capMonthly: Infinity });
 
     const retirementOrder = cfg.vehicleOrder_Retirement
-      .map(v => ({ name: v.name, capMonthly: v.capMonthly }))
+      .map(v => {
+        let adjustedCap = v.capMonthly;
+        
+        // Apply catch-up contributions for age 50+
+        if (age >= 50) {
+          if (v.name.includes('401')) {
+            // 401(k) catch-up: $7,500 for 50-59, $11,250 for 60+
+            const catchup401k = age >= 60 ? LIMITS.RETIREMENT.CATCHUP_401K_60 : LIMITS.RETIREMENT.CATCHUP_401K_50;
+            adjustedCap = (v.capMonthly * 12 + catchup401k) / 12;
+          } else if (v.name.includes('IRA')) {
+            // IRA catch-up: $1,000 for 50+
+            adjustedCap = (v.capMonthly * 12 + LIMITS.RETIREMENT.CATCHUP_IRA) / 12;
+          }
+        }
+        
+        return { name: v.name, capMonthly: adjustedCap };
+      })
       .concat({ name: 'Family Bank', capMonthly: Infinity });
 
     return {
@@ -1114,7 +1226,23 @@ const profileHelpers = {
       .concat({ name: 'Health Bank', capMonthly: Infinity });
 
     const retirementOrder = cfg.vehicleOrder_Retirement
-      .map(v => ({ name: v.name, capMonthly: v.capMonthly }))
+      .map(v => {
+        let adjustedCap = v.capMonthly;
+        
+        // Apply catch-up contributions for age 50+
+        if (age >= 50) {
+          if (v.name.includes('401')) {
+            // 401(k) catch-up: $7,500 for 50-59, $11,250 for 60+
+            const catchup401k = age >= 60 ? LIMITS.RETIREMENT.CATCHUP_401K_60 : LIMITS.RETIREMENT.CATCHUP_401K_50;
+            adjustedCap = (v.capMonthly * 12 + catchup401k) / 12;
+          } else if (v.name.includes('IRA')) {
+            // IRA catch-up: $1,000 for 50+
+            adjustedCap = (v.capMonthly * 12 + LIMITS.RETIREMENT.CATCHUP_IRA) / 12;
+          }
+        }
+        
+        return { name: v.name, capMonthly: adjustedCap };
+      })
       .concat({ name: 'Family Bank', capMonthly: Infinity });
 
     return {
@@ -1161,7 +1289,23 @@ const profileHelpers = {
       .concat({ name: 'Health Bank', capMonthly: Infinity });
 
     const retirementOrder = cfg.vehicleOrder_Retirement
-      .map(v => ({ name: v.name, capMonthly: v.capMonthly }))
+      .map(v => {
+        let adjustedCap = v.capMonthly;
+        
+        // Apply catch-up contributions for age 50+
+        if (age >= 50) {
+          if (v.name.includes('401')) {
+            // 401(k) catch-up: $7,500 for 50-59, $11,250 for 60+
+            const catchup401k = age >= 60 ? LIMITS.RETIREMENT.CATCHUP_401K_60 : LIMITS.RETIREMENT.CATCHUP_401K_50;
+            adjustedCap = (v.capMonthly * 12 + catchup401k) / 12;
+          } else if (v.name.includes('IRA')) {
+            // IRA catch-up: $1,000 for 50+
+            adjustedCap = (v.capMonthly * 12 + LIMITS.RETIREMENT.CATCHUP_IRA) / 12;
+          }
+        }
+        
+        return { name: v.name, capMonthly: adjustedCap };
+      })
       .concat({ name: 'Family Bank', capMonthly: Infinity });
 
     return {
