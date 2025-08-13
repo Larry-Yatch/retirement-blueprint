@@ -763,7 +763,6 @@ const profileHelpers = {
 
   const retirementOrder = cfg.vehicleOrder_Retirement
     .map(v=>({ name:v.name, capMonthly:v.capMonthly }))
-    .filter(v=>!(v.name==='HSA'&&!hsaElig))
     .concat({ name:'Family Bank', capMonthly:Infinity });
 
   return {
@@ -806,8 +805,7 @@ const profileHelpers = {
     
     // Build base retirement order
     let baseRetirementOrder = cfg.vehicleOrder_Retirement
-      .map(v => ({ name: v.name, capMonthly: v.capMonthly }))
-      .filter(v => !(v.name === 'HSA' && !hsaElig));
+      .map(v => ({ name: v.name, capMonthly: v.capMonthly }));
     
     // Adjust order based on tax preference
     if (taxFocus === 'Now') {
@@ -882,7 +880,6 @@ const profileHelpers = {
 
     const retirementOrder = cfg.vehicleOrder_Retirement
       .map(v => ({ name: v.name, capMonthly: v.capMonthly }))
-      .filter(v => !(v.name === 'HSA' && !hsaElig))
       .concat({ name: 'Family Bank', capMonthly: Infinity });
 
     return {
@@ -930,7 +927,6 @@ const profileHelpers = {
 
     const retirementOrder = cfg.vehicleOrder_Retirement
       .map(v => ({ name: v.name, capMonthly: v.capMonthly }))
-      .filter(v => !(v.name === 'HSA' && !hsaElig))
       .concat({ name: 'Family Bank', capMonthly: Infinity });
 
     return {
@@ -978,7 +974,6 @@ const profileHelpers = {
 
     const retirementOrder = cfg.vehicleOrder_Retirement
       .map(v => ({ name: v.name, capMonthly: v.capMonthly }))
-      .filter(v => !(v.name === 'HSA' && !hsaElig))
       .concat({ name: 'Family Bank', capMonthly: Infinity });
 
     return {
@@ -1026,7 +1021,6 @@ const profileHelpers = {
 
     const retirementOrder = cfg.vehicleOrder_Retirement
       .map(v => ({ name: v.name, capMonthly: v.capMonthly }))
-      .filter(v => !(v.name === 'HSA' && !hsaElig))
       .concat({ name: 'Family Bank', capMonthly: Infinity });
 
     return {
@@ -1074,7 +1068,6 @@ const profileHelpers = {
 
     const retirementOrder = cfg.vehicleOrder_Retirement
       .map(v => ({ name: v.name, capMonthly: v.capMonthly }))
-      .filter(v => !(v.name === 'HSA' && !hsaElig))
       .concat({ name: 'Family Bank', capMonthly: Infinity });
 
     return {
@@ -1122,7 +1115,6 @@ const profileHelpers = {
 
     const retirementOrder = cfg.vehicleOrder_Retirement
       .map(v => ({ name: v.name, capMonthly: v.capMonthly }))
-      .filter(v => !(v.name === 'HSA' && !hsaElig))
       .concat({ name: 'Family Bank', capMonthly: Infinity });
 
     return {
@@ -1170,7 +1162,6 @@ const profileHelpers = {
 
     const retirementOrder = cfg.vehicleOrder_Retirement
       .map(v => ({ name: v.name, capMonthly: v.capMonthly }))
-      .filter(v => !(v.name === 'HSA' && !hsaElig))
       .concat({ name: 'Family Bank', capMonthly: Infinity });
 
     return {
