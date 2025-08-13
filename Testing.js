@@ -444,29 +444,37 @@ function quickTestSolo401k() {
 // Quick tax preference verification test
 function quickTestTaxPreference() {
   Logger.log('🎯 QUICK TEST: Tax Preference Logic Verification');
+  Logger.log('Using TestData sheet for accurate testing...\n');
   
   const testProfiles = [
-    { profile: '3_Solo401k_Builder', taxPref: 'Now', expected: 'Traditional first' },
-    { profile: '2_ROBS_Curious', taxPref: 'Later', expected: 'Roth first' },
-    { profile: '4_Roth_Reclaimer', taxPref: 'Both', expected: 'Balanced order' }
+    { profile: '5_Bracket_Strategist', row: 6, taxPref: 'Now', expected: 'Traditional first' },
+    { profile: '2_ROBS_Curious', row: 3, taxPref: 'Later', expected: 'Roth first' },
+    { profile: '4_Roth_Reclaimer', row: 5, taxPref: 'Both', expected: 'Balanced order' }
   ];
   
   testProfiles.forEach(test => {
-    Logger.log(`\n--- Testing ${test.profile} (${test.taxPref}) ---`);
+    Logger.log(`--- Testing ${test.profile} (${test.taxPref}) ---`);
     try {
-      const result = testProfileHelper(test.profile);
+      // Use the same approach as our successful end-to-end tests
+      const result = testProfileHelperWithTestData(test.profile, test.row);
       const retOrder = result.vehicleOrders.Retirement || [];
       const vehicleNames = retOrder.slice(0, -1).map(v => v.name); // Exclude Family Bank
       
       Logger.log(`Tax preference: ${test.taxPref} (${test.expected})`);
       Logger.log(`Retirement order: ${vehicleNames.join(' → ')}`);
       
-      // Simple verification
-      const hasTraditional = vehicleNames.some(name => name.toLowerCase().includes('traditional'));
+      // Enhanced verification
+      const hasTraditional = vehicleNames.some(name => 
+        name.toLowerCase().includes('traditional') || 
+        (name.toLowerCase().includes('401') && !name.toLowerCase().includes('roth'))
+      );
       const hasRoth = vehicleNames.some(name => name.toLowerCase().includes('roth'));
       
       if (hasTraditional && hasRoth) {
-        const traditionalIndex = vehicleNames.findIndex(name => name.toLowerCase().includes('traditional'));
+        const traditionalIndex = vehicleNames.findIndex(name => 
+          name.toLowerCase().includes('traditional') || 
+          (name.toLowerCase().includes('401') && !name.toLowerCase().includes('roth'))
+        );
         const rothIndex = vehicleNames.findIndex(name => name.toLowerCase().includes('roth'));
         
         if (test.taxPref === 'Now' && traditionalIndex < rothIndex) {
@@ -477,9 +485,11 @@ function quickTestTaxPreference() {
           Logger.log('✅ Tax preference BOTH working: Balanced order maintained');
         } else {
           Logger.log(`⚠️ Tax preference may need review for ${test.profile}`);
+          Logger.log(`   Traditional at index: ${traditionalIndex}, Roth at index: ${rothIndex}`);
         }
       } else {
         Logger.log('ℹ️ Profile has limited retirement vehicle types for comparison');
+        Logger.log(`   Vehicle types found: ${vehicleNames.join(', ')}`);
       }
     } catch (error) {
       Logger.log(`❌ Error testing ${test.profile}: ${error.message}`);
@@ -487,6 +497,92 @@ function quickTestTaxPreference() {
   });
   
   Logger.log('\n🎯 Tax preference verification complete');
+}
+
+// Comprehensive smoke test of all profiles 
+function smokeTestAllProfiles() {
+  Logger.log('🔥 SMOKE TEST: All Profile Helpers');
+  Logger.log('Testing all 9 profiles for basic functionality...\n');
+  
+  const profiles = [
+    { profile: '1_ROBS_In_Use', row: 2 },
+    { profile: '2_ROBS_Curious', row: 3 },
+    { profile: '3_Solo401k_Builder', row: 4 },
+    { profile: '4_Roth_Reclaimer', row: 5 },
+    { profile: '5_Bracket_Strategist', row: 6 },
+    { profile: '6_Catch_Up', row: 7 },
+    { profile: '7_Foundation_Builder', row: 8 },
+    { profile: '8_Biz_Owner_Group', row: 9 },
+    { profile: '9_Late_Stage_Growth', row: 10 }
+  ];
+  
+  let passCount = 0;
+  let failCount = 0;
+  
+  profiles.forEach(test => {
+    try {
+      const result = testProfileHelperWithTestData(test.profile, test.row);
+      
+      // Basic validation
+      if (result && result.vehicleOrders && 
+          result.vehicleOrders.Retirement && 
+          result.vehicleOrders.Health && 
+          result.vehicleOrders.Education) {
+        Logger.log(`✅ ${test.profile}: PASS`);
+        passCount++;
+      } else {
+        Logger.log(`❌ ${test.profile}: FAIL - Missing vehicle orders`);
+        failCount++;
+      }
+    } catch (error) {
+      Logger.log(`❌ ${test.profile}: FAIL - ${error.message}`);
+      failCount++;
+    }
+  });
+  
+  Logger.log(`\n📊 SMOKE TEST SUMMARY:`);
+  Logger.log(`✅ Passed: ${passCount}/9`);
+  Logger.log(`❌ Failed: ${failCount}/9`);
+  
+  if (failCount === 0) {
+    Logger.log('🎉 ALL PROFILES WORKING CORRECTLY!');
+  } else {
+    Logger.log('⚠️ Some profiles need attention');
+  }
+}
+
+// Helper function to test profile with TestData 
+function testProfileHelperWithTestData(profileId, testRow) {
+  Logger.log(`🧪 Testing ${profileId} with TestData row ${testRow}...`);
+  
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const td = ss.getSheetByName('TestData');
+  const ws = ss.getSheetByName('Working Sheet');
+  
+  if (!td) {
+    throw new Error('TestData sheet not found. Run createTestDataTab() first.');
+  }
+  
+  const rawCols = td.getLastColumn();
+  const headers = ws.getRange(2, 1, 1, rawCols).getValues()[0];
+  const testVals = td.getRange(testRow, 1, 1, rawCols).getValues()[0];
+  
+  // Create header map
+  const hdr = {};
+  headers.forEach((header, index) => {
+    if (header) hdr[header] = index + 1;
+  });
+  
+  // Create row array from test data
+  const rowArr = testVals;
+  
+  // Get the profile helper and run it
+  const helper = profileHelpers[profileId];
+  if (!helper) {
+    throw new Error(`No helper found for profile '${profileId}'`);
+  }
+  
+  return helper(rowArr, hdr);
 }
 
 // Validation Functions
