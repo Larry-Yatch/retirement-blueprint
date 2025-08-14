@@ -171,72 +171,6 @@ function updateEmbeddedFormData() {
 // Form Analysis Functions
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function analyzeFormGaps() {
-  let CURRENT_FORMS;
-  try {
-    CURRENT_FORMS = getCurrentFormsData();
-  } catch (error) {
-    Logger.log('❌ No current forms data available. Ensure Current_Forms_Full.js is deployed.');
-    return;
-  }
-  
-  Logger.log(`\n🔍 FORM GAP ANALYSIS`);
-  Logger.log(`Data from: ${CURRENT_FORMS.lastExported}`);
-  
-  // Check each profile's form against universal questions
-  Object.entries(PROFILE_CONFIG).forEach(([profileId, profileConfig]) => {
-    const currentForm = CURRENT_FORMS.formsData[profileId];
-    
-    if (!currentForm) {
-      Logger.log(`\n❌ ${profileId}: No form data found`);
-      return;
-    }
-    
-    Logger.log(`\n📋 ${profileId}:`);
-    Logger.log(`Current: ${currentForm.items.length} questions`);
-    
-    // Check for universal questions
-    const missingUniversal = [];
-    const universalQuestions = UNIVERSAL_QUESTIONS; // Assume this exists
-    
-    if (universalQuestions) {
-      universalQuestions.forEach(q => {
-        const found = currentForm.items.some(item => 
-          item.title.toLowerCase().includes(q.title.toLowerCase().substring(0, 10))
-        );
-        if (!found) {
-          missingUniversal.push(q.title);
-        }
-      });
-    }
-    
-    if (missingUniversal.length > 0) {
-      Logger.log(`❌ Missing universal questions (${missingUniversal.length}):`);
-      missingUniversal.forEach(q => Logger.log(`   • ${q}`));
-    } else {
-      Logger.log(`✅ Has all universal questions`);
-    }
-    
-    // Check profile-specific questions
-    if (profileConfig && profileConfig.specificQuestions) {
-      const missingSpecific = [];
-      profileConfig.specificQuestions.forEach(q => {
-        const found = currentForm.items.some(item => 
-          item.title.toLowerCase().includes(q.toLowerCase().substring(0, 10))
-        );
-        if (!found) {
-          missingSpecific.push(q);
-        }
-      });
-      
-      if (missingSpecific.length > 0) {
-        Logger.log(`⚠️ Missing profile-specific questions (${missingSpecific.length}):`);
-        missingSpecific.forEach(q => Logger.log(`   • ${q}`));
-      }
-    }
-  });
-}
-
 function showFormComparison(profileId) {
   let CURRENT_FORMS;
   try {
@@ -278,78 +212,6 @@ function showFormComparison(profileId) {
   }
 }
 
-function exportAllFormsToJSON() {
-  Logger.log('📋 Exporting all forms to JSON files...');
-  
-  const allFormsData = {};
-  let successCount = 0;
-  let errorCount = 0;
-  
-  // Export Phase 1
-  try {
-    let CURRENT_FORMS;
-    try {
-      CURRENT_FORMS = getCurrentFormsData();
-    } catch (error) {
-      Logger.log('❌ No current forms data available. Ensure Current_Forms_Full.js is deployed.');
-      return;
-    }
-    
-    if (!CURRENT_FORMS?.formsData?.PHASE_1?.metadata?.formId) {
-      Logger.log('❌ Phase 1 form ID not found');
-      return;
-    }
-    
-    Logger.log(`Exporting PHASE_1...`);
-    const formData = exportFormToJSON(CURRENT_FORMS.formsData.PHASE_1.metadata.formId, 'Phase 1');
-    
-    if (formData) {
-      allFormsData['PHASE_1'] = formData;
-      successCount++;
-    } else {
-      errorCount++;
-    }
-  } catch (error) {
-    Logger.log(`❌ Error exporting PHASE_1: ${error.message}`);
-    errorCount++;
-  }
-  
-  // Export all Phase 2 forms
-  Object.entries(FORM_CONFIG).forEach(([configKey, formConfig]) => {
-    try {
-      if (!formConfig.formId) {
-        Logger.log(`⚠️ No form ID for ${configKey}`);
-        return;
-      }
-      
-      Logger.log(`Exporting ${formConfig.name}...`);
-      const formData = exportFormToJSON(formConfig.formId, formConfig.name);
-      
-      if (formData) {
-        allFormsData[configKey] = formData;
-        successCount++;
-      } else {
-        errorCount++;
-      }
-    } catch (error) {
-      Logger.log(`❌ Error exporting ${configKey}: ${error.message}`);
-      errorCount++;
-    }
-  });
-  
-  // Create combined export data
-  const exportData = {
-    exportTimestamp: new Date().toISOString(),
-    exportedBy: 'exportAllFormsToJSON()',
-    formsCount: successCount,
-    formsData: allFormsData
-  };
-  
-  Logger.log(`\n📊 Export complete: ${successCount} forms exported, ${errorCount} errors`);
-  
-  return exportData;
-}
-
 function analyzeFormStructure(formKey) {
   let CURRENT_FORMS;
   try {
@@ -366,11 +228,11 @@ function analyzeFormStructure(formKey) {
   
   const form = CURRENT_FORMS.formsData[formKey];
   
-  console.log(`\n=== ${formKey} ANALYSIS ===`);
-  console.log(`Title: ${form.metadata.title}`);
-  console.log(`Description: ${form.metadata.description}`);
-  console.log(`Total Questions: ${form.items.length}`);
-  console.log(`Export Date: ${form.metadata.exportTimestamp}`);
+  Logger.log(`\n=== ${formKey} ANALYSIS ===`);
+  Logger.log(`Title: ${form.metadata.title}`);
+  Logger.log(`Description: ${form.metadata.description}`);
+  Logger.log(`Total Questions: ${form.items.length}`);
+  Logger.log(`Export Date: ${form.metadata.exportTimestamp}`);
   
   // Analyze question types
   const questionTypes = {};
@@ -378,29 +240,12 @@ function analyzeFormStructure(formKey) {
     questionTypes[item.type] = (questionTypes[item.type] || 0) + 1;
   });
   
-  console.log(`\nQuestion Type Breakdown:`);
+  Logger.log(`\nQuestion Type Breakdown:`);
   Object.entries(questionTypes).forEach(([type, count]) => {
-    console.log(`  ${type}: ${count}`);
+    Logger.log(`  ${type}: ${count}`);
   });
 }
 
-function compareAllFormsToTemplates() {
-  Logger.log('🔍 Comparing all current forms to ideal templates...\n');
-  
-  let CURRENT_FORMS;
-  try {
-    CURRENT_FORMS = getCurrentFormsData();
-  } catch (error) {
-    Logger.log('❌ No current forms data available. Ensure Current_Forms_Full.js is deployed.');
-    return;
-  }
-  
-  Object.keys(PROFILE_CONFIG).forEach(profileId => {
-    if (CURRENT_FORMS?.formsData?.[profileId]) {
-      analyzeFormStructure(profileId);
-    }
-  });
-}
 
 // Form Update Functions
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -620,26 +465,6 @@ function updateFormStructure(formId, formStructure) {
   }
 }
 
-function batchUpdateForms(formUpdates) {
-  Logger.log(`🔄 Batch updating ${formUpdates.length} forms...`);
-  
-  const results = formUpdates.map(update => {
-    Logger.log(`Updating ${update.formId}...`);
-    return updateFormStructure(update.formId, update.structure);
-  });
-  
-  const successCount = results.filter(r => r.success).length;
-  
-  Logger.log(`\n📊 Batch update complete: ${successCount}/${formUpdates.length} successful`);
-  
-  results.forEach(result => {
-    if (!result.success) {
-      Logger.log(`❌ ${result.formId}: ${result.error}`);
-    }
-  });
-  
-  return results;
-}
 
 // Form Template Functions
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -673,45 +498,6 @@ function generateFormTemplate(profileId) {
   return formStructure;
 }
 
-function generateAllFormTemplates() {
-  Logger.log('📋 Generating templates for all profiles...\n');
-  
-  const templates = {};
-  
-  Object.keys(PROFILE_CONFIG).forEach(profileId => {
-    try {
-      const template = generateFormTemplate(profileId);
-      templates[profileId] = template;
-      Logger.log(`✅ ${profileId}: ${template.questions?.length || 0} questions`);
-    } catch (error) {
-      Logger.log(`❌ ${profileId}: ${error.message}`);
-    }
-  });
-  
-  return templates;
-}
-
-function previewFormTemplate(profileId) {
-  try {
-    const template = generateFormTemplate(profileId);
-    
-    Logger.log(`\n=== FORM TEMPLATE PREVIEW: ${profileId} ===`);
-    Logger.log(`Title: ${template.title}`);
-    Logger.log(`Description: ${template.description}`);
-    Logger.log(`Questions: ${template.questions?.length || 0}\n`);
-    
-    if (template.questions) {
-      template.questions.forEach((q, index) => {
-        Logger.log(`${index + 1}. ${q.title} (${q.type})`);
-        if (q.headerMapping) {
-          Logger.log(`   → Maps to: ${q.headerMapping}`);
-        }
-      });
-    }
-  } catch (error) {
-    Logger.log(`❌ Error generating template for ${profileId}: ${error.message}`);
-  }
-}
 
 function compareFormStructures(currentForm, idealTemplate) {
   const comparison = {
@@ -954,35 +740,3 @@ function syncAllFormsToTemplates(dryRun = true, profileFilter = null) {
   return results;
 }
 
-function showFormDifferences(profileId) {
-  const result = syncFormToTemplate(profileId, true); // Always dry run for differences
-  
-  if (!result.success) {
-    Logger.log(`❌ Error analyzing ${profileId}: ${result.error}`);
-    return;
-  }
-  
-  if (result.status === 'already_synced') {
-    Logger.log(`✅ ${profileId} is already perfectly synced with its template`);
-    return;
-  }
-  
-  Logger.log(`\n=== DETAILED DIFFERENCES: ${profileId} ===`);
-  if (result.differences && result.differences.length > 0) {
-    result.differences.forEach(diff => {
-      Logger.log(`\n• ${diff.type}: ${diff.description}`);
-      if (diff.current !== undefined) {
-        Logger.log(`   Current: ${diff.current}`);
-      }
-      if (diff.ideal !== undefined) {
-        Logger.log(`   Ideal: ${diff.ideal}`);
-      }
-      if (diff.index !== undefined) {
-        Logger.log(`   Question #: ${diff.index + 1}`);
-      }
-      Logger.log('');
-    });
-  } else {
-    Logger.log('No differences found');
-  }
-}

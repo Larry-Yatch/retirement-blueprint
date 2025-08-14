@@ -1634,31 +1634,6 @@ function cascadeWaterfall(order, pool, initial = {}) {
 
 
 
-/**
- * Round-robin cascade: allocate `total` across `order` of vehicles
- */
-function cascadeRoundRobin(order, total, initialAlloc = {}) {
-  const alloc = order.reduce((o, v) => {
-    o[v.name] = initialAlloc[v.name] || 0;
-    return o;
-  }, {});
-  const caps = order.map(v => ({
-    name:      v.name,
-    remaining: (v.capMonthly || Infinity) - (initialAlloc[v.name] || 0)
-  }));
-  let left = total, idx = 0;
-  while (left > 0 && caps.some(c => c.remaining > 0)) {
-    const c = caps[idx];
-    if (c.remaining > 0) {
-      const step = Math.min(1, c.remaining, left);
-      alloc[c.name] += step;
-      c.remaining   -= step;
-      left          -= step;
-    }
-    idx = (idx + 1) % caps.length;
-  }
-  return alloc;
-}
 
 /**
  * Initialize Working Sheet and header map
@@ -1993,30 +1968,6 @@ function handlePhase2(e) {
 
 
 
-// helper to fetch all actual keys (returns array)
-function listAllVehicleActualKeys() {
-  const keys = new Set();
-
-  Object.values(PROFILE_CONFIG).forEach(cfg => {
-    ['Retirement','Education','Health'].forEach(domain => {
-      (cfg[`vehicleOrder_${domain}`] || []).forEach(v => {
-        const key = `${domain.toLowerCase()}_` +
-          v.name.toLowerCase()
-                .replace(/[()%–-]/g, '')
-                .replace(/\s+/g, '_') +
-          '_actual';
-        keys.add(key);
-      });
-    });
-  });
-
-  // Log them sorted
-  const sorted = Array.from(keys).sort();
-  Logger.log('Actual vehicle headers needed:\n' + sorted.join('\n'));
-
-  // And return the array of keys
-  return Array.from(keys);
-}
 
 
 
@@ -2068,9 +2019,6 @@ function computeDomainsAndWeights(rowArr, hdr, rMonthly) {
 /*** UTILS ***/
 function sumValues(obj) {
   return Object.values(obj).reduce((s, v) => s + v, 0);
-}
-function mergeInto(target, src) {
-  for (const k in src) target[k] = (target[k] || 0) + src[k];
 }
 
 
