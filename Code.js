@@ -26,7 +26,18 @@ const LIMITS = {
     TRADITIONAL_IRA: 7000,
     ROTH_IRA: 7000,
     CATCHUP_IRA: 1000,
-    DEFINED_BENEFIT: 280000
+    DEFINED_BENEFIT: 280000,
+    // Roth IRA income phase-out limits for 2024
+    ROTH_IRA_PHASE_OUT: {
+      SINGLE: {
+        START: 146000,
+        END: 161000
+      },
+      MARRIED_FILING_JOINTLY: {
+        START: 230000,
+        END: 240000
+      }
+    }
   },
   EDUCATION: {
     CESA_COMBINED: Infinity
@@ -662,6 +673,46 @@ const UNIVERSAL_QUESTIONS = [
 
 
 /**
+ * Universal Roth IRA phase-out function
+ * Replaces direct Roth IRA with Backdoor Roth when income exceeds limits
+ * @param {Array} vehicleOrder - Current vehicle order
+ * @param {Object} params - Parameters including grossIncome, filingStatus, taxFocus
+ * @returns {Array} Updated vehicle order with appropriate Roth strategy
+ */
+function applyRothIRAPhaseOut(vehicleOrder, params) {
+  const { grossIncome, filingStatus, taxFocus } = params;
+  
+  // Phase-out limits apply regardless of tax preference - it's an IRS rule
+  // Get phase-out limits based on filing status
+  const limits = filingStatus === 'Single' 
+    ? LIMITS.RETIREMENT.ROTH_IRA_PHASE_OUT.SINGLE
+    : LIMITS.RETIREMENT.ROTH_IRA_PHASE_OUT.MARRIED_FILING_JOINTLY;
+  
+  // If income is below phase-out start, keep regular Roth IRA
+  if (grossIncome < limits.START) {
+    return vehicleOrder;
+  }
+  
+  // If income is above phase-out start, remove direct Roth IRA
+  const updatedOrder = vehicleOrder.filter(v => v.name !== 'Roth IRA');
+  
+  // Ensure Backdoor Roth IRA is present (if not already)
+  const hasBackdoor = updatedOrder.some(v => v.name === 'Backdoor Roth IRA');
+  if (!hasBackdoor) {
+    // Find where to insert Backdoor Roth (after Traditional IRA if present)
+    const tradIndex = updatedOrder.findIndex(v => v.name === 'Traditional IRA');
+    const insertIndex = tradIndex >= 0 ? tradIndex + 1 : 0;
+    
+    updatedOrder.splice(insertIndex, 0, {
+      name: 'Backdoor Roth IRA',
+      capMonthly: LIMITS.RETIREMENT.ROTH_IRA / 12
+    });
+  }
+  
+  return updatedOrder;
+}
+
+/**
  * Universal employer 401(k) function
  * Adds employer 401(k) vehicles based on user responses
  * @param {Array} baseOrder - Existing vehicle order
@@ -804,6 +855,9 @@ const profileHelpers = {
   // Get tax preference for vehicle ordering
   const taxFocus = getValue(hdr, rowArr, HEADERS.TAX_MINIMIZATION);
   
+  // Get gross income for phase-out calculations
+  const grossIncome = Number(getValue(hdr, rowArr, HEADERS.GROSS_ANNUAL_INCOME)) || 75000;
+  
   // Calculate monthly capacities using utility functions
   const hsaCap = calculateHsaMonthlyCapacity(hsaElig, age, filing);
   const cesaCap = calculateCesaMonthlyCapacity(numKids);
@@ -857,6 +911,13 @@ const profileHelpers = {
       return { name: v.name, capMonthly: adjustedCap };
     });
   
+  // Apply Roth IRA phase-out rules
+  baseRetirementOrder = applyRothIRAPhaseOut(baseRetirementOrder, {
+    grossIncome,
+    filingStatus: filing,
+    taxFocus
+  });
+  
   // Adjust order based on tax preference
   if (taxFocus === 'Now') {
     // Prioritize Traditional over Roth for current tax savings
@@ -894,14 +955,12 @@ const profileHelpers = {
     // Get tax preference
     const taxFocus = getValue(hdr, rowArr, HEADERS.TAX_MINIMIZATION);
     
-    let hsaCap = 0;
-    if (hsaElig) {
-      const type = (filing === 'Married Filing Jointly') ? 'FAMILY' : 'INDIVIDUAL';
-      const base = LIMITS.HEALTH.HSA[type];
-      const catchup = age >= 55 ? LIMITS.HEALTH.HSA.CATCHUP : 0;
-      hsaCap = (base + catchup) / 12;
-    }
-    const cesaCap = (CONFIG.ANNUAL_CESA_LIMIT * numKids) / 12;
+    // Get gross income for phase-out calculations
+    const grossIncome = Number(getValue(hdr, rowArr, HEADERS.GROSS_ANNUAL_INCOME)) || 72000;
+    
+    // Calculate monthly capacities using universal functions
+    const hsaCap = calculateHsaMonthlyCapacity(hsaElig, age, filing);
+    const cesaCap = calculateCesaMonthlyCapacity(numKids);
 
     const seeds = { Education: {}, Health: {}, Retirement: {} };
     
@@ -926,6 +985,13 @@ const profileHelpers = {
         
         return { name: v.name, capMonthly: adjustedCap };
       });
+    
+    // Apply Roth IRA phase-out rules
+    baseRetirementOrder = applyRothIRAPhaseOut(baseRetirementOrder, {
+      grossIncome,
+      filingStatus: filing,
+      taxFocus
+    });
     
     // Adjust order based on tax preference
     if (taxFocus === 'Now') {
@@ -969,6 +1035,7 @@ const profileHelpers = {
     const numKids = Number(getValue(hdr, rowArr, HEADERS.P2_CESA_NUM_CHILDREN)) || 0;
     const age = Number(getValue(hdr, rowArr, HEADERS.CURRENT_AGE));
     const filing = getValue(hdr, rowArr, HEADERS.FILING_STATUS);
+    const grossIncome = Number(getValue(hdr, rowArr, HEADERS.GROSS_ANNUAL_INCOME)) || 100000;
     
     // Get tax preference for vehicle ordering
     const taxFocus = getValue(hdr, rowArr, HEADERS.TAX_MINIMIZATION);
@@ -1016,6 +1083,13 @@ const profileHelpers = {
         return { name: v.name, capMonthly: adjustedCap };
       });
     
+    // Apply Roth IRA phase-out rules
+    baseRetirementOrder = applyRothIRAPhaseOut(baseRetirementOrder, {
+      grossIncome,
+      filingStatus: filing,
+      taxFocus
+    });
+    
     // Adjust order based on tax preference
     if (taxFocus === 'Now') {
       // Prioritize Traditional over Roth for current tax savings
@@ -1045,6 +1119,9 @@ const profileHelpers = {
     
     // Get tax preference for vehicle ordering
     const taxFocus = getValue(hdr, rowArr, HEADERS.TAX_MINIMIZATION);
+    
+    // Get gross income for phase-out calculations
+    const grossIncome = Number(getValue(hdr, rowArr, HEADERS.GROSS_ANNUAL_INCOME)) || 95000;
     
     // Calculate monthly capacities using utility functions
     const hsaCap = calculateHsaMonthlyCapacity(hsaElig, age, filing);
@@ -1089,6 +1166,13 @@ const profileHelpers = {
         return { name: v.name, capMonthly: adjustedCap };
       });
     
+    // Apply Roth IRA phase-out rules
+    baseRetirementOrder = applyRothIRAPhaseOut(baseRetirementOrder, {
+      grossIncome,
+      filingStatus: filing,
+      taxFocus
+    });
+    
     // Adjust order based on tax preference
     if (taxFocus === 'Now') {
       // Prioritize Traditional over Roth for current tax savings
@@ -1118,6 +1202,9 @@ const profileHelpers = {
     
     // Get tax preference for vehicle ordering
     const taxFocus = getValue(hdr, rowArr, HEADERS.TAX_MINIMIZATION);
+    
+    // Get gross income for phase-out calculations
+    const grossIncome = Number(getValue(hdr, rowArr, HEADERS.GROSS_ANNUAL_INCOME)) || 65000;
     
     // Calculate monthly capacities using utility functions
     const hsaCap = calculateHsaMonthlyCapacity(hsaElig, age, filing);
@@ -1162,6 +1249,13 @@ const profileHelpers = {
         return { name: v.name, capMonthly: adjustedCap };
       });
     
+    // Apply Roth IRA phase-out rules
+    baseRetirementOrder = applyRothIRAPhaseOut(baseRetirementOrder, {
+      grossIncome,
+      filingStatus: filing,
+      taxFocus
+    });
+    
     // Adjust order based on tax preference
     if (taxFocus === 'Now') {
       // Prioritize Traditional over Roth for current tax savings
@@ -1191,6 +1285,9 @@ const profileHelpers = {
     
     // Get tax preference for vehicle ordering
     const taxFocus = getValue(hdr, rowArr, HEADERS.TAX_MINIMIZATION);
+    
+    // Get gross income for phase-out calculations
+    const grossIncome = Number(getValue(hdr, rowArr, HEADERS.GROSS_ANNUAL_INCOME)) || 78000;
     
     // Calculate monthly capacities using utility functions
     const hsaCap = calculateHsaMonthlyCapacity(hsaElig, age, filing);
@@ -1234,6 +1331,13 @@ const profileHelpers = {
         
         return { name: v.name, capMonthly: adjustedCap };
       });
+    
+    // Apply Roth IRA phase-out rules
+    baseRetirementOrder = applyRothIRAPhaseOut(baseRetirementOrder, {
+      grossIncome,
+      filingStatus: filing,
+      taxFocus
+    });
     
     // Adjust order based on tax preference
     if (taxFocus === 'Now') {
@@ -1311,6 +1415,13 @@ const profileHelpers = {
       grossIncome
     });
     
+    // Apply Roth IRA phase-out rules
+    baseRetirementOrder = applyRothIRAPhaseOut(baseRetirementOrder, {
+      grossIncome,
+      filingStatus: filing,
+      taxFocus
+    });
+    
     // Adjust order based on tax preference using universal functions
     if (taxFocus === 'Now') {
       // Prioritize Traditional over Roth for current tax savings
@@ -1340,6 +1451,9 @@ const profileHelpers = {
     
     // Get tax preference for vehicle ordering
     const taxFocus = getValue(hdr, rowArr, HEADERS.TAX_MINIMIZATION);
+    
+    // Get gross income for phase-out calculations
+    const grossIncome = Number(getValue(hdr, rowArr, HEADERS.GROSS_ANNUAL_INCOME)) || 144000;
     
     // Calculate monthly capacities using utility functions
     const hsaCap = calculateHsaMonthlyCapacity(hsaElig, age, filing);
@@ -1384,6 +1498,13 @@ const profileHelpers = {
         return { name: v.name, capMonthly: adjustedCap };
       });
     
+    // Apply Roth IRA phase-out rules
+    baseRetirementOrder = applyRothIRAPhaseOut(baseRetirementOrder, {
+      grossIncome,
+      filingStatus: filing,
+      taxFocus
+    });
+    
     // Adjust order based on tax preference
     if (taxFocus === 'Now') {
       // Prioritize Traditional over Roth for current tax savings
@@ -1413,6 +1534,9 @@ const profileHelpers = {
     
     // Get tax preference for vehicle ordering
     const taxFocus = getValue(hdr, rowArr, HEADERS.TAX_MINIMIZATION);
+    
+    // Get gross income for phase-out calculations
+    const grossIncome = Number(getValue(hdr, rowArr, HEADERS.GROSS_ANNUAL_INCOME)) || 110000;
     
     // Calculate monthly capacities using utility functions
     const hsaCap = calculateHsaMonthlyCapacity(hsaElig, age, filing);
@@ -1456,6 +1580,13 @@ const profileHelpers = {
         
         return { name: v.name, capMonthly: adjustedCap };
       });
+    
+    // Apply Roth IRA phase-out rules
+    baseRetirementOrder = applyRothIRAPhaseOut(baseRetirementOrder, {
+      grossIncome,
+      filingStatus: filing,
+      taxFocus
+    });
     
     // Adjust order based on tax preference
     if (taxFocus === 'Now') {
