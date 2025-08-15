@@ -216,9 +216,10 @@ const PROFILE_CONFIG = {
     formId:     '1FAIpQLSc4oMG-yUnGnucmWLcx9trxMXIp2DWwVZijbp0OfTtQ3f8wqg',
     entryToken: 'entry.188501795',
     vehicleOrder_Retirement: [
+      // Note: Employer 401(k) vehicles are dynamically added if available
       { name: 'Roth IRA',            capMonthly: LIMITS.RETIREMENT.ROTH_IRA                / 12 },
-      { name: 'Backdoor Roth IRA', capMonthly: LIMITS.RETIREMENT.ROTH_IRA     / 12 },
       { name: 'Traditional IRA',     capMonthly: LIMITS.RETIREMENT.TRADITIONAL_IRA          / 12 },
+      { name: 'Backdoor Roth IRA',   capMonthly: LIMITS.RETIREMENT.ROTH_IRA                / 12 },
       { name: 'HSA',                 capMonthly: LIMITS.HEALTH.HSA.INDIVIDUAL              / 12 }
     ],
     vehicleOrder_Education: [
@@ -659,6 +660,65 @@ const UNIVERSAL_QUESTIONS = [
   }
 ];
 
+
+/**
+ * Universal employer 401(k) function
+ * Adds employer 401(k) vehicles based on user responses
+ * @param {Array} baseOrder - Existing vehicle order
+ * @param {Object} params - Parameters including rowArr, hdr, age, grossIncome
+ * @returns {Array} Updated vehicle order with employer 401(k) vehicles
+ */
+function addEmployer401kVehicles(baseOrder, params) {
+  const { rowArr, hdr, age, grossIncome } = params;
+  
+  // Get employer 401(k) information from extra questions
+  const hasEmployer401k = getValue(hdr, rowArr, 'ex_q1') === 'Yes';
+  const hasEmployerMatch = getValue(hdr, rowArr, 'ex_q2') === 'Yes';
+  const matchPercentage = getValue(hdr, rowArr, 'ex_q3'); // e.g. "50% up to 6%"
+  const hasRoth401k = getValue(hdr, rowArr, 'ex_q4') === 'Yes';
+  
+  if (!hasEmployer401k) {
+    return baseOrder; // No changes if no employer 401(k)
+  }
+  
+  const updatedOrder = [...baseOrder];
+  
+  // Calculate 401(k) limits with catch-up
+  let employee401kCap = LIMITS.RETIREMENT.EMPLOYEE_401K / 12;
+  if (age >= 50) {
+    const catchup401k = age >= 60 ? LIMITS.RETIREMENT.CATCHUP_401K_60 : LIMITS.RETIREMENT.CATCHUP_401K_50;
+    employee401kCap = (LIMITS.RETIREMENT.EMPLOYEE_401K + catchup401k) / 12;
+  }
+  
+  // Add employer match vehicle first if they offer matching
+  if (hasEmployerMatch) {
+    // Calculate match cap based on the match percentage answer
+    let matchCap = 500; // Default fallback
+    
+    if (matchPercentage) {
+      // Extract the employee contribution percentage that gets matched
+      const matchUpToMatch = matchPercentage.match(/up to (\d+)%/);
+      if (matchUpToMatch) {
+        const matchUpToPct = parseInt(matchUpToMatch[1]) / 100;
+        // Calculate monthly cap as the amount needed to maximize match
+        matchCap = Math.round((grossIncome * matchUpToPct) / 12);
+      }
+    }
+    
+    // Insert match at the beginning (after HSA if present)
+    const hsaIndex = updatedOrder.findIndex(v => v.name === 'HSA');
+    const insertIndex = hsaIndex >= 0 ? hsaIndex + 1 : 0;
+    updatedOrder.splice(insertIndex, 0, { 
+      name: 'Employer 401(k) - Match', 
+      capMonthly: matchCap
+    });
+  }
+  
+  // Optionally add full 401(k) contributions based on business rules
+  // For now, we're limiting to match only to encourage self-directed accounts
+  
+  return updatedOrder;
+}
 
 /**
  * Tax preference utility functions
@@ -1228,27 +1288,30 @@ const profileHelpers = {
       .filter(v => !(v.name === 'HSA' && !hsaElig))
       .concat({ name: 'Health Bank', capMonthly: Infinity });
 
-    // Build base retirement order with catch-up logic
+    // Build base retirement order from config
     let baseRetirementOrder = cfg.vehicleOrder_Retirement
       .map(v => {
         let adjustedCap = v.capMonthly;
         
         // Apply catch-up contributions for age 50+
-        if (age >= 50) {
-          if (v.name.includes('401')) {
-            // 401(k) catch-up: $7,500 for 50-59, $11,250 for 60+
-            const catchup401k = age >= 60 ? LIMITS.RETIREMENT.CATCHUP_401K_60 : LIMITS.RETIREMENT.CATCHUP_401K_50;
-            adjustedCap = (v.capMonthly * 12 + catchup401k) / 12;
-          } else if (v.name.includes('IRA')) {
-            // IRA catch-up: $1,000 for 50+
-            adjustedCap = (v.capMonthly * 12 + LIMITS.RETIREMENT.CATCHUP_IRA) / 12;
-          }
+        if (age >= 50 && v.name.includes('IRA')) {
+          // IRA catch-up: $1,000 for 50+
+          adjustedCap = (v.capMonthly * 12 + LIMITS.RETIREMENT.CATCHUP_IRA) / 12;
         }
         
         return { name: v.name, capMonthly: adjustedCap };
       });
     
-    // Adjust order based on tax preference
+    // Add employer 401(k) vehicles using universal function
+    const grossIncome = Number(getValue(hdr, rowArr, HEADERS.GROSS_ANNUAL_INCOME)) || 75000;
+    baseRetirementOrder = addEmployer401kVehicles(baseRetirementOrder, {
+      rowArr,
+      hdr,
+      age,
+      grossIncome
+    });
+    
+    // Adjust order based on tax preference using universal functions
     if (taxFocus === 'Now') {
       // Prioritize Traditional over Roth for current tax savings
       baseRetirementOrder = prioritizeTraditionalAccounts(baseRetirementOrder);
@@ -1564,21 +1627,24 @@ function coreAllocate({ domains, pool, seeds, vehicleOrders }) {
     )
   };
 
+  // Track cumulative allocations across all domains to handle shared vehicles
+  const cumulativeAllocations = {};
+
   // 2) Education
   const eduPool = domains.Education.w * pool;
-  const eduAlloc = cascadeWaterfall(vehicleOrders.Education, eduPool, vehicles.Education);
+  const eduAlloc = cascadeWaterfallWithTracking(vehicleOrders.Education, eduPool, vehicles.Education, cumulativeAllocations);
   vehicles.Education = eduAlloc;
   const leftoverEdu = eduPool - sumValues(eduAlloc);
 
   // 3) Health (include leftover from Education)
   const healthPool = domains.Health.w * pool + leftoverEdu;
-  const hlthAlloc = cascadeWaterfall(vehicleOrders.Health, healthPool, vehicles.Health);
+  const hlthAlloc = cascadeWaterfallWithTracking(vehicleOrders.Health, healthPool, vehicles.Health, cumulativeAllocations);
   vehicles.Health = hlthAlloc;
   const leftoverHealth = healthPool - sumValues(hlthAlloc);
 
   // 4) Retirement (include leftover from Health)
   const retPool = domains.Retirement.w * pool + leftoverHealth;
-  const retAlloc = cascadeWaterfall(vehicleOrders.Retirement, retPool, vehicles.Retirement);
+  const retAlloc = cascadeWaterfallWithTracking(vehicleOrders.Retirement, retPool, vehicles.Retirement, cumulativeAllocations);
   vehicles.Retirement = retAlloc;
 
   return vehicles;
@@ -1629,6 +1695,40 @@ function cascadeWaterfall(order, pool, initial = {}) {
     if (remaining <= 0) break;
   }
 
+  return alloc;
+}
+
+/**
+ * Enhanced cascade allocator with cross-domain tracking
+ * Tracks cumulative allocations to prevent over-allocation of shared vehicles
+ *
+ * @param {Array<{name: string, capMonthly: number}>} order
+ * @param {number} pool  Total dollars to allocate
+ * @param {Object} initial  Optional map of pre‐seeded allocations { [name]: amount }
+ * @param {Object} cumulativeAllocations  Running total of allocations across all domains
+ * @returns {Object}  Final allocations by vehicle name
+ */
+function cascadeWaterfallWithTracking(order, pool, initial = {}, cumulativeAllocations = {}) {
+  const alloc = { ...initial };
+  let remaining = pool;
+
+  for (const v of order) {
+    const already = alloc[v.name] || 0;
+    const cumulativeAlready = cumulativeAllocations[v.name] || 0;
+    
+    // Check both domain-specific and cumulative allocations against the cap
+    const totalAlready = cumulativeAlready + already;
+    const available = Math.max(0, (v.capMonthly || Infinity) - totalAlready);
+    const take = Math.min(available, remaining);
+    
+    if (take > 0) {
+      alloc[v.name] = already + take;
+      // Update cumulative tracking
+      cumulativeAllocations[v.name] = totalAlready + take;
+      remaining -= take;
+    }
+    if (remaining <= 0) break;
+  }
   return alloc;
 }
 
