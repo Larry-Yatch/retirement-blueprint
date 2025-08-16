@@ -222,7 +222,7 @@ const PROFILE_CONFIG = {
 
   '7_Foundation_Builder': {
     title:       'Foundation Builder',
-    description: 'No current retirement accounts but ready to start with clear, simple steps.',
+    description: 'Standard investor building retirement foundation. May have employer 401(k) or Roth accounts.',
     extraQuestions: [/* ... */],
     formId:     '1FAIpQLSc4oMG-yUnGnucmWLcx9trxMXIp2DWwVZijbp0OfTtQ3f8wqg',
     entryToken: 'entry.188501795',
@@ -1716,7 +1716,7 @@ const HEADERS = {
   P2_EX_Q9:                       'ex_q9',
   P2_EX_Q10:                      'ex_q10',
   
-    // ── Phase 2 output columns ──
+  // ── Phase 2 output columns ──
   // Retirement IRA top-ups (education piggy-backed here)
   RETIREMENT_TRADITIONAL_IRA_ACTUAL: 'retirement_traditional_ira_actual',
   RETIREMENT_TRADITIONAL_IRA_IDEAL:  'retirement_traditional_ira_ideal',
