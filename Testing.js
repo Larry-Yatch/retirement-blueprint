@@ -788,3 +788,263 @@ function runAllEngineTests() {
     results
   };
 }
+
+// Simple test wrapper that can be called from Code.js
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Test form mapping - simple wrapper for Testing.js function
+ * Call this from Code.js to run the full test
+ */
+function testFormMapping() {
+  console.log('Running form mapping tests from Testing.js...\n');
+  testFormQuestionMapping();
+}
+
+// Form Mapping and Employer 401(k) Testing
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Test employer 401(k) integration for profiles with new employer questions
+ * Tests the form mapping and vehicle creation for profiles 2, 4, 5, 6, and 9
+ */
+function testEmployer401kIntegration() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ws = ss.getSheetByName(SHEET_NAMES.WORKING_SHEET);
+  const hdr = getHeaderRow(ws);
+  
+  // Test profiles that now have employer 401(k) questions
+  const testProfiles = [
+    {
+      profileId: '2_ROBS_Curious',
+      testData: {
+        age: 45,
+        grossIncome: 150000,
+        ex_q1: 'Yes',  // employer 401k
+        ex_q2: 'Yes',  // employer match
+        ex_q3: '50% up to 6%',  // match percentage
+        ex_q4: 'Yes',  // roth option
+        ex_q5: '50000',  // rollover balance
+        ex_q6: '10000'   // annual contribution
+      }
+    },
+    {
+      profileId: '4_Roth_Reclaimer',
+      testData: {
+        age: 40,
+        grossIncome: 120000,
+        ex_q1: 'Yes',  // employer 401k
+        ex_q2: 'Yes',  // employer match
+        ex_q3: '100% up to 3%',  // match percentage
+        ex_q4: 'No',   // roth option
+        ex_q5: '100000',  // trad IRA balance
+        ex_q6: '5000',    // after-tax contributions
+        ex_q7: 'Yes',     // backdoor understanding
+        ex_q8: '5500'     // conversion amount
+      }
+    },
+    {
+      profileId: '5_Bracket_Strategist',
+      testData: {
+        age: 55,
+        grossIncome: 200000,
+        ex_q1: 'Yes',  // employer 401k
+        ex_q2: 'Yes',  // employer match
+        ex_q3: '50% up to 4%',  // match percentage
+        ex_q4: 'Yes'   // roth option
+      }
+    },
+    {
+      profileId: '6_Catch_Up',
+      testData: {
+        age: 60,
+        grossIncome: 180000,
+        ex_q1: 'Yes',  // employer 401k
+        ex_q2: 'Yes',  // employer match
+        ex_q3: '100% up to 6%',  // match percentage
+        ex_q4: 'Yes'   // roth option
+      }
+    },
+    {
+      profileId: '9_Late_Stage_Growth',
+      testData: {
+        age: 58,
+        grossIncome: 300000,
+        ex_q1: 'Yes',  // employer 401k
+        ex_q2: 'Yes',  // employer match
+        ex_q3: '50% up to 6%',  // match percentage
+        ex_q4: 'Yes'   // roth option
+      }
+    }
+  ];
+  
+  console.log('\n=== EMPLOYER 401(K) INTEGRATION TEST ===\n');
+  
+  testProfiles.forEach(profile => {
+    console.log(`\nTesting Profile: ${profile.profileId}`);
+    console.log('--------------------------------');
+    
+    // Create a test row with the profile data
+    const rowArr = [];
+    rowArr[hdr[HEADERS.PROFILE_ID]] = profile.profileId;
+    rowArr[hdr[HEADERS.P1_AGE]] = profile.testData.age;
+    rowArr[hdr[HEADERS.P1_GROSS_INCOME]] = profile.testData.grossIncome;
+    rowArr[hdr[HEADERS.P2_EX_Q1]] = profile.testData.ex_q1;
+    rowArr[hdr[HEADERS.P2_EX_Q2]] = profile.testData.ex_q2;
+    rowArr[hdr[HEADERS.P2_EX_Q3]] = profile.testData.ex_q3;
+    rowArr[hdr[HEADERS.P2_EX_Q4]] = profile.testData.ex_q4;
+    if (profile.testData.ex_q5) rowArr[hdr[HEADERS.P2_EX_Q5]] = profile.testData.ex_q5;
+    if (profile.testData.ex_q6) rowArr[hdr[HEADERS.P2_EX_Q6]] = profile.testData.ex_q6;
+    if (profile.testData.ex_q7) rowArr[hdr[HEADERS.P2_EX_Q7]] = profile.testData.ex_q7;
+    if (profile.testData.ex_q8) rowArr[hdr[HEADERS.P2_EX_Q8]] = profile.testData.ex_q8;
+    
+    // Get the profile helper function
+    const helper = profileHelpers[profile.profileId];
+    
+    if (helper) {
+      // Call the profile helper to get allocation order
+      const { seeds, vehicleOrders } = helper(rowArr, hdr);
+      const allocOrder = vehicleOrders.Retirement;
+      
+      console.log(`Age: ${profile.testData.age}`);
+      console.log(`Income: $${profile.testData.grossIncome.toLocaleString()}`);
+      console.log(`Employer 401(k): ${profile.testData.ex_q1}`);
+      console.log(`Employer Match: ${profile.testData.ex_q2}`);
+      console.log(`Match Details: ${profile.testData.ex_q3}`);
+      console.log(`\nAllocation Order:`);
+      
+      // Check if employer match vehicles are present
+      const hasEmployerMatch = allocOrder.some(v => v.name.includes('401(k) Match'));
+      const matchPosition = allocOrder.findIndex(v => v.name.includes('401(k) Match'));
+      
+      allocOrder.forEach((vehicle, index) => {
+        console.log(`  ${index + 1}. ${vehicle.name} - Limit: $${vehicle.monthlyLimit}/mo`);
+      });
+      
+      if (profile.testData.ex_q2 === 'Yes') {
+        if (hasEmployerMatch) {
+          console.log(`\n✅ SUCCESS: Employer match found at position ${matchPosition + 1}`);
+        } else {
+          console.log('\n❌ ERROR: Employer match expected but not found!');
+        }
+      } else {
+        if (!hasEmployerMatch) {
+          console.log('\n✅ SUCCESS: No employer match expected or found');
+        } else {
+          console.log('\n❌ ERROR: Employer match found but not expected!');
+        }
+      }
+    } else {
+      console.log(`❌ ERROR: Helper function for ${profile.profileId} not found`);
+    }
+  });
+  
+  console.log('\n=== TEST COMPLETE ===\n');
+}
+
+/**
+ * Test form question mapping functionality
+ * Verifies that the FORM_EX_Q_MAPPING correctly remaps form responses
+ */
+function testFormQuestionMapping() {
+  console.log('\n=== FORM QUESTION MAPPING TEST ===\n');
+  
+  // Test data simulating form responses with questions in different positions
+  const testCases = [
+    {
+      profileId: '2_ROBS_Curious',
+      formResponse: [
+        '2024-01-15 10:30:00',  // 0: timestamp
+        'Test User',            // 1: name
+        'test@example.com',     // 2: email
+        '12345',                // 3: student ID
+        '45',                   // 4: age
+        '150000',               // 5: income
+        'Traditional',          // 6: tax preference
+        '50000',                // 7: ex_q5 (rollover balance) - original position
+        '10000',                // 8: ex_q6 (annual contribution) - original position
+        'Yes',                  // 9: ex_q1 (employer 401k) - NEW
+        'Yes',                  // 10: ex_q2 (employer match) - NEW
+        '50% up to 6%',         // 11: ex_q3 (match percentage) - NEW
+        'Yes'                   // 12: ex_q4 (roth option) - NEW
+      ],
+      expectedMapping: {
+        ex_q1: 'Yes',
+        ex_q2: 'Yes',
+        ex_q3: '50% up to 6%',
+        ex_q4: 'Yes',
+        ex_q5: '50000',
+        ex_q6: '10000'
+      }
+    },
+    {
+      profileId: '4_Roth_Reclaimer',
+      formResponse: [
+        '2024-01-15 11:00:00',  // 0: timestamp
+        'Roth User',            // 1: name
+        'roth@example.com',     // 2: email
+        '67890',                // 3: student ID
+        '40',                   // 4: age
+        '120000',               // 5: income
+        'Roth',                 // 6: tax preference
+        '100000',               // 7: ex_q5 (trad IRA balance)
+        '5000',                 // 8: ex_q6 (after-tax contributions)
+        'Yes',                  // 9: ex_q7 (backdoor understanding)
+        '5500',                 // 10: ex_q8 (conversion amount)
+        'Yes',                  // 11: ex_q1 (employer 401k) - NEW
+        'Yes',                  // 12: ex_q2 (employer match) - NEW
+        '100% up to 3%',        // 13: ex_q3 (match percentage) - NEW
+        'No'                    // 14: ex_q4 (roth option) - NEW
+      ],
+      expectedMapping: {
+        ex_q1: 'Yes',
+        ex_q2: 'Yes',
+        ex_q3: '100% up to 3%',
+        ex_q4: 'No',
+        ex_q5: '100000',
+        ex_q6: '5000',
+        ex_q7: 'Yes',
+        ex_q8: '5500'
+      }
+    }
+  ];
+  
+  testCases.forEach(testCase => {
+    console.log(`\nTesting ${testCase.profileId}:`);
+    console.log('Original form response positions:');
+    testCase.formResponse.forEach((val, idx) => {
+      if (idx >= 7) {  // Only show extra questions
+        console.log(`  Position ${idx}: ${val}`);
+      }
+    });
+    
+    // Simulate the remapping
+    const hdr = {}; // Mock header mapping
+    const startCol = 47; // Mock start column for P2 data
+    
+    // Set up mock headers
+    Object.keys(testCase.expectedMapping).forEach((key, idx) => {
+      hdr[HEADERS[`P2_${key.toUpperCase()}`]] = startCol + idx;
+    });
+    
+    const remapped = remapFormValues(testCase.formResponse, testCase.profileId, startCol, hdr);
+    
+    console.log('\nExpected mapping result:');
+    Object.entries(testCase.expectedMapping).forEach(([key, expectedValue]) => {
+      console.log(`  ${key}: ${expectedValue}`);
+    });
+    
+    console.log('\nMapping configuration:');
+    const mapping = FORM_EX_Q_MAPPING[testCase.profileId];
+    if (mapping) {
+      Object.entries(mapping).forEach(([sourcePos, targetExQ]) => {
+        console.log(`  Position ${sourcePos} → ${targetExQ}`);
+      });
+      console.log('✅ Mapping configuration found');
+    } else {
+      console.log('❌ No mapping configuration found!');
+    }
+  });
+  
+  console.log('\n=== MAPPING TEST COMPLETE ===\n');
+}

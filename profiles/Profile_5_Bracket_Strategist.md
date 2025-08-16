@@ -18,7 +18,12 @@ if (['Now','Both'].includes(taxFocus)) {
 *Note: This is a lower priority check, so users must not match other profiles first*
 
 ## Phase 2 Extra Questions
-Profile uses standard Phase 2 questions without additional profile-specific queries.
+1. Does your employer offer a 401(k) retirement plan? (NEW)
+2. Does your employer match your 401(k) contributions? (NEW)
+3. What percentage does your employer match? (e.g., "50% up to 6%") (NEW)
+4. Does your employer 401(k) plan have a Roth option? (NEW)
+
+Note: This profile already has "Traditional 401(k)" in its vehicle order, making employer match particularly relevant.
 
 ## Vehicle Priority Order
 
@@ -64,7 +69,7 @@ Profile uses standard Phase 2 questions without additional profile-specific quer
 
 ## Technical Implementation
 
-### Helper Function Logic (Code.js:1197-1279)
+### Helper Function Logic (Code.js:1213-1295)
 ```javascript
 '5_Bracket_Strategist': function(rowArr, hdr) {
     // Key features:
@@ -72,7 +77,7 @@ Profile uses standard Phase 2 questions without additional profile-specific quer
     // 2. Full catch-up contribution support
     // 3. Dynamic reordering based on tax preference
     // 4. Roth phase-out handling
-    // 5. No employer 401(k) integration (differs from Foundation Builder)
+    // 5. NOW INCLUDES: addEmployer401kVehicles for employer match
 }
 ```
 
@@ -85,9 +90,10 @@ Profile uses standard Phase 2 questions without additional profile-specific quer
 ### Universal Functions Applied
 1. **calculateHsaMonthlyCapacity()** - Determines HSA limits
 2. **calculateCesaMonthlyCapacity()** - Sets CESA limits
-3. **applyRothIRAPhaseOut()** - Handles high-income scenarios
-4. **prioritizeTraditionalAccounts()** - Reorders for current tax savings
-5. **prioritizeRothAccounts()** - Reorders for future tax savings
+3. **addEmployer401kVehicles()** - NEW: Adds employer match (free money first!)
+4. **applyRothIRAPhaseOut()** - Handles high-income scenarios
+5. **prioritizeTraditionalAccounts()** - Reorders for current tax savings
+6. **prioritizeRothAccounts()** - Reorders for future tax savings
 
 ## Income Phase-Out Rules
 - **Single Filers**: Roth IRA phases out $146,000-$161,000

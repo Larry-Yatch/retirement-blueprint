@@ -1083,6 +1083,14 @@ const profileHelpers = {
         return { name: v.name, capMonthly: adjustedCap };
       });
     
+    // Add employer 401(k) vehicles if applicable
+    baseRetirementOrder = addEmployer401kVehicles(baseRetirementOrder, {
+      rowArr,
+      hdr,
+      age,
+      grossIncome
+    });
+    
     // Apply Roth IRA phase-out rules
     baseRetirementOrder = applyRothIRAPhaseOut(baseRetirementOrder, {
       grossIncome,
@@ -1165,6 +1173,14 @@ const profileHelpers = {
         
         return { name: v.name, capMonthly: adjustedCap };
       });
+    
+    // Add employer 401(k) vehicles if applicable
+    baseRetirementOrder = addEmployer401kVehicles(baseRetirementOrder, {
+      rowArr,
+      hdr,
+      age,
+      grossIncome
+    });
     
     // Apply Roth IRA phase-out rules
     baseRetirementOrder = applyRothIRAPhaseOut(baseRetirementOrder, {
@@ -1249,6 +1265,14 @@ const profileHelpers = {
         return { name: v.name, capMonthly: adjustedCap };
       });
     
+    // Add employer 401(k) vehicles if applicable
+    baseRetirementOrder = addEmployer401kVehicles(baseRetirementOrder, {
+      rowArr,
+      hdr,
+      age,
+      grossIncome
+    });
+    
     // Apply Roth IRA phase-out rules
     baseRetirementOrder = applyRothIRAPhaseOut(baseRetirementOrder, {
       grossIncome,
@@ -1331,6 +1355,14 @@ const profileHelpers = {
         
         return { name: v.name, capMonthly: adjustedCap };
       });
+    
+    // Add employer 401(k) vehicles if applicable
+    baseRetirementOrder = addEmployer401kVehicles(baseRetirementOrder, {
+      rowArr,
+      hdr,
+      age,
+      grossIncome
+    });
     
     // Apply Roth IRA phase-out rules
     baseRetirementOrder = applyRothIRAPhaseOut(baseRetirementOrder, {
@@ -1581,6 +1613,14 @@ const profileHelpers = {
         return { name: v.name, capMonthly: adjustedCap };
       });
     
+    // Add employer 401(k) vehicles if applicable
+    baseRetirementOrder = addEmployer401kVehicles(baseRetirementOrder, {
+      rowArr,
+      hdr,
+      age,
+      grossIncome
+    });
+    
     // Apply Roth IRA phase-out rules
     baseRetirementOrder = applyRothIRAPhaseOut(baseRetirementOrder, {
       grossIncome,
@@ -1733,6 +1773,89 @@ const HEADERS = {
   FAMILY_BANK_IDEAL:                 'family_bank_ideal'
 };
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// FORM QUESTION MAPPING - Update when changing form questions
+// ═══════════════════════════════════════════════════════════════════════════════
+const FORM_EX_Q_MAPPING = {
+  '2_ROBS_Curious': {
+    // position_in_form: 'target_ex_q'
+    9: 'ex_q1',   // employer 401k
+    10: 'ex_q2',  // employer match
+    11: 'ex_q3',  // match percentage
+    12: 'ex_q4',  // roth option
+    7: 'ex_q5',   // rollover balance (original)
+    8: 'ex_q6'    // annual contribution (original)
+  },
+  '4_Roth_Reclaimer': {
+    11: 'ex_q1',  // employer 401k
+    12: 'ex_q2',  // employer match
+    13: 'ex_q3',  // match percentage
+    14: 'ex_q4',  // roth option
+    7: 'ex_q5',   // trad IRA balance (original)
+    8: 'ex_q6',   // after-tax contributions (original)
+    9: 'ex_q7',   // backdoor understanding (original)
+    10: 'ex_q8'   // conversion amount (original)
+  },
+  '5_Bracket_Strategist': {
+    7: 'ex_q1',   // employer 401k (or wherever you added them)
+    8: 'ex_q2',   // employer match
+    9: 'ex_q3',   // match percentage
+    10: 'ex_q4'   // roth option
+  },
+  '6_Catch_Up': {
+    7: 'ex_q1',   // employer 401k
+    8: 'ex_q2',   // employer match
+    9: 'ex_q3',   // match percentage
+    10: 'ex_q4'   // roth option
+  },
+  '9_Late_Stage_Growth': {
+    7: 'ex_q1',   // employer 401k
+    8: 'ex_q2',   // employer match
+    9: 'ex_q3',   // match percentage
+    10: 'ex_q4'   // roth option
+  }
+  // Profiles 1, 3, 7, 8 don't need mapping (no changes or already correct)
+};
+
+/**
+ * Remap form values to correct ex_q positions based on profile
+ */
+function remapFormValues(vals, profileId, startCol, hdr) {
+  const mapping = FORM_EX_Q_MAPPING[profileId];
+  if (!mapping) return vals; // No remapping needed
+  
+  // Create array to hold remapped values
+  const remapped = [...vals];
+  
+  // Apply each mapping
+  Object.entries(mapping).forEach(([sourcePos, targetExQ]) => {
+    const sourcePosNum = parseInt(sourcePos);
+    const targetHeader = `P2_${targetExQ.toUpperCase()}`;
+    
+    if (sourcePosNum < vals.length && HEADERS[targetHeader]) {
+      const targetCol = hdr[HEADERS[targetHeader]] - startCol;
+      if (targetCol >= 0 && targetCol < remapped.length) {
+        remapped[targetCol] = vals[sourcePosNum];
+      }
+    }
+  });
+  
+  return remapped;
+}
+
+/**
+ * Test function to verify form mapping configuration
+ * This is a simple wrapper that calls the full test in Testing.js
+ */
+function testFormMapping() {
+  // Call the test function from Testing.js
+  console.log('Testing form mapping configuration...');
+  console.log('Current mappings:', FORM_EX_Q_MAPPING);
+  
+  // For detailed tests, the functions are in Testing.js:
+  // - testFormQuestionMapping() - Full mapping test
+  // - testEmployer401kIntegration() - Employer 401k test
+}
 
 /**
  * CORE ALLOCATOR
@@ -2113,9 +2236,18 @@ function handlePhase2(e) {
   if (!matches.length) throw new Error(`No match for Student ID "${studentId}"`);
   const rowNum = matches[matches.length - 1].getRow();
 
-  // 3) Paste raw Phase 2 answers
+  // 3) Paste raw Phase 2 answers with intelligent mapping
   const startCol = hdr[HEADERS.PHASE_2_LINK] + 1;
-  ws.getRange(rowNum, startCol, 1, vals.length).setValues([vals]);
+  
+  // Get profile ID for this row
+  const currentRowData = ws.getRange(rowNum, 1, 1, ws.getLastColumn()).getValues()[0];
+  const profileId = getValue(hdr, currentRowData, HEADERS.PROFILE_ID);
+  
+  // Remap values if needed
+  const finalVals = remapFormValues(vals, profileId, startCol, hdr);
+  
+  // Paste the (possibly remapped) values
+  ws.getRange(rowNum, startCol, 1, finalVals.length).setValues([finalVals]);
 
   // 4) Run the allocation engine
   const results = runUniversalEngine(rowNum);

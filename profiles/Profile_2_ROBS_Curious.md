@@ -22,6 +22,10 @@ if (robsInterest === 'Yes' &&
 ## Phase 2 Extra Questions
 1. What is the approximate balance you plan to rollover initially into your ROBS-funded C-corp?
 2. What is your expected annual contribution from business profits back into the Solo 401(k)?
+3. Does your employer offer a 401(k) retirement plan? (NEW)
+4. Does your employer match your 401(k) contributions? (NEW)
+5. What percentage does your employer match? (e.g., "50% up to 6%") (NEW)
+6. Does your employer 401(k) plan have a Roth option? (NEW)
 
 ## Vehicle Priority Order
 
@@ -59,7 +63,7 @@ if (robsInterest === 'Yes' &&
 
 ## Technical Implementation
 
-### Helper Function Logic (Code.js:1033-1113)
+### Helper Function Logic (Code.js:1033-1121)
 ```javascript
 '2_ROBS_Curious': function(rowArr, hdr) {
     // Key features:
@@ -68,6 +72,7 @@ if (robsInterest === 'Yes' &&
     // 3. Standard Solo 401(k) limits apply
     // 4. Full universal function support
     // 5. No seeding - future contributions only
+    // 6. NOW INCLUDES: addEmployer401kVehicles for current employer match
 }
 ```
 
@@ -80,8 +85,9 @@ if (robsInterest === 'Yes' &&
 ### Universal Functions Applied
 1. **calculateHsaMonthlyCapacity()** - Determines HSA limits based on coverage and age
 2. **calculateCesaMonthlyCapacity()** - Sets CESA limits per child
-3. **applyRothIRAPhaseOut()** - Switches to Backdoor Roth when income exceeds limits
-4. **Tax Preference Functions** - Reorders vehicles based on tax strategy
+3. **addEmployer401kVehicles()** - NEW: Adds employer match if currently employed
+4. **applyRothIRAPhaseOut()** - Switches to Backdoor Roth when income exceeds limits
+5. **Tax Preference Functions** - Reorders vehicles based on tax strategy
 
 ### Tax Preference Logic
 - **"Now" Focus**: Prioritizes Traditional Solo 401(k)

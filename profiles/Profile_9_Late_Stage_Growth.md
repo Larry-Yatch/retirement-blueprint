@@ -18,8 +18,12 @@ if (age >= 55 || String(nearRetire).startsWith('Yes')) {
 *Note: Takes precedence over Catch-Up profile despite similar age*
 
 ## Phase 2 Extra Questions
-Profile uses standard Phase 2 questions without additional profile-specific queries.
-*Note: Could benefit from questions about alternative investment interest, estate planning needs*
+1. Does your employer offer a 401(k) retirement plan? (NEW)
+2. Does your employer match your 401(k) contributions? (NEW)
+3. What percentage does your employer match? (e.g., "50% up to 6%") (NEW)
+4. Does your employer 401(k) plan have a Roth option? (NEW)
+
+*Note: Could also benefit from questions about alternative investment interest and estate planning needs*
 
 ## Vehicle Priority Order
 
@@ -56,15 +60,16 @@ Profile uses standard Phase 2 questions without additional profile-specific quer
 
 ## Technical Implementation
 
-### Helper Function Logic (Code.js:1529-1611)
+### Helper Function Logic (Code.js:1545-1627)
 ```javascript
 '9_Late_Stage_Growth': function(rowArr, hdr) {
     // Key features:
-    // 1. Identical structure to Catch_Up profile
+    // 1. Similar structure to Catch_Up profile
     // 2. Same vehicle ordering and limits
     // 3. Missing alternative investment integration
     // 4. No estate planning considerations
     // 5. Standard universal function usage
+    // 6. NOW INCLUDES: addEmployer401kVehicles for pre-retirement match
 }
 ```
 
@@ -78,8 +83,9 @@ The profile description mentions "alternative investments" but the implementatio
 ### Universal Functions Applied
 1. **calculateHsaMonthlyCapacity()** - Including 55+ catch-up
 2. **calculateCesaMonthlyCapacity()** - May be for grandchildren
-3. **applyRothIRAPhaseOut()** - Income considerations
-4. **Tax Preference Functions** - Critical at this stage
+3. **addEmployer401kVehicles()** - NEW: Last chance for employer match before retirement
+4. **applyRothIRAPhaseOut()** - Income considerations
+5. **Tax Preference Functions** - Critical at this stage
 
 ## Income Phase-Out Rules
 - **Single Filers**: Roth IRA phases out $146,000-$161,000

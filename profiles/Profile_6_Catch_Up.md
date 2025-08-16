@@ -18,7 +18,12 @@ if (age >= 50 && catchUpFeeling === 'Yes') {
 *Note: Takes precedence over Bracket Strategist but not over business-related profiles*
 
 ## Phase 2 Extra Questions
-Profile uses standard Phase 2 questions without additional profile-specific queries.
+1. Does your employer offer a 401(k) retirement plan? (NEW)
+2. Does your employer match your 401(k) contributions? (NEW)
+3. What percentage does your employer match? (e.g., "50% up to 6%") (NEW)
+4. Does your employer 401(k) plan have a Roth option? (NEW)
+
+Note: This profile already has "401(k) Catch-Up" in its vehicle order, making employer match highly relevant for maximizing catch-up contributions.
 
 ## Vehicle Priority Order
 
@@ -50,7 +55,7 @@ Profile uses standard Phase 2 questions without additional profile-specific quer
 
 ## Technical Implementation
 
-### Helper Function Logic (Code.js:1280-1362)
+### Helper Function Logic (Code.js:1296-1378)
 ```javascript
 '6_Catch_Up': function(rowArr, hdr) {
     // Key features:
@@ -59,6 +64,7 @@ Profile uses standard Phase 2 questions without additional profile-specific quer
     // 3. Simplified vehicle list focusing on maximum contributions
     // 4. Tax preference ordering still applies
     // 5. Roth phase-out handling included
+    // 6. NOW INCLUDES: addEmployer401kVehicles for employer match
 }
 ```
 
@@ -79,8 +85,9 @@ Profile uses standard Phase 2 questions without additional profile-specific quer
 ### Universal Functions Applied
 1. **calculateHsaMonthlyCapacity()** - Includes age 55+ catch-up
 2. **calculateCesaMonthlyCapacity()** - Standard CESA limits
-3. **applyRothIRAPhaseOut()** - Handles high-income scenarios
-4. **Tax Preference Functions** - Reorders based on tax strategy
+3. **addEmployer401kVehicles()** - NEW: Critical for maximizing catch-up with match
+4. **applyRothIRAPhaseOut()** - Handles high-income scenarios
+5. **Tax Preference Functions** - Reorders based on tax strategy
 
 ## Income Phase-Out Rules
 - **Single Filers**: Roth IRA phases out $146,000-$161,000

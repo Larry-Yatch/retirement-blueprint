@@ -21,6 +21,10 @@ if (hasTradIRA === 'Yes') {
 2. Have you ever made after-tax (non-deductible) contributions to an IRA?
 3. Do you understand or have you used the "Backdoor Roth" IRA strategy?
 4. Would you like to move some or all of your Traditional IRA money into a Roth IRA? If so, how much?
+5. Does your employer offer a 401(k) retirement plan? (NEW)
+6. Does your employer match your 401(k) contributions? (NEW)
+7. What percentage does your employer match? (e.g., "50% up to 6%") (NEW)
+8. Does your employer 401(k) plan have a Roth option? (NEW)
 
 ## Vehicle Priority Order
 
@@ -48,7 +52,7 @@ if (hasTradIRA === 'Yes') {
 
 ## Technical Implementation
 
-### Helper Function Logic (Code.js:1114-1179)
+### Helper Function Logic (Code.js:1122-1211)
 ```javascript
 '4_Roth_Reclaimer': function(rowArr, hdr) {
     // Key features:
@@ -56,7 +60,7 @@ if (hasTradIRA === 'Yes') {
     // 2. Focus on backdoor Roth strategy
     // 3. No direct Roth IRA (assumes high income)
     // 4. HSA for additional tax-advantaged savings
-    // 5. No employer 401(k) vehicles by default
+    // 5. NOW INCLUDES: addEmployer401kVehicles for employer match
 }
 ```
 
@@ -69,7 +73,9 @@ if (hasTradIRA === 'Yes') {
 ### Universal Functions Applied
 1. **calculateHsaMonthlyCapacity()** - Determines HSA limits based on coverage and age
 2. **calculateCesaMonthlyCapacity()** - Sets CESA limits per child
-3. **Tax Preference Functions** - Less relevant due to limited options
+3. **addEmployer401kVehicles()** - NEW: Adds employer match for high earners
+4. **applyRothIRAPhaseOut()** - Handles phase-out (usually already phased out)
+5. **Tax Preference Functions** - Reorders available vehicles
 
 ## Pro-Rata Rule Implications
 - **Challenge**: Existing Traditional IRA balance complicates backdoor Roth
