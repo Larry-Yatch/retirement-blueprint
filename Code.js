@@ -2173,6 +2173,77 @@ function setValue(sheet, hdr, rowNum, name, value) {
   sheet.getRange(rowNum, col).setValue(value);
 }
 
+/**
+ * Validates that all expected headers exist in the Working Sheet
+ * @param {Array<string>} requiredHeaders - Additional headers to check beyond defaults
+ * @returns {Object} { valid: boolean, missing: string[], hdr: Object }
+ */
+function validateHeaders(requiredHeaders = []) {
+  const ws = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Working Sheet');
+  if (!ws) {
+    return { 
+      valid: false, 
+      missing: ['Working Sheet not found'], 
+      hdr: {} 
+    };
+  }
+  
+  // Get headers from row 2 (standard location)
+  const headerRange = ws.getRange(2, 1, 1, ws.getLastColumn());
+  const headers = headerRange.getValues()[0];
+  const hdr = {};
+  const foundHeaders = new Set();
+  
+  // Build header map
+  headers.forEach((header, index) => {
+    if (header) {
+      hdr[header] = index + 1; // 1-based index
+      foundHeaders.add(header);
+    }
+  });
+  
+  // Check critical headers that should always exist
+  const defaultRequired = [
+    HEADERS.PROFILE_ID,
+    HEADERS.CURRENT_AGE,
+    HEADERS.WORK_SITUATION,
+    HEADERS.GROSS_ANNUAL_INCOME
+  ];
+  
+  // Combine with any additional required headers
+  const allRequired = [...new Set([...defaultRequired, ...requiredHeaders])];
+  const missing = [];
+  
+  allRequired.forEach(headerName => {
+    if (!foundHeaders.has(headerName)) {
+      missing.push(headerName);
+    }
+  });
+  
+  return {
+    valid: missing.length === 0,
+    missing,
+    hdr,
+    foundHeaders: Array.from(foundHeaders)
+  };
+}
+
+/**
+ * Safe getter that validates header exists before accessing
+ * @param {Object} hdr - Header map
+ * @param {Array} rowArr - Row data array  
+ * @param {string} headerConstant - HEADERS constant like HEADERS.CURRENT_AGE
+ * @param {*} defaultValue - Default if header not found
+ * @returns {*} The value or default
+ */
+function safeGetValue(hdr, rowArr, headerConstant, defaultValue = '') {
+  if (!hdr[headerConstant]) {
+    console.warn(`Header not found: ${headerConstant}, using default: ${defaultValue}`);
+    return defaultValue;
+  }
+  return getValue(hdr, rowArr, headerConstant);
+}
+
 
 /*** DISPATCHER ***/
 function onAnyFormSubmit(e) {
