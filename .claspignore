@@ -1,0 +1,10 @@
+# Ignore files that shouldn't be pushed to Google Apps Script
+**/**
+!Code.js
+!Testing.js
+!Form_Management.js
+!Current_Forms_Full.js
+!appsscript.json
+
+# Explicitly exclude draft files
+form-mapping-implementation.js

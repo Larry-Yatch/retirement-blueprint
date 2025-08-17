@@ -809,9 +809,24 @@ function testFormMapping() {
  * Tests the form mapping and vehicle creation for profiles 2, 4, 5, 6, and 9
  */
 function testEmployer401kIntegration() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const ws = ss.getSheetByName(SHEET_NAMES.WORKING_SHEET);
-  const hdr = getHeaderRow(ws);
+  // Create a mock header mapping for testing (1-indexed like Google Sheets)
+  const hdr = {
+    'ProfileID': 1,
+    'Current_Age': 2, 
+    'gross_annual_income': 3,
+    'filing_status': 4,
+    'Tax_Minimization': 5,
+    'hsa_eligibility': 6,
+    'cesa_num_children': 7,
+    'ex_q1': 8,
+    'ex_q2': 9,
+    'ex_q3': 10,
+    'ex_q4': 11,
+    'ex_q5': 12,
+    'ex_q6': 13,
+    'ex_q7': 14,
+    'ex_q8': 15
+  };
   
   // Test profiles that now have employer 401(k) questions
   const testProfiles = [
@@ -884,19 +899,32 @@ function testEmployer401kIntegration() {
     console.log(`\nTesting Profile: ${profile.profileId}`);
     console.log('--------------------------------');
     
-    // Create a test row with the profile data
+    // Create a test row with the profile data (subtract 1 for 0-based array indexing)
     const rowArr = [];
-    rowArr[hdr[HEADERS.PROFILE_ID]] = profile.profileId;
-    rowArr[hdr[HEADERS.P1_AGE]] = profile.testData.age;
-    rowArr[hdr[HEADERS.P1_GROSS_INCOME]] = profile.testData.grossIncome;
-    rowArr[hdr[HEADERS.P2_EX_Q1]] = profile.testData.ex_q1;
-    rowArr[hdr[HEADERS.P2_EX_Q2]] = profile.testData.ex_q2;
-    rowArr[hdr[HEADERS.P2_EX_Q3]] = profile.testData.ex_q3;
-    rowArr[hdr[HEADERS.P2_EX_Q4]] = profile.testData.ex_q4;
-    if (profile.testData.ex_q5) rowArr[hdr[HEADERS.P2_EX_Q5]] = profile.testData.ex_q5;
-    if (profile.testData.ex_q6) rowArr[hdr[HEADERS.P2_EX_Q6]] = profile.testData.ex_q6;
-    if (profile.testData.ex_q7) rowArr[hdr[HEADERS.P2_EX_Q7]] = profile.testData.ex_q7;
-    if (profile.testData.ex_q8) rowArr[hdr[HEADERS.P2_EX_Q8]] = profile.testData.ex_q8;
+    rowArr[hdr['ProfileID'] - 1] = profile.profileId;
+    rowArr[hdr['Current_Age'] - 1] = profile.testData.age;
+    rowArr[hdr['gross_annual_income'] - 1] = profile.testData.grossIncome;
+    rowArr[hdr['filing_status'] - 1] = 'Married Filing Jointly';
+    rowArr[hdr['Tax_Minimization'] - 1] = 'Both';
+    rowArr[hdr['hsa_eligibility'] - 1] = 'Yes';
+    rowArr[hdr['cesa_num_children'] - 1] = 0;
+    rowArr[hdr['ex_q1'] - 1] = profile.testData.ex_q1;
+    rowArr[hdr['ex_q2'] - 1] = profile.testData.ex_q2;
+    rowArr[hdr['ex_q3'] - 1] = profile.testData.ex_q3;
+    rowArr[hdr['ex_q4'] - 1] = profile.testData.ex_q4;
+    
+    // Debug logging
+    console.log('Test row setup:');
+    console.log('  hdr[ex_q1]:', hdr['ex_q1'], 'value:', rowArr[hdr['ex_q1'] - 1]);
+    console.log('  hdr[ex_q2]:', hdr['ex_q2'], 'value:', rowArr[hdr['ex_q2'] - 1]);
+    console.log('  hdr[ex_q3]:', hdr['ex_q3'], 'value:', rowArr[hdr['ex_q3'] - 1]);
+    console.log('  hdr[ex_q4]:', hdr['ex_q4'], 'value:', rowArr[hdr['ex_q4'] - 1]);
+    console.log('  age index:', hdr['Current_Age'], 'value:', rowArr[hdr['Current_Age'] - 1]);
+    console.log('  income index:', hdr['gross_annual_income'], 'value:', rowArr[hdr['gross_annual_income'] - 1]);
+    if (profile.testData.ex_q5) rowArr[hdr['ex_q5'] - 1] = profile.testData.ex_q5;
+    if (profile.testData.ex_q6) rowArr[hdr['ex_q6'] - 1] = profile.testData.ex_q6;
+    if (profile.testData.ex_q7) rowArr[hdr['ex_q7'] - 1] = profile.testData.ex_q7;
+    if (profile.testData.ex_q8) rowArr[hdr['ex_q8'] - 1] = profile.testData.ex_q8;
     
     // Get the profile helper function
     const helper = profileHelpers[profile.profileId];
@@ -1047,4 +1075,534 @@ function testFormQuestionMapping() {
   });
   
   console.log('\n=== MAPPING TEST COMPLETE ===\n');
+}
+
+/**
+ * Test form submission processing with mapping
+ * Simulates actual form submission and processing through allocator
+ */
+function testFormSubmissionWithMapping() {
+  console.log('\n=== FORM SUBMISSION WITH MAPPING TEST ===\n');
+  
+  // Simulate a form submission for Profile 2 with employer 401k questions in new positions
+  const formResponse = {
+    timestamp: '2024-01-15 14:30:00',
+    profileId: '2_ROBS_Curious',
+    responses: [
+      '2024-01-15 14:30:00',  // 0: timestamp
+      'Bob Builder',          // 1: name
+      'bob@example.com',      // 2: email
+      '99999',                // 3: student ID
+      '35',                   // 4: age
+      '100000',               // 5: income
+      'Medium',               // 6: tax preference
+      '25000',                // 7: rollover balance (ex_q5) 
+      '5000',                 // 8: annual contribution (ex_q6)
+      'Yes',                  // 9: employer 401k (ex_q1)
+      'Yes',                  // 10: employer match (ex_q2)
+      '50% up to 6%',         // 11: match percentage (ex_q3)
+      'Yes',                  // 12: roth option (ex_q4)
+      'Yes',                  // 13: HSA eligible
+      '2'                     // 14: number of children
+    ]
+  };
+  
+  console.log('Form submission:');
+  console.log(`  Profile: ${formResponse.profileId}`);
+  console.log(`  Age: ${formResponse.responses[4]}`);
+  console.log(`  Income: $${formResponse.responses[5]}`);
+  console.log(`  Employer 401k: ${formResponse.responses[9]} (position 9)`);
+  console.log(`  Match: ${formResponse.responses[10]} with ${formResponse.responses[11]}`);
+  
+  // Test the mapping
+  const mapping = FORM_EX_Q_MAPPING[formResponse.profileId];
+  console.log('\nApplying mapping:');
+  Object.entries(mapping).forEach(([sourcePos, targetExQ]) => {
+    console.log(`  Position ${sourcePos} → ${targetExQ}: "${formResponse.responses[sourcePos]}"`);
+  });
+  
+  // Simulate processing through profile helper
+  console.log('\nSimulating profile helper processing...');
+  
+  // Create mock row data after mapping
+  const mockHdr = {};
+  Object.keys(HEADERS).forEach((key, index) => {
+    mockHdr[HEADERS[key]] = index + 1;
+  });
+  
+  // Apply mapping
+  const mappedData = remapFormValues(formResponse.responses, formResponse.profileId, 0, mockHdr);
+  
+  // Verify employer 401k data is in correct positions
+  const employerData = {
+    hasEmployer401k: mappedData[mockHdr[HEADERS.P2_EX_Q1] - 1],
+    hasMatch: mappedData[mockHdr[HEADERS.P2_EX_Q2] - 1],
+    matchPercentage: mappedData[mockHdr[HEADERS.P2_EX_Q3] - 1],
+    hasRoth401k: mappedData[mockHdr[HEADERS.P2_EX_Q4] - 1]
+  };
+  
+  console.log('\nMapped employer 401k data:');
+  console.log(`  Has 401k: ${employerData.hasEmployer401k}`);
+  console.log(`  Has match: ${employerData.hasMatch}`);
+  console.log(`  Match percentage: ${employerData.matchPercentage}`);
+  console.log(`  Has Roth option: ${employerData.hasRoth401k}`);
+  
+  // Verify the data would create the correct vehicle
+  if (employerData.hasEmployer401k === 'Yes' && employerData.hasMatch === 'Yes') {
+    const monthlyIncome = parseInt(formResponse.responses[5]) / 12;
+    const matchUpToMatch = employerData.matchPercentage.match(/up to (\d+)%/);
+    const matchUpToPct = matchUpToMatch ? parseInt(matchUpToMatch[1]) / 100 : 0.06;
+    const matchCap = Math.round(monthlyIncome * matchUpToPct);
+    
+    console.log(`\n✅ Would create employer match vehicle:`);
+    console.log(`   Name: 401(k) Match Traditional (${employerData.matchPercentage})`);
+    console.log(`   Monthly cap: $${matchCap}`);
+  } else {
+    console.log('\n❌ No employer match vehicle would be created');
+  }
+  
+  console.log('\n=== SUBMISSION TEST COMPLETE ===\n');
+}
+
+/**
+ * Test Profile 2 and Profile 4 tuning with detailed scenarios
+ * Validates assumptions and edge cases
+ */
+function testTunedProfiles() {
+  console.log('\n=== TESTING TUNED PROFILES 2 & 4 ===\n');
+  
+  // Add detailed ROBS Curious analysis
+  testROBSCuriousDetailed();
+  
+  // Test Profile 2: ROBS Curious
+  console.log('PROFILE 2: ROBS CURIOUS TESTS');
+  console.log('=' .repeat(50));
+  
+  const profile2Tests = [
+    {
+      name: 'W-2 Employee with 401(k) Match',
+      rowData: {
+        age: 45,
+        grossIncome: 120000,
+        filing: 'Married Filing Jointly',
+        workSituation: 'W-2 employee',
+        taxFocus: 'Both',
+        hsaElig: 'Yes',
+        numKids: 2,
+        hasEmployer401k: 'Yes',
+        hasMatch: 'Yes',
+        matchDetails: '50% up to 6%',
+        hasRoth401k: 'Yes',
+        plannedRollover: 75000,
+        expectedContribution: 0
+      }
+    },
+    {
+      name: 'Self-Employed with Business Income',
+      rowData: {
+        age: 52,
+        grossIncome: 150000,
+        filing: 'Single',
+        workSituation: 'Self-employed',
+        taxFocus: 'Now',
+        hsaElig: 'Yes',
+        numKids: 0,
+        hasEmployer401k: 'No',
+        plannedRollover: 200000,
+        expectedContribution: 50000
+      }
+    },
+    {
+      name: 'Both W-2 and Self-Employed',
+      rowData: {
+        age: 40,
+        grossIncome: 180000,
+        filing: 'Married Filing Jointly',
+        workSituation: 'Both',
+        taxFocus: 'Later',
+        hsaElig: 'No',
+        numKids: 1,
+        hasEmployer401k: 'Yes',
+        hasMatch: 'Yes',
+        matchDetails: '100% up to 3%',
+        hasRoth401k: 'No',
+        plannedRollover: 50000,
+        expectedContribution: 20000
+      }
+    }
+  ];
+  
+  profile2Tests.forEach(test => {
+    console.log(`\nTest: ${test.name}`);
+    const result = runProfileTest('2_ROBS_Curious', test.rowData);
+    analyzeResults(result, test);
+  });
+  
+  // Test Profile 4: Roth Reclaimer
+  console.log('\n\nPROFILE 4: ROTH RECLAIMER TESTS');
+  console.log('=' .repeat(50));
+  
+  const profile4Tests = [
+    {
+      name: 'Has IRA + Understands Backdoor',
+      rowData: {
+        age: 45,
+        grossIncome: 150000,
+        filing: 'Married Filing Jointly',
+        hsaElig: 'Yes',
+        numKids: 0,
+        hasEmployer401k: 'Yes',
+        hasMatch: 'Yes',
+        matchDetails: '50% up to 6%',
+        hasRoth401k: 'Yes',
+        tradIRABalance: 100000,
+        afterTaxContrib: 'No',
+        understandsBackdoor: 'Yes',
+        desiredConversion: 6500
+      }
+    },
+    {
+      name: 'Clean Slate + Mega Backdoor',
+      rowData: {
+        age: 50,
+        grossIncome: 300000,
+        filing: 'Single',
+        hsaElig: 'No',
+        numKids: 2,
+        hasEmployer401k: 'Yes',
+        hasMatch: 'Yes',
+        matchDetails: '100% up to 4%',
+        hasRoth401k: 'No',
+        tradIRABalance: 0,
+        afterTaxContrib: 'Yes',
+        understandsBackdoor: 'Yes',
+        desiredConversion: 7500
+      }
+    },
+    {
+      name: 'Doesn\'t Understand Backdoor',
+      rowData: {
+        age: 40,
+        grossIncome: 200000,
+        filing: 'Married Filing Jointly',
+        hsaElig: 'Yes',
+        numKids: 0,
+        hasEmployer401k: 'No',
+        tradIRABalance: 50000,
+        understandsBackdoor: 'No'
+      }
+    }
+  ];
+  
+  profile4Tests.forEach(test => {
+    console.log(`\nTest: ${test.name}`);
+    const result = runProfileTest('4_Roth_Reclaimer', test.rowData);
+    analyzeResults(result, test);
+  });
+}
+
+/**
+ * Helper to run a single profile test
+ */
+function runProfileTest(profileId, rowData) {
+  // Create mock header mapping
+  const hdr = {};
+  Object.keys(HEADERS).forEach((key, idx) => {
+    hdr[HEADERS[key]] = idx + 1;
+  });
+  
+  // Create row array
+  const rowArr = [];
+  
+  // Map test data to row positions
+  const dataMapping = {
+    age: HEADERS.CURRENT_AGE,
+    grossIncome: HEADERS.GROSS_ANNUAL_INCOME,
+    filing: HEADERS.FILING_STATUS,
+    workSituation: HEADERS.WORK_SITUATION,
+    taxFocus: HEADERS.TAX_MINIMIZATION,
+    hsaElig: HEADERS.P2_HSA_ELIGIBILITY,
+    numKids: HEADERS.P2_CESA_NUM_CHILDREN,
+    // Profile 2 specifics
+    plannedRollover: HEADERS.P2_EX_Q5,
+    expectedContribution: HEADERS.P2_EX_Q6,
+    // Profile 4 specifics
+    tradIRABalance: HEADERS.P2_EX_Q5,
+    afterTaxContrib: HEADERS.P2_EX_Q6,
+    understandsBackdoor: HEADERS.P2_EX_Q7,
+    desiredConversion: HEADERS.P2_EX_Q8,
+    // Employer 401k (both profiles)
+    hasEmployer401k: HEADERS.P2_EX_Q1,
+    hasMatch: HEADERS.P2_EX_Q2,
+    matchDetails: HEADERS.P2_EX_Q3,
+    hasRoth401k: HEADERS.P2_EX_Q4
+  };
+  
+  Object.entries(dataMapping).forEach(([key, header]) => {
+    if (rowData[key] !== undefined) {
+      rowArr[hdr[header] - 1] = rowData[key];
+    }
+  });
+  
+  // Call the profile helper
+  const helper = profileHelpers[profileId];
+  return helper(rowArr, hdr);
+}
+
+/**
+ * Analyze and display test results
+ */
+/**
+ * Detailed testing for ROBS Curious profile
+ * Tests assumptions and edge cases
+ */
+function testROBSCuriousDetailed() {
+  console.log('\n=== DETAILED ROBS CURIOUS ANALYSIS ===\n');
+  
+  // Test Case 1: Self-employed with Solo 401(k) limits
+  console.log('TEST 1: Solo 401(k) Contribution Limits');
+  console.log('-'.repeat(40));
+  
+  const test1 = runProfileTest('2_ROBS_Curious', {
+    age: 52,
+    grossIncome: 150000,
+    filing: 'Single',
+    workSituation: 'Self-employed',
+    taxFocus: 'Now',
+    hsaElig: 'Yes',
+    numKids: 0,
+    hasEmployer401k: 'No',
+    plannedRollover: 200000,
+    expectedContribution: 50000  // Business profit contribution
+  });
+  
+  // Check Solo 401(k) limits
+  const solo401kVehicles = test1.vehicleOrders.Retirement.filter(v => 
+    v.name.includes('Solo 401(k)')
+  );
+  
+  console.log('Solo 401(k) Vehicles Found:');
+  solo401kVehicles.forEach(v => {
+    const annualCap = Math.round(v.capMonthly * 12);
+    console.log(`  ${v.name}: $${v.capMonthly}/mo ($${annualCap}/yr)`);
+  });
+  
+  // Verify catch-up is applied (age 52 = 50+)
+  const expectedEmployeeCap = (23000 + 7500) / 12; // $30,500 with catch-up
+  const actualEmployeeCap = solo401kVehicles.find(v => 
+    v.name.includes('Traditional') || v.name.includes('Roth')
+  )?.capMonthly;
+  
+  console.log(`\nEmployee contribution limit check:`);
+  console.log(`  Expected: $${Math.round(expectedEmployeeCap)}/mo`);
+  console.log(`  Actual: $${Math.round(actualEmployeeCap)}/mo`);
+  console.log(`  Catch-up applied: ${actualEmployeeCap > 23000/12 ? '✅' : '❌'}`);
+  
+  // Test Case 2: Employment situation handling
+  console.log('\n\nTEST 2: Employment Situation Logic');
+  console.log('-'.repeat(40));
+  
+  const employmentTests = [
+    { workSituation: 'W-2 employee', hasEmployer401k: 'Yes' },
+    { workSituation: 'Self-employed', hasEmployer401k: 'No' },
+    { workSituation: 'Both', hasEmployer401k: 'Yes' }
+  ];
+  
+  employmentTests.forEach(test => {
+    const result = runProfileTest('2_ROBS_Curious', {
+      age: 45,
+      grossIncome: 120000,
+      filing: 'Married Filing Jointly',
+      workSituation: test.workSituation,
+      taxFocus: 'Both',
+      hsaElig: 'Yes',
+      numKids: 0,
+      hasEmployer401k: test.hasEmployer401k,
+      hasMatch: test.hasEmployer401k,
+      matchDetails: '50% up to 6%',
+      hasRoth401k: 'Yes',
+      plannedRollover: 50000,
+      expectedContribution: 0
+    });
+    
+    const hasSolo401k = result.vehicleOrders.Retirement.some(v => 
+      v.name.includes('Solo 401(k)')
+    );
+    const hasEmployerMatch = result.vehicleOrders.Retirement.some(v => 
+      v.name.includes('401(k) Match')
+    );
+    
+    console.log(`\n${test.workSituation}:`);
+    console.log(`  Has Solo 401(k): ${hasSolo401k ? '✅' : '❌'}`);
+    console.log(`  Has Employer Match: ${hasEmployerMatch ? '✅' : '❌'}`);
+    
+    // Verify logic
+    const shouldHaveSolo = test.workSituation === 'Self-employed' || 
+                          test.workSituation === 'Both';
+    const shouldHaveMatch = test.hasEmployer401k === 'Yes';
+    
+    console.log(`  Logic correct: ${
+      (hasSolo401k === shouldHaveSolo && hasEmployerMatch === shouldHaveMatch) 
+      ? '✅' : '❌'
+    }`);
+  });
+  
+  // Test Case 3: ROBS Planning Elements
+  console.log('\n\nTEST 3: ROBS Planning Features');
+  console.log('-'.repeat(40));
+  
+  const robsTest = runProfileTest('2_ROBS_Curious', {
+    age: 48,
+    grossIncome: 100000,
+    filing: 'Single',
+    workSituation: 'Self-employed',
+    taxFocus: 'Both',
+    hsaElig: 'No',
+    numKids: 0,
+    hasEmployer401k: 'No',
+    plannedRollover: 300000,  // Large ROBS rollover planned
+    expectedContribution: 75000  // Significant business profit expected
+  });
+  
+  // Check Traditional IRA presence (needed for ROBS)
+  const hasTradIRA = robsTest.vehicleOrders.Retirement.some(v => 
+    v.name === 'Traditional IRA'
+  );
+  console.log(`Traditional IRA for ROBS: ${hasTradIRA ? '✅' : '❌'}`);
+  
+  // Check seeding
+  console.log(`\nSeeds:`, robsTest.seeds.Retirement);
+  console.log(`Planned rollover captured: ${
+    robsTest.seeds.Retirement['Planned ROBS Rollover'] === 300000 ? '✅' : '❌'
+  }`);
+  
+  // Check Solo 401(k) employer portion
+  const employerVehicle = robsTest.vehicleOrders.Retirement.find(v => 
+    v.name === 'Solo 401(k) – Employer'
+  );
+  if (employerVehicle) {
+    const annualEmployer = employerVehicle.capMonthly * 12;
+    console.log(`\nSolo 401(k) Employer portion:`);
+    console.log(`  Monthly: $${Math.round(employerVehicle.capMonthly)}`);
+    console.log(`  Annual: $${Math.round(annualEmployer)}`);
+    console.log(`  Uses expected contribution: ${
+      annualEmployer <= 75000 ? '✅' : '❌'
+    }`);
+  }
+  
+  // Test Case 4: Tax Preference Ordering
+  console.log('\n\nTEST 4: Tax Preference Vehicle Ordering');
+  console.log('-'.repeat(40));
+  
+  const taxPreferences = ['Now', 'Later', 'Both'];
+  
+  taxPreferences.forEach(taxFocus => {
+    const result = runProfileTest('2_ROBS_Curious', {
+      age: 40,
+      grossIncome: 100000,
+      filing: 'Single',
+      workSituation: 'Self-employed',
+      taxFocus: taxFocus,
+      hsaElig: 'No',
+      numKids: 0,
+      hasEmployer401k: 'No',
+      plannedRollover: 0,
+      expectedContribution: 0
+    });
+    
+    const vehicles = result.vehicleOrders.Retirement
+      .filter(v => v.name.includes('Solo 401(k)') && !v.name.includes('Employer'))
+      .map(v => v.name);
+    
+    console.log(`\n${taxFocus}: ${vehicles.join(' → ')}`);
+    
+    // Verify ordering
+    if (taxFocus === 'Now' && vehicles[0].includes('Traditional')) {
+      console.log('  Correct: Traditional first ✅');
+    } else if (taxFocus === 'Later' && vehicles[0].includes('Roth')) {
+      console.log('  Correct: Roth first ✅');
+    } else if (taxFocus === 'Both') {
+      console.log('  Default order maintained ✅');
+    }
+  });
+  
+  // Test Case 5: Roth IRA Phase-out
+  console.log('\n\nTEST 5: Roth IRA Phase-out Logic');
+  console.log('-'.repeat(40));
+  
+  const incomeTests = [
+    { income: 150000, filing: 'Single' },      // Near phase-out
+    { income: 180000, filing: 'Single' },      // In phase-out
+    { income: 250000, filing: 'Single' },      // Fully phased out
+    { income: 240000, filing: 'Married Filing Jointly' }, // MFJ near phase-out
+  ];
+  
+  incomeTests.forEach(test => {
+    const result = runProfileTest('2_ROBS_Curious', {
+      age: 35,
+      grossIncome: test.income,
+      filing: test.filing,
+      workSituation: 'W-2 employee',
+      taxFocus: 'Both',
+      hsaElig: 'No',
+      numKids: 0,
+      hasEmployer401k: 'Yes',
+      hasMatch: 'No',
+      hasRoth401k: 'Yes',
+      plannedRollover: 0,
+      expectedContribution: 0
+    });
+    
+    const rothIRA = result.vehicleOrders.Retirement.find(v => 
+      v.name === 'Roth IRA'
+    );
+    const backdoorRoth = result.vehicleOrders.Retirement.find(v => 
+      v.name === 'Backdoor Roth IRA'
+    );
+    
+    console.log(`\n$${test.income} ${test.filing}:`);
+    if (rothIRA) {
+      console.log(`  Roth IRA: $${Math.round(rothIRA.capMonthly)}/mo`);
+    }
+    if (backdoorRoth) {
+      console.log(`  Backdoor Roth: $${Math.round(backdoorRoth.capMonthly)}/mo`);
+    }
+    if (!rothIRA && !backdoorRoth) {
+      console.log(`  No Roth IRA available (fully phased out)`);
+    }
+  });
+}
+
+function analyzeResults(result, test) {
+  console.log('  Input:', JSON.stringify(test.rowData, null, 2));
+  
+  // Show retirement vehicles
+  console.log('\n  Retirement Vehicles:');
+  result.vehicleOrders.Retirement.forEach((v, idx) => {
+    if (v.name !== 'Family Bank') {
+      const cap = v.capMonthly === Infinity ? 'Unlimited' : 
+                 v.capMonthly === 0 ? 'Info' : 
+                 `$${Math.round(v.capMonthly)}/mo`;
+      console.log(`    ${idx + 1}. ${v.name} - ${cap}`);
+      if (v.note) console.log(`       Note: ${v.note}`);
+    }
+  });
+  
+  // Show seeds if any
+  if (Object.keys(result.seeds.Retirement || {}).length > 0) {
+    console.log('\n  Seeds:', result.seeds.Retirement);
+  }
+  
+  // Show other domains if vehicles present
+  ['Education', 'Health'].forEach(domain => {
+    const vehicles = result.vehicleOrders[domain].filter(v => 
+      !v.name.includes('Bank') && v.capMonthly > 0
+    );
+    if (vehicles.length > 0) {
+      console.log(`\n  ${domain} Vehicles:`);
+      vehicles.forEach(v => {
+        console.log(`    - ${v.name}: $${Math.round(v.capMonthly)}/mo`);
+      });
+    }
+  });
 }

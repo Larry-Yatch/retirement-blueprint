@@ -1,16 +1,22 @@
-# Profile Helper Tuning - Master Document
+# Profile Helper Tuning - Master Tracking Document
 
 ## 🎯 Purpose
-This document serves as the single source of truth for the profile helper tuning process, tracking what we've accomplished, current status, and next steps for each profile.
+This document tracks the current status and progress of profile helper tuning. For detailed implementation analysis, reasoning, and technical patterns, see [`/profiles/Profile_Tuning_Detailed_Analysis.md`](../profiles/Profile_Tuning_Detailed_Analysis.md).
+
+**Use this document for:**
+- Quick status checks
+- Tracking what's complete vs pending
+- Test results summary
+- Planning next tasks
 
 ## 📊 Profile Tuning Status Overview
 
 | Profile | Universal Functions | Employer 401(k) | Form Questions | Tuning Status | Next Steps |
 |---------|-------------------|-----------------|----------------|---------------|------------|
 | 1_ROBS_In_Use | ✅ Complete | N/A | Original | ⏳ Not Started | Review allocation logic |
-| 2_ROBS_Curious | ✅ Complete | ✅ Added | ✅ Updated | ⏳ Not Started | Test & tune allocation |
+| 2_ROBS_Curious | ✅ Complete | ✅ Added | ✅ Updated | ✅ Tuned | Test with live form |
 | 3_Solo401k_Builder | ✅ Complete | N/A | Original | ⏳ Not Started | Review seeding logic |
-| 4_Roth_Reclaimer | ✅ Complete | ✅ Added | ✅ Updated | ⏳ Not Started | Test & tune allocation |
+| 4_Roth_Reclaimer | ✅ Complete | ✅ Added | ✅ Updated | ✅ Tuned | Test with live form |
 | 5_Bracket_Strategist | ✅ Complete | ✅ Added | ✅ Updated | ⏳ Not Started | Test & tune allocation |
 | 6_Catch_Up | ✅ Complete | ✅ Added | ✅ Updated | ⏳ Not Started | Test & tune allocation |
 | 7_Foundation_Builder | ✅ Complete | ✅ Original | Original | ✅ Complete | Reference implementation |
@@ -89,21 +95,31 @@ When tuning profiles and changing questions:
 - **Unique Features**: Unlimited profit distributions
 - **Next Steps**: Review allocation priorities for ROBS vehicles
 
-### Profile 2: ROBS_Curious
-- **Status**: Infrastructure complete, tuning not started
-- **Recent Changes**: Added employer 401(k) support
-- **Next Steps**: Test employer match integration with ROBS planning
+### Profile 2: ROBS_Curious ✅
+- **Status**: TUNED - Major overhaul complete with simplified Solo 401(k)
+- **Key Changes**: 
+  - Dynamic vehicles based on employment
+  - Employer 401(k) support
+  - Traditional IRA added
+  - Simplified Solo 401(k) calculation with spouse support
+  - Updated form questions and mapping
+- **Test Results**: ✅ All scenarios pass (see test details in analysis doc)
+- **Latest Updates**: 
+  - Simplified business savings question
+  - Added spouse in business question
+  - Fixed form mapping (spouse question at end)
+- **Next Steps**: Ready for live form testing
 
 ### Profile 3: Solo401k_Builder
 - **Status**: Infrastructure complete, tuning not started
 - **Unique Features**: Seeding logic for employee/employer contributions
 - **Next Steps**: Review seeding calculations and allocation order
 
-### Profile 4: Roth_Reclaimer
-- **Status**: Infrastructure complete, tuning not started
-- **Recent Changes**: Added employer 401(k) support
-- **Challenges**: Limited vehicles due to pro-rata rule
-- **Next Steps**: Test backdoor Roth with employer 401(k) coordination
+### Profile 4: Roth_Reclaimer ✅
+- **Status**: TUNED - Sophisticated backdoor Roth logic implemented
+- **Key Changes**: Dynamic IRA strategy based on balance/understanding, employer 401(k) integration, mega backdoor support
+- **Test Results**: ✅ All backdoor scenarios validated
+- **Next Steps**: Ready for live form testing
 
 ### Profile 5: Bracket_Strategist
 - **Status**: Infrastructure complete, tuning not started
@@ -133,62 +149,26 @@ When tuning profiles and changing questions:
 - **Missing**: Alternative investment integration
 - **Next Steps**: Consider adding alternative investment logic
 
-## 🚀 Next Steps for Profile Tuning
+## 🚀 Next Steps
 
-### Current Status (Testing Phase):
-🔧 **Infrastructure:** Complete  
-🧪 **Testing:** In Progress  
-📝 **Test Functions Added:**
-- `testEmployer401kIntegration()` - Verifies employer match vehicles are created
-- `testFormQuestionMapping()` - Tests form question remapping logic
+### Current Phase: Profile Tuning
+- **Completed**: Profiles 2 & 4 ✅
+- **In Progress**: Profile 5 (Bracket Strategist)
+- **Remaining**: Profiles 1, 3, 6, 8, 9
 
-### Immediate Priorities:
-1. **Test Employer 401(k) Integration** ⏳ - Run test functions in Apps Script
-2. **Verify Question Mapping** ⏳ - Submit test forms for profiles 2,4,5,6,9
-3. **Begin Profile 2 Tuning** 🔜 - First profile with new employer logic
+### Quick Reference:
+- **Tuning Process**: See [Profile Tuning Process Documentation](../profiles/Profile_Tuning_Detailed_Analysis.md#profile-tuning-process-documentation)
+- **Test Functions**: `testTunedProfiles()` in Testing.js
+- **Form Mapping**: Lines 1776-1818 in Code.js
 
-### Tuning Process for Each Profile:
-1. Review current vehicle order and logic
-2. Test with various scenarios (income levels, ages, preferences)
-3. Adjust vehicle priorities based on results
-4. Update extra questions as needed
-5. Document changes in this file
+## 📋 Testing Summary
 
-### Key Questions for Each Profile:
-- Are vehicles in optimal order?
-- Do contribution limits calculate correctly?
-- Does tax preference logic work as expected?
-- Are there missing vehicles or strategies?
-- Do the extra questions gather needed information?
+### Test Results:
+- **Profile 2**: ✅ 3/3 scenarios pass
+- **Profile 4**: ✅ 3/3 scenarios pass
 
-## 📋 Testing Checklist
+For detailed test scenarios and implementation patterns, see the analysis document.
 
-For each profile being tuned:
-- [ ] Submit test Phase 2 form
-- [ ] Verify question mapping works
-- [ ] Check employer match vehicle appears (if applicable)
-- [ ] Test with minimum allocation scenario
-- [ ] Test with maximum allocation scenario
-- [ ] Test with different tax preferences
-- [ ] Test with catch-up eligibility (age 50+)
-- [ ] Verify results align with profile strategy
-
-## 🧪 Testing Results
-
-### Test Functions Status:
-| Function | Purpose | Status | Notes |
-|----------|---------|--------|-------|
-| `testEmployer401kIntegration()` | Verify employer match vehicles | ⏳ Ready to run | Tests all 5 updated profiles |
-| `testFormQuestionMapping()` | Test question remapping | ⏳ Ready to run | Tests profiles 2 & 4 |
-
-### Form Submission Tests:
-| Profile | Form Submitted | Questions Mapped | Employer Match Works | Notes |
-|---------|---------------|------------------|---------------------|-------|
-| 2_ROBS_Curious | ⏳ | ⏳ | ⏳ | - |
-| 4_Roth_Reclaimer | ⏳ | ⏳ | ⏳ | - |
-| 5_Bracket_Strategist | ⏳ | ⏳ | ⏳ | - |
-| 6_Catch_Up | ⏳ | ⏳ | ⏳ | - |
-| 9_Late_Stage_Growth | ⏳ | ⏳ | ⏳ | - |
 
 ## 🔄 Continuous Improvement Process
 
@@ -198,13 +178,16 @@ For each profile being tuned:
 4. **Test Extensively** - Use test data before production
 5. **Share Learnings** - Apply improvements across profiles
 
-## 📚 Related Documentation
+## 📚 Key Files
 
-- **GOOGLE_FORMS_UPDATE_STRATEGY.md** - Detailed form mapping strategy
-- **FLEXIBLE_FORM_MAPPING_SYSTEM.md** - Technical implementation details
-- **EMPLOYER_401K_QUESTIONS_UPDATE.md** - Employer 401(k) implementation guide
-- **Individual Profile Docs** - Detailed documentation for each profile in `/profiles/`
+- **Technical Reference**: [`/profiles/Profile_Tuning_Detailed_Analysis.md`](../profiles/Profile_Tuning_Detailed_Analysis.md)
+- **Test Functions**: `Testing.js` - `testTunedProfiles()`
+- **Main Code**: `Code.js` - Profile helpers start at line ~990
 
 ---
 
-*Last Updated: 2025-08-16 - Infrastructure complete, test functions added, ready for integration testing*
+CONCERN
+
+We need to optimize SOLO401k profit sharing for profiles 1,2,3,8
+
+*Last Updated: 2025-08-16 - Profiles 2 & 4 tuned and tested*

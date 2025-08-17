@@ -100,18 +100,21 @@ const PROFILE_CONFIG = {
 
   '2_ROBS_Curious': {
     title:       'ROBS-Curious Builder',
-    description: 'Interested in ROBS but hasn’t implemented it yet; wants to leverage business income for retirement growth.',
+    description: 'Interested in ROBS but has not implemented it yet; wants to leverage business income for retirement growth.',
     extraQuestions: [
       'What is the approximate balance you plan to rollover initially into your ROBS-funded C-corp?',
-      'What is your expected annual contribution from business profits back into the Solo 401(k)?'
+      'What is your expected annual business income available for retirement savings? (Enter total amount you can save from your business)',
+      'Does your spouse work in your business (or plan to)?',
+      'Does your employer offer a 401(k) retirement plan?',
+      'Does your employer match your 401(k) contributions?',
+      'What percentage does your employer match?',
+      'Does your employer 401(k) plan have a Roth option?'
     ],
     formId:     '1FAIpQLSchOqMFkphypcStnZ92i-oWhQ_Oysn4gIiWimJYVt3e-sjhXQ',
     entryToken: 'entry.110058618',
+    // Note: vehicleOrder_Retirement is dynamically generated in profile helper based on employment situation
     vehicleOrder_Retirement: [
-      { name: 'Solo 401(k) – Roth',        capMonthly: LIMITS.RETIREMENT.EMPLOYEE_401K / 12 },
-      { name: 'Solo 401(k) – Traditional', capMonthly: LIMITS.RETIREMENT.EMPLOYEE_401K / 12 },
-      { name: 'HSA',                       capMonthly: LIMITS.HEALTH.HSA.INDIVIDUAL / 12 },
-      { name: 'Roth IRA',                  capMonthly: LIMITS.RETIREMENT.ROTH_IRA / 12 }
+      // Dynamic - see profileHelpers['2_ROBS_Curious'] for logic
     ],
     vehicleOrder_Education: [
       { name: 'Combined CESA', capMonthly: Infinity },
@@ -159,7 +162,11 @@ const PROFILE_CONFIG = {
       'What is the current balance in your Traditional IRA or other old retirement account?',
       'Have you ever made after-tax (non-deductible) contributions to an IRA?',
       'Do you understand or have you used the "Backdoor Roth" IRA strategy?',
-      'Would you like to move some or all of your Traditional IRA money into a Roth IRA? If so, how much?'
+      'Would you like to move some or all of your Traditional IRA money into a Roth IRA? If so, how much?',
+      'Does your employer offer a 401(k) retirement plan?',
+      'Does your employer match your 401(k) contributions?',
+      'What percentage does your employer match?',
+      'Does your employer 401(k) plan have a Roth option?'
     ],
     formId:     '1FAIpQLSdbKrRSMkQNnlS-Sv5eHADLRCLV29UH7KXLkYdXQVJ689ZSpQ',
     entryToken: 'entry.1488387721',
@@ -723,10 +730,10 @@ function addEmployer401kVehicles(baseOrder, params) {
   const { rowArr, hdr, age, grossIncome } = params;
   
   // Get employer 401(k) information from extra questions
-  const hasEmployer401k = getValue(hdr, rowArr, 'ex_q1') === 'Yes';
-  const hasEmployerMatch = getValue(hdr, rowArr, 'ex_q2') === 'Yes';
-  const matchPercentage = getValue(hdr, rowArr, 'ex_q3'); // e.g. "50% up to 6%"
-  const hasRoth401k = getValue(hdr, rowArr, 'ex_q4') === 'Yes';
+  const hasEmployer401k = getValue(hdr, rowArr, HEADERS.P2_EX_Q1) === 'Yes';
+  const hasEmployerMatch = getValue(hdr, rowArr, HEADERS.P2_EX_Q2) === 'Yes';
+  const matchPercentage = getValue(hdr, rowArr, HEADERS.P2_EX_Q3); // e.g. "50% up to 6%"
+  const hasRoth401k = getValue(hdr, rowArr, HEADERS.P2_EX_Q4) === 'Yes';
   
   if (!hasEmployer401k) {
     return baseOrder; // No changes if no employer 401(k)
@@ -759,10 +766,11 @@ function addEmployer401kVehicles(baseOrder, params) {
     // Insert match at the beginning (after HSA if present)
     const hsaIndex = updatedOrder.findIndex(v => v.name === 'HSA');
     const insertIndex = hsaIndex >= 0 ? hsaIndex + 1 : 0;
-    updatedOrder.splice(insertIndex, 0, { 
-      name: 'Employer 401(k) - Match', 
+    const matchVehicle = { 
+      name: `401(k) Match Traditional (${matchPercentage})`, 
       capMonthly: matchCap
-    });
+    };
+    updatedOrder.splice(insertIndex, 0, matchVehicle);
   }
   
   // Optionally add full 401(k) contributions based on business rules
@@ -1037,59 +1045,134 @@ const profileHelpers = {
     const filing = getValue(hdr, rowArr, HEADERS.FILING_STATUS);
     const grossIncome = Number(getValue(hdr, rowArr, HEADERS.GROSS_ANNUAL_INCOME)) || 100000;
     
-    // Get tax preference for vehicle ordering
+    // Get tax preference and employment info
     const taxFocus = getValue(hdr, rowArr, HEADERS.TAX_MINIMIZATION);
+    const workSituation = getValue(hdr, rowArr, HEADERS.WORK_SITUATION);
+    const isSelfEmployed = workSituation === 'Self-employed' || workSituation === 'Both';
+    const isW2Employee = workSituation === 'W-2 employee' || workSituation === 'Both';
+    
+    // Get ROBS planning info from extra questions
+    const plannedRollover = Number(getValue(hdr, rowArr, HEADERS.P2_EX_Q5)) || 0;
+    const businessSavingsCapacity = Number(getValue(hdr, rowArr, HEADERS.P2_EX_Q6)) || 0;
+    const spouseInBusiness = getValue(hdr, rowArr, HEADERS.P2_EX_Q7) === 'Yes';
     
     // Calculate monthly capacities using utility functions
     const hsaCap = calculateHsaMonthlyCapacity(hsaElig, age, filing);
     const cesaCap = calculateCesaMonthlyCapacity(numKids);
-
-    const seeds = { Education: {}, Health: {}, Retirement: {} };
     
-    const cfg = PROFILE_CONFIG['2_ROBS_Curious'];
+    // Initialize seeds - could use rollover info for seeding
+    const seeds = { Education: {}, Health: {}, Retirement: {} };
+    if (plannedRollover > 0) {
+      // Note: This is informational - actual ROBS rollover happens later
+      seeds.Retirement['Planned ROBS Rollover'] = plannedRollover;
+    }
+    
+    // Education vehicles (unchanged)
     const educationOrder = (numKids > 0
-      ? cfg.vehicleOrder_Education.map(v => ({
-          name: v.name,
-          capMonthly: v.name === 'Combined CESA' ? cesaCap : v.capMonthly
-        }))
+      ? [{ name: 'Combined CESA', capMonthly: cesaCap }]
       : []
     ).concat({ name: 'Education Bank', capMonthly: Infinity });
 
-    const healthOrder = cfg.vehicleOrder_Health
-      .map(v => ({
-        name: v.name,
-        capMonthly: v.name === 'HSA' ? hsaCap : v.capMonthly
-      }))
-      .filter(v => !(v.name === 'HSA' && !hsaElig))
-      .concat({ name: 'Health Bank', capMonthly: Infinity });
+    // Health vehicles (unchanged)
+    const healthOrder = (hsaElig
+      ? [{ name: 'HSA', capMonthly: hsaCap }]
+      : []
+    ).concat({ name: 'Health Bank', capMonthly: Infinity });
 
-    // Build base retirement order with catch-up contributions
-    let baseRetirementOrder = cfg.vehicleOrder_Retirement
-      .map(v => {
-        let adjustedCap = v.capMonthly;
+    // Build retirement order based on employment situation
+    let baseRetirementOrder = [];
+    
+    // HSA goes first if eligible (triple tax advantage)
+    if (hsaElig) {
+      baseRetirementOrder.push({ name: 'HSA', capMonthly: hsaCap });
+    }
+    
+    // Calculate 401(k) employee limits with catch-up
+    let employee401kCap = LIMITS.RETIREMENT.EMPLOYEE_401K / 12;
+    if (age >= 50) {
+      const catchup401k = age >= 60 ? LIMITS.RETIREMENT.CATCHUP_401K_60 : LIMITS.RETIREMENT.CATCHUP_401K_50;
+      employee401kCap = (LIMITS.RETIREMENT.EMPLOYEE_401K + catchup401k) / 12;
+    }
+    
+    // Add appropriate 401(k) vehicles based on employment
+    if (isSelfEmployed) {
+      // Solo 401(k) options for self-employed
+      if (taxFocus === 'Now') {
+        baseRetirementOrder.push({ name: 'Solo 401(k) – Traditional', capMonthly: employee401kCap });
+        baseRetirementOrder.push({ name: 'Solo 401(k) – Roth', capMonthly: employee401kCap });
+      } else {
+        baseRetirementOrder.push({ name: 'Solo 401(k) – Roth', capMonthly: employee401kCap });
+        baseRetirementOrder.push({ name: 'Solo 401(k) – Traditional', capMonthly: employee401kCap });
+      }
+      
+      // Add employer portion if expecting business contributions
+      if (businessSavingsCapacity > 0) {
+        // Simplified calculation based on total business savings capacity
+        // Account for spouse if working in business
+        const participants = spouseInBusiness ? 2 : 1;
         
-        // Apply catch-up contributions for age 50+
-        if (age >= 50) {
-          if (v.name.includes('401')) {
-            // 401(k) catch-up: $7,500 for 50-59, $11,250 for 60+
-            const catchup401k = age >= 60 ? LIMITS.RETIREMENT.CATCHUP_401K_60 : LIMITS.RETIREMENT.CATCHUP_401K_50;
-            adjustedCap = (v.capMonthly * 12 + catchup401k) / 12;
-          } else if (v.name.includes('IRA')) {
-            // IRA catch-up: $1,000 for 50+
-            adjustedCap = (v.capMonthly * 12 + LIMITS.RETIREMENT.CATCHUP_IRA) / 12;
-          }
+        // Calculate limits based on number of participants
+        const employeeMaxPerPerson = age >= 50 ? 30500 : 23000;
+        const totalMaxPerPerson = age >= 50 ? 76500 : 69000;
+        
+        // Total business 401(k) limits
+        const employeeMaxTotal = employeeMaxPerPerson * participants;
+        const totalMaxTotal = totalMaxPerPerson * participants;
+        
+        // Simple allocation: fill employee first, then employer
+        const employeeAmount = Math.min(businessSavingsCapacity, employeeMaxTotal);
+        const employerAmount = Math.min(
+          businessSavingsCapacity - employeeAmount,
+          totalMaxTotal - employeeAmount
+        );
+        
+        // Adjust employee vehicle capacity if spouse is included
+        if (spouseInBusiness && employeeAmount > 0) {
+          // Override the standard employee cap to account for both spouses
+          const adjustedEmployeeCap = employeeAmount / 12;
+          // Find and update the Solo 401(k) employee vehicles
+          baseRetirementOrder.forEach(vehicle => {
+            if (vehicle.name.includes('Solo 401(k)') && !vehicle.name.includes('Employer')) {
+              vehicle.capMonthly = Math.round(adjustedEmployeeCap);
+              vehicle.note = 'Includes spouse contributions';
+            }
+          });
         }
         
-        return { name: v.name, capMonthly: adjustedCap };
-      });
+        // Add employer vehicle if there's capacity
+        if (employerAmount > 0) {
+          baseRetirementOrder.push({ 
+            name: 'Solo 401(k) – Employer', 
+            capMonthly: Math.round(employerAmount / 12),
+            note: spouseInBusiness ? 
+              'Family business - includes both spouses. Consult tax advisor for exact splits.' :
+              'Simplified calculation - consult tax advisor for exact limits.'
+          });
+        }
+      }
+    }
     
-    // Add employer 401(k) vehicles if applicable
-    baseRetirementOrder = addEmployer401kVehicles(baseRetirementOrder, {
-      rowArr,
-      hdr,
-      age,
-      grossIncome
-    });
+    // Add employer 401(k) vehicles if W-2 employee
+    if (isW2Employee) {
+      baseRetirementOrder = addEmployer401kVehicles(baseRetirementOrder, {
+        rowArr,
+        hdr,
+        age,
+        grossIncome
+      });
+    }
+    
+    // Calculate IRA limits with catch-up
+    let iraCap = LIMITS.RETIREMENT.TRADITIONAL_IRA / 12;
+    if (age >= 50) {
+      iraCap = (LIMITS.RETIREMENT.TRADITIONAL_IRA + LIMITS.RETIREMENT.CATCHUP_IRA) / 12;
+    }
+    
+    // Add Traditional IRA (important for future ROBS rollover)
+    baseRetirementOrder.push({ name: 'Traditional IRA', capMonthly: iraCap });
+    
+    // Add Roth IRA with phase-out check
+    baseRetirementOrder.push({ name: 'Roth IRA', capMonthly: LIMITS.RETIREMENT.ROTH_IRA / 12 });
     
     // Apply Roth IRA phase-out rules
     baseRetirementOrder = applyRothIRAPhaseOut(baseRetirementOrder, {
@@ -1098,15 +1181,8 @@ const profileHelpers = {
       taxFocus
     });
     
-    // Adjust order based on tax preference
-    if (taxFocus === 'Now') {
-      // Prioritize Traditional over Roth for current tax savings
-      baseRetirementOrder = prioritizeTraditionalAccounts(baseRetirementOrder);
-    } else if (taxFocus === 'Later') {
-      // Prioritize Roth over Traditional for tax-free growth
-      baseRetirementOrder = prioritizeRothAccounts(baseRetirementOrder);
-    }
-    // For 'Both' or undefined, keep original order (balanced approach)
+    // Add taxable account
+    baseRetirementOrder.push({ name: 'Taxable Brokerage', capMonthly: Infinity });
     
     const retirementOrder = baseRetirementOrder.concat({ name: 'Family Bank', capMonthly: Infinity });
 
@@ -1124,80 +1200,136 @@ const profileHelpers = {
     const numKids = Number(getValue(hdr, rowArr, HEADERS.P2_CESA_NUM_CHILDREN)) || 0;
     const age = Number(getValue(hdr, rowArr, HEADERS.CURRENT_AGE));
     const filing = getValue(hdr, rowArr, HEADERS.FILING_STATUS);
-    
-    // Get tax preference for vehicle ordering
-    const taxFocus = getValue(hdr, rowArr, HEADERS.TAX_MINIMIZATION);
-    
-    // Get gross income for phase-out calculations
     const grossIncome = Number(getValue(hdr, rowArr, HEADERS.GROSS_ANNUAL_INCOME)) || 95000;
+    
+    // Get tax preference and backdoor Roth info
+    const taxFocus = getValue(hdr, rowArr, HEADERS.TAX_MINIMIZATION);
+    const tradIRABalance = Number(getValue(hdr, rowArr, HEADERS.P2_EX_Q5)) || 0;
+    const afterTaxContributions = getValue(hdr, rowArr, HEADERS.P2_EX_Q6) === 'Yes';
+    const understandsBackdoor = getValue(hdr, rowArr, HEADERS.P2_EX_Q7) === 'Yes';
+    const desiredConversion = Number(getValue(hdr, rowArr, HEADERS.P2_EX_Q8)) || 0;
+    
+    // Get employer 401(k) info
+    const hasEmployer401k = getValue(hdr, rowArr, HEADERS.P2_EX_Q1) === 'Yes';
+    const hasEmployerMatch = getValue(hdr, rowArr, HEADERS.P2_EX_Q2) === 'Yes';
+    const hasRoth401k = getValue(hdr, rowArr, HEADERS.P2_EX_Q4) === 'Yes';
     
     // Calculate monthly capacities using utility functions
     const hsaCap = calculateHsaMonthlyCapacity(hsaElig, age, filing);
     const cesaCap = calculateCesaMonthlyCapacity(numKids);
-
-    const seeds = { Education: {}, Health: {}, Retirement: {} };
     
-    const cfg = PROFILE_CONFIG['4_Roth_Reclaimer'];
+    // Initialize seeds
+    const seeds = { Education: {}, Health: {}, Retirement: {} };
+    if (tradIRABalance > 0) {
+      seeds.Retirement['Traditional IRA Balance'] = tradIRABalance;
+    }
+    
+    // Education vehicles (simplified)
     const educationOrder = (numKids > 0
-      ? cfg.vehicleOrder_Education.map(v => ({
-          name: v.name,
-          capMonthly: v.name === 'Combined CESA' ? cesaCap : v.capMonthly
-        }))
+      ? [{ name: 'Combined CESA', capMonthly: cesaCap }]
       : []
     ).concat({ name: 'Education Bank', capMonthly: Infinity });
 
-    const healthOrder = cfg.vehicleOrder_Health
-      .map(v => ({
-        name: v.name,
-        capMonthly: v.name === 'HSA' ? hsaCap : v.capMonthly
-      }))
-      .filter(v => !(v.name === 'HSA' && !hsaElig))
-      .concat({ name: 'Health Bank', capMonthly: Infinity });
+    // Health vehicles
+    const healthOrder = (hsaElig
+      ? [{ name: 'HSA', capMonthly: hsaCap }]
+      : []
+    ).concat({ name: 'Health Bank', capMonthly: Infinity });
 
-    // Build base retirement order with catch-up logic
-    let baseRetirementOrder = cfg.vehicleOrder_Retirement
-      .map(v => {
-        let adjustedCap = v.capMonthly;
-        
-        // Apply catch-up contributions for age 50+
-        if (age >= 50) {
-          if (v.name.includes('401')) {
-            // 401(k) catch-up: $7,500 for 50-59, $11,250 for 60+
-            const catchup401k = age >= 60 ? LIMITS.RETIREMENT.CATCHUP_401K_60 : LIMITS.RETIREMENT.CATCHUP_401K_50;
-            adjustedCap = (v.capMonthly * 12 + catchup401k) / 12;
-          } else if (v.name.includes('IRA')) {
-            // IRA catch-up: $1,000 for 50+
-            adjustedCap = (v.capMonthly * 12 + LIMITS.RETIREMENT.CATCHUP_IRA) / 12;
-          }
-        }
-        
-        return { name: v.name, capMonthly: adjustedCap };
+    // Build retirement order based on Traditional IRA status
+    let baseRetirementOrder = [];
+    
+    // HSA goes first if eligible (triple tax advantage)
+    if (hsaElig) {
+      baseRetirementOrder.push({ name: 'HSA', capMonthly: hsaCap });
+    }
+    
+    // Add employer 401(k) vehicles if available
+    if (hasEmployer401k) {
+      baseRetirementOrder = addEmployer401kVehicles(baseRetirementOrder, {
+        rowArr,
+        hdr,
+        age,
+        grossIncome
       });
+      
+      // Calculate 401(k) employee limits with catch-up
+      let employee401kCap = LIMITS.RETIREMENT.EMPLOYEE_401K / 12;
+      if (age >= 50) {
+        const catchup401k = age >= 60 ? LIMITS.RETIREMENT.CATCHUP_401K_60 : LIMITS.RETIREMENT.CATCHUP_401K_50;
+        employee401kCap = (LIMITS.RETIREMENT.EMPLOYEE_401K + catchup401k) / 12;
+      }
+      
+      // Add employee 401(k) contributions based on tax preference and availability
+      if (hasRoth401k && taxFocus !== 'Now') {
+        baseRetirementOrder.push({ name: '401(k) – Roth', capMonthly: employee401kCap });
+        baseRetirementOrder.push({ name: '401(k) – Traditional', capMonthly: employee401kCap });
+      } else {
+        baseRetirementOrder.push({ name: '401(k) – Traditional', capMonthly: employee401kCap });
+        if (hasRoth401k) {
+          baseRetirementOrder.push({ name: '401(k) – Roth', capMonthly: employee401kCap });
+        }
+      }
+    }
     
-    // Add employer 401(k) vehicles if applicable
-    baseRetirementOrder = addEmployer401kVehicles(baseRetirementOrder, {
-      rowArr,
-      hdr,
-      age,
-      grossIncome
-    });
+    // Calculate IRA limits with catch-up
+    let iraCap = LIMITS.RETIREMENT.TRADITIONAL_IRA / 12;
+    if (age >= 50) {
+      iraCap = (LIMITS.RETIREMENT.TRADITIONAL_IRA + LIMITS.RETIREMENT.CATCHUP_IRA) / 12;
+    }
     
-    // Apply Roth IRA phase-out rules
-    baseRetirementOrder = applyRothIRAPhaseOut(baseRetirementOrder, {
+    // Determine if backdoor Roth is viable
+    const canDoBackdoor = tradIRABalance === 0 || (hasEmployer401k && understandsBackdoor);
+    
+    // Check if income allows direct Roth contributions
+    const rothPhaseout = applyRothIRAPhaseOut([{ name: 'Roth IRA', capMonthly: iraCap }], {
       grossIncome,
       filingStatus: filing,
       taxFocus
     });
+    const canDoDirectRoth = rothPhaseout.length > 0 && rothPhaseout[0].capMonthly > 0;
     
-    // Adjust order based on tax preference
-    if (taxFocus === 'Now') {
-      // Prioritize Traditional over Roth for current tax savings
-      baseRetirementOrder = prioritizeTraditionalAccounts(baseRetirementOrder);
-    } else if (taxFocus === 'Later') {
-      // Prioritize Roth over Traditional for tax-free growth
-      baseRetirementOrder = prioritizeRothAccounts(baseRetirementOrder);
+    // Add appropriate IRA vehicles
+    if (canDoDirectRoth && tradIRABalance === 0) {
+      // Direct Roth contribution is available and no pro-rata issues
+      baseRetirementOrder.push({ name: 'Roth IRA', capMonthly: iraCap });
+    } else if (canDoBackdoor && understandsBackdoor) {
+      // Backdoor Roth strategy
+      baseRetirementOrder.push({ name: 'Backdoor Roth IRA', capMonthly: iraCap });
+      
+      // If they have existing Traditional IRA, note the strategy
+      if (tradIRABalance > 0) {
+        baseRetirementOrder.push({ 
+          name: 'IRA → 401(k) Rollover', 
+          capMonthly: 0,
+          note: 'Roll Traditional IRA to 401(k) to enable clean backdoor Roth'
+        });
+      }
+    } else if (!canDoDirectRoth) {
+      // Can't do direct Roth due to income, but doesn't understand backdoor
+      baseRetirementOrder.push({ name: 'Traditional IRA', capMonthly: iraCap });
+      
+      if (tradIRABalance === 0) {
+        // Add note about backdoor potential
+        baseRetirementOrder.push({ 
+          name: 'Backdoor Roth Potential', 
+          capMonthly: 0,
+          note: 'Consider learning about backdoor Roth strategy'
+        });
+      }
     }
-    // For 'Both' or undefined, keep original order (balanced approach)
+    
+    // Add mega backdoor if they understand it and have after-tax capacity
+    if (hasEmployer401k && afterTaxContributions && understandsBackdoor) {
+      const afterTaxCap = (LIMITS.RETIREMENT.TOTAL_401K_457_403B - LIMITS.RETIREMENT.EMPLOYEE_401K) / 12;
+      baseRetirementOrder.push({ 
+        name: 'After-tax 401(k) → Mega Backdoor', 
+        capMonthly: afterTaxCap 
+      });
+    }
+    
+    // Always add taxable as catch-all
+    baseRetirementOrder.push({ name: 'Taxable Brokerage', capMonthly: Infinity });
     
     const retirementOrder = baseRetirementOrder.concat({ name: 'Family Bank', capMonthly: Infinity });
 
@@ -1781,10 +1913,11 @@ const FORM_EX_Q_MAPPING = {
     // position_in_form: 'target_ex_q'
     9: 'ex_q1',   // employer 401k
     10: 'ex_q2',  // employer match
-    11: 'ex_q3',  // match percentage
-    12: 'ex_q4',  // roth option
+    12: 'ex_q3',  // match percentage
+    11: 'ex_q4',  // roth option
     7: 'ex_q5',   // rollover balance (original)
-    8: 'ex_q6'    // annual contribution (original)
+    8: 'ex_q6',   // business income for retirement (updated)
+    13: 'ex_q7'   // spouse in business (at end of form)
   },
   '4_Roth_Reclaimer': {
     11: 'ex_q1',  // employer 401k
