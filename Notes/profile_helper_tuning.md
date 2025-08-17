@@ -103,11 +103,13 @@ When tuning profiles and changing questions:
   - Traditional IRA added
   - Simplified Solo 401(k) calculation with spouse support
   - Updated form questions and mapping
+  - Removed Taxable Brokerage - flows directly to Family Bank
 - **Test Results**: ✅ All scenarios pass (see test details in analysis doc)
 - **Latest Updates**: 
   - Simplified business savings question
   - Added spouse in business question
   - Fixed form mapping (spouse question at end)
+  - Removed Taxable Brokerage vehicle
 - **Next Steps**: Ready for live form testing
 
 ### Profile 3: Solo401k_Builder
@@ -117,7 +119,11 @@ When tuning profiles and changing questions:
 
 ### Profile 4: Roth_Reclaimer ✅
 - **Status**: TUNED - Sophisticated backdoor Roth logic implemented
-- **Key Changes**: Dynamic IRA strategy based on balance/understanding, employer 401(k) integration, mega backdoor support
+- **Key Changes**: 
+  - Dynamic IRA strategy based on balance/understanding
+  - Employer 401(k) integration
+  - Mega backdoor support
+  - Removed Taxable Brokerage - flows directly to Family Bank
 - **Test Results**: ✅ All backdoor scenarios validated
 - **Next Steps**: Ready for live form testing
 

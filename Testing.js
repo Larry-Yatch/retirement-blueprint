@@ -41,8 +41,8 @@ function generateTestData() {
   // Get Working Sheet
   const ws = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Working Sheet');
   
-  // Get headers from Working Sheet
-  const headerRange = ws.getRange(1, 1, 1, ws.getLastColumn());
+  // Get headers from Working Sheet row 2 (not row 1)
+  const headerRange = ws.getRange(2, 1, 1, ws.getLastColumn());
   const headers = headerRange.getValues()[0];
   const hdr = {};
   headers.forEach((header, index) => {

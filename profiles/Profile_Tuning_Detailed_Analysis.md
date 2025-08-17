@@ -46,6 +46,9 @@ This document provides comprehensive technical analysis and implementation detai
 
 ## Vehicle Order Logic by Scenario
 
+### IMPORTANT: No Taxable Brokerage
+All profiles should flow excess funds directly to Family Bank. Taxable Brokerage is NOT included in any vehicle orders.
+
 ### Scenario 1: W-2 Employee Only
 ```
 1. Employer 401(k) Match (if available) - FREE MONEY
@@ -53,7 +56,7 @@ This document provides comprehensive technical analysis and implementation detai
 3. Employer 401(k) Employee contributions
 4. Traditional IRA - For future ROBS
 5. Roth IRA (or Backdoor if phased out)
-6. Taxable Brokerage - Catch-all
+6. Family Bank - Final overflow (no Taxable Brokerage)
 ```
 
 ### Scenario 2: Self-Employed Only
@@ -63,11 +66,11 @@ This document provides comprehensive technical analysis and implementation detai
 3. Solo 401(k) – Employer (if expecting contributions)
 4. Traditional IRA
 5. Roth IRA (or Backdoor if phased out)
-6. Taxable Brokerage
+6. Family Bank - Final overflow (no Taxable Brokerage)
 ```
 
 ### Scenario 3: Both W-2 and Self-Employed
-Combines both strategies with appropriate limits.
+Combines both strategies with appropriate limits, flowing directly to Family Bank.
 
 ## Potential Issues & Edge Cases
 
@@ -162,7 +165,7 @@ Limited options due to pro-rata rule:
 1. **Employer 401(k) Match** - Free money always first
 2. **HSA** - Triple tax advantage
 3. **Employer 401(k)** - No pro-rata issues
-4. **Taxable Brokerage** - Only option left
+4. **Family Bank** - Final overflow (no Taxable Brokerage)
 
 ### Phase 2: After IRA Cleared
 Full strategy available:
@@ -171,7 +174,7 @@ Full strategy available:
 3. **Backdoor Roth IRA** - Tax-free growth
 4. **401(k) Employee** - Tax-advantaged
 5. **Mega Backdoor** - If sophisticated
-6. **Taxable** - Catch-all
+6. **Family Bank** - Final overflow (no Taxable Brokerage)
 
 ## Potential Issues & Edge Cases
 
@@ -232,13 +235,14 @@ Full strategy available:
 - Made Solo 401(k) conditional on employment status
 - Added Traditional IRA for ROBS planning
 - Used extra questions for sizing not just info
-- Added Taxable Brokerage as catch-all
+- Direct overflow to Family Bank (no Taxable Brokerage)
 
 ### Profile 4
 - Created sophisticated decision tree for backdoor Roth
 - Only suggest strategies user understands
 - Integrated employer 401(k) as solution to pro-rata
 - Added educational notes for learning opportunities
+- Direct overflow to Family Bank (no Taxable Brokerage)
 
 ---
 
@@ -306,6 +310,11 @@ ELSE:
 ### 4. Implementation in Code.js
 **Goal:** Update profile helper function with new logic.
 
+**CRITICAL REQUIREMENT:** NO TAXABLE BROKERAGE
+- All excess funds must flow to Family Bank
+- Do NOT include "Taxable Brokerage" in any vehicle orders
+- Family Bank should be the final vehicle with Infinity capacity
+
 **Structure:**
 ```javascript
 '[ProfileID]': function(rowArr, hdr) {
@@ -331,7 +340,10 @@ ELSE:
   // 6. Apply universal adjustments
   baseRetirementOrder = applyRothIRAPhaseOut(baseRetirementOrder, params);
   
-  // 7. Return structured result
+  // 7. IMPORTANT: Add Family Bank as final vehicle (NO Taxable Brokerage)
+  const retirementOrder = baseRetirementOrder.concat({ name: 'Family Bank', capMonthly: Infinity });
+  
+  // 8. Return structured result
   return {
     seeds,
     vehicleOrders: {

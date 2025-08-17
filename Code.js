@@ -1181,9 +1181,7 @@ const profileHelpers = {
       taxFocus
     });
     
-    // Add taxable account
-    baseRetirementOrder.push({ name: 'Taxable Brokerage', capMonthly: Infinity });
-    
+    // Family Bank is the final overflow vehicle
     const retirementOrder = baseRetirementOrder.concat({ name: 'Family Bank', capMonthly: Infinity });
 
     return {
@@ -1328,9 +1326,7 @@ const profileHelpers = {
       });
     }
     
-    // Always add taxable as catch-all
-    baseRetirementOrder.push({ name: 'Taxable Brokerage', capMonthly: Infinity });
-    
+    // Family Bank is the final overflow vehicle
     const retirementOrder = baseRetirementOrder.concat({ name: 'Family Bank', capMonthly: Infinity });
 
     return {
