@@ -1120,10 +1120,61 @@ const CURRENT_FORMS = {
         },
         {
           "index": 45,
-          "title": "What is your expected annual contribution from business profits back into the Solo 401(k)?",
+          "title": "What is your expected annual business income available for retirement savings?",
           "type": "PARAGRAPH_TEXT",
-          "helpText": "",
+          "helpText": "Enter total amount you can save from your business",
           "required": true
+        },
+        {
+          "index": 46,
+          "title": "Does your employer offer a 401(k) retirement plan?",
+          "type": "MULTIPLE_CHOICE",
+          "helpText": "",
+          "required": true,
+          "choices": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "index": 47,
+          "title": "Does your employer match your 401(k) contributions?",
+          "type": "MULTIPLE_CHOICE",
+          "helpText": "",
+          "required": true,
+          "choices": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "index": 48,
+          "title": "What percentage does your employer match?",
+          "type": "TEXT",
+          "helpText": "e.g., \"50% up to 6%\" or \"100% up to 3%\"",
+          "required": false
+        },
+        {
+          "index": 49,
+          "title": "Does your employer 401(k) plan have a Roth option?",
+          "type": "MULTIPLE_CHOICE",
+          "helpText": "",
+          "required": true,
+          "choices": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "index": 50,
+          "title": "Does your spouse work in your business (or plan to)?",
+          "type": "MULTIPLE_CHOICE",
+          "helpText": "",
+          "required": true,
+          "choices": [
+            "Yes",
+            "No"
+          ]
         }
       ]
     },

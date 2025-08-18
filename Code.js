@@ -1907,13 +1907,13 @@ const HEADERS = {
 const FORM_EX_Q_MAPPING = {
   '2_ROBS_Curious': {
     // position_in_form: 'target_ex_q'
-    9: 'ex_q1',   // employer 401k
-    10: 'ex_q2',  // employer match
-    12: 'ex_q3',  // match percentage
-    11: 'ex_q4',  // roth option
-    7: 'ex_q5',   // rollover balance (original)
-    8: 'ex_q6',   // business income for retirement (updated)
-    13: 'ex_q7'   // spouse in business (at end of form)
+    46: 'ex_q1',  // employer 401k
+    47: 'ex_q2',  // employer match
+    48: 'ex_q3',  // match percentage
+    49: 'ex_q4',  // roth option
+    44: 'ex_q5',  // rollover balance
+    45: 'ex_q6',  // business income for retirement
+    50: 'ex_q7'   // spouse in business
   },
   '4_Roth_Reclaimer': {
     11: 'ex_q1',  // employer 401k
@@ -1953,6 +1953,17 @@ function remapFormValues(vals, profileId, startCol, hdr) {
   const mapping = FORM_EX_Q_MAPPING[profileId];
   if (!mapping) return vals; // No remapping needed
   
+  console.log(`remapFormValues: profileId=${profileId}, startCol=${startCol}, vals.length=${vals.length}`);
+  console.log('Mapping:', mapping);
+  
+  // Debug: Show ex_q column positions
+  for (let i = 1; i <= 7; i++) {
+    const header = `P2_EX_Q${i}`;
+    if (HEADERS[header] && hdr[HEADERS[header]]) {
+      console.log(`${header} (${HEADERS[header]}) is at column ${hdr[HEADERS[header]]}`);
+    }
+  }
+  
   // Create array to hold remapped values
   const remapped = [...vals];
   
@@ -1961,11 +1972,22 @@ function remapFormValues(vals, profileId, startCol, hdr) {
     const sourcePosNum = parseInt(sourcePos);
     const targetHeader = `P2_${targetExQ.toUpperCase()}`;
     
+    console.log(`Mapping form position ${sourcePos} to ${targetExQ}:`);
+    console.log(`  Source value: ${vals[sourcePosNum]}`);
+    console.log(`  Target header: ${targetHeader} (${HEADERS[targetHeader]})`);
+    
     if (sourcePosNum < vals.length && HEADERS[targetHeader]) {
       const targetCol = hdr[HEADERS[targetHeader]] - startCol;
+      console.log(`  Target column: ${hdr[HEADERS[targetHeader]]} - ${startCol} = ${targetCol}`);
+      
       if (targetCol >= 0 && targetCol < remapped.length) {
         remapped[targetCol] = vals[sourcePosNum];
+        console.log(`  ✓ Mapped successfully`);
+      } else {
+        console.log(`  ✗ Target column ${targetCol} out of range [0, ${remapped.length})`);
       }
+    } else {
+      console.log(`  ✗ Skipped: sourcePosNum=${sourcePosNum}, vals.length=${vals.length}, header exists=${!!HEADERS[targetHeader]}`);
     }
   });
   
