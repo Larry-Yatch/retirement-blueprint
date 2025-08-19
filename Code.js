@@ -1168,6 +1168,29 @@ const profileHelpers = {
         age,
         grossIncome
       });
+      
+      // Add employee 401(k) contribution vehicles
+      const hasRoth401k = getValue(hdr, rowArr, HEADERS.P2_EX_Q4) === 'Yes';
+      
+      // Calculate 401(k) employee limits with catch-up
+      let employee401kCap = LIMITS.RETIREMENT.EMPLOYEE_401K / 12;
+      if (age >= 50) {
+        const catchup401k = age >= 60 ? LIMITS.RETIREMENT.CATCHUP_401K_60 : LIMITS.RETIREMENT.CATCHUP_401K_50;
+        employee401kCap = (LIMITS.RETIREMENT.EMPLOYEE_401K + catchup401k) / 12;
+      }
+      
+      // Add based on tax preference
+      if (taxFocus === 'Now') {
+        baseRetirementOrder.push({ name: '401(k) Traditional', capMonthly: employee401kCap });
+        if (hasRoth401k) {
+          baseRetirementOrder.push({ name: '401(k) Roth', capMonthly: employee401kCap });
+        }
+      } else {
+        if (hasRoth401k) {
+          baseRetirementOrder.push({ name: '401(k) Roth', capMonthly: employee401kCap });
+        }
+        baseRetirementOrder.push({ name: '401(k) Traditional', capMonthly: employee401kCap });
+      }
     }
     
     // Calculate IRA limits with catch-up

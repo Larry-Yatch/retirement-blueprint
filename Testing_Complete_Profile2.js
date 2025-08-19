@@ -2,6 +2,51 @@
 // This ensures Phase 1 and Phase 2 data are properly matched
 
 /**
+ * Validate that all required headers exist
+ */
+function validateTestHeaders() {
+  const ws = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Working Sheet');
+  const headers = ws.getRange(2, 1, 1, ws.getLastColumn()).getValues()[0];
+  
+  // Build header map
+  const hdr = {};
+  headers.forEach((header, index) => {
+    if (header) hdr[header] = index + 1;
+  });
+  
+  // Check critical headers using HEADERS constant
+  const criticalHeaders = [
+    HEADERS.FULL_NAME,
+    HEADERS.EMAIL,
+    HEADERS.STUDENT_ID_LAST4,
+    HEADERS.CURRENT_AGE,
+    HEADERS.PROFILE_ID,
+    HEADERS.WORK_SITUATION,
+    HEADERS.GROSS_ANNUAL_INCOME,
+    HEADERS.FILING_STATUS,
+    HEADERS.TAX_MINIMIZATION,
+    HEADERS.P2_HSA_ELIGIBILITY,
+    HEADERS.P2_CESA_NUM_CHILDREN
+  ];
+  
+  const missing = [];
+  criticalHeaders.forEach(headerName => {
+    if (!hdr[headerName]) {
+      missing.push(headerName);
+    }
+  });
+  
+  if (missing.length > 0) {
+    console.log('❌ CRITICAL HEADERS MISSING:');
+    missing.forEach(h => console.log(`   - ${h}`));
+    return false;
+  }
+  
+  console.log('✅ All critical headers found');
+  return true;
+}
+
+/**
  * Create a complete test scenario with matching Phase 1 and Phase 2 data
  */
 function createCompleteTestScenario(scenarioName) {
@@ -19,6 +64,7 @@ function createCompleteTestScenario(scenarioName) {
     w2Employee: {
       name: 'W-2 Employee with Employer 401(k)',
       phase1: {
+        // Use actual column names from Working Sheet
         'Full_Name': 'Test W2 Employee',
         'Email': 'test.w2@example.com',
         'Student_ID_Last4': '1234TW',
@@ -28,8 +74,8 @@ function createCompleteTestScenario(scenarioName) {
         'gross_annual_income': 120000,
         'filing_status': 'Married Filing Jointly',
         'Tax_Minimization': 'Both',
-        'p2_hsa_eligibility': 'Yes',
-        'p2_cesa_num_children': 2,
+        'hsa_eligibility': 'Yes',
+        'cesa_num_children': 2,
         'Net_Monthly_Income': 7500,
         'Allocation_Percentage': 26.7
       },
@@ -186,6 +232,25 @@ function setupPhase1TestData(scenarioName) {
   
   console.log(`\nSetting up Phase 1 data for: ${scenario.name}`);
   
+  // First validate headers exist
+  const requiredHeaders = Object.keys(scenario.phase1);
+  const missingHeaders = [];
+  requiredHeaders.forEach(header => {
+    if (!hdr[header]) {
+      // Try to find it using HEADERS constant mapping
+      const headerKey = Object.keys(HEADERS).find(key => HEADERS[key] === header);
+      if (!headerKey || !hdr[HEADERS[headerKey]]) {
+        missingHeaders.push(header);
+      }
+    }
+  });
+  
+  if (missingHeaders.length > 0) {
+    console.log('❌ Missing headers:', missingHeaders.join(', '));
+    console.log('Available headers:', Object.keys(hdr).slice(0, 20).join(', '), '...');
+    return null;
+  }
+  
   // Check if student already exists
   const studentId = scenario.phase1['Student_ID_Last4'];
   const existing = ws.createTextFinder(studentId).matchEntireCell(true).findAll();
@@ -196,21 +261,30 @@ function setupPhase1TestData(scenarioName) {
     rowNum = existing[0].getRow();
     console.log(`Found existing student at row ${rowNum}, updating...`);
   } else {
-    // Create new row
-    ws.appendRow([]);
+    // Create new row with initial data
+    const newRow = new Array(ws.getLastColumn()).fill('');
+    newRow[0] = new Date(); // Timestamp in first column
+    ws.appendRow(newRow);
     rowNum = ws.getLastRow();
     console.log(`Creating new student at row ${rowNum}`);
-    
-    // Add timestamp
-    ws.getRange(rowNum, hdr['Timestamp']).setValue(new Date());
   }
   
-  // Write Phase 1 data
+  // Write Phase 1 data using proper header resolution
   Object.entries(scenario.phase1).forEach(([field, value]) => {
-    if (hdr[field]) {
-      ws.getRange(rowNum, hdr[field]).setValue(value);
+    let columnIndex = hdr[field];
+    
+    // If direct mapping doesn't work, try HEADERS constant
+    if (!columnIndex) {
+      const headerKey = Object.keys(HEADERS).find(key => HEADERS[key] === field);
+      if (headerKey && hdr[HEADERS[headerKey]]) {
+        columnIndex = hdr[HEADERS[headerKey]];
+      }
+    }
+    
+    if (columnIndex) {
+      ws.getRange(rowNum, columnIndex).setValue(value);
     } else {
-      console.log(`Warning: Header not found for ${field}`);
+      console.log(`Warning: Could not resolve header for ${field}`);
     }
   });
   
@@ -289,6 +363,12 @@ function runCompleteProfile2Test(scenarioName) {
   console.log(`COMPLETE TEST: ${scenarioName}`);
   console.log('='.repeat(60));
   
+  // Validate headers first
+  if (!validateTestHeaders()) {
+    console.log('\n❌ Cannot run test - fix header issues first!');
+    return;
+  }
+  
   submitPhase2TestData(scenarioName);
 }
 
@@ -334,4 +414,71 @@ function cleanupTestData() {
   });
   
   console.log('✅ Test data cleaned up');
+}
+
+/**
+ * Validate a Profile 2 submission
+ */
+function validateProfile2Submission(rowNumber) {
+  const ws = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Working Sheet');
+  const headers = ws.getRange(2, 1, 1, ws.getLastColumn()).getValues()[0];
+  const rowData = ws.getRange(rowNumber, 1, 1, ws.getLastColumn()).getValues()[0];
+  
+  // Build header map
+  const hdr = {};
+  headers.forEach((header, index) => {
+    if (header) hdr[header] = index + 1;
+  });
+  
+  console.log('\n=== VALIDATING PROFILE 2 SUBMISSION ===');
+  console.log(`Row ${rowNumber} Analysis:\n`);
+  
+  // Check profile ID
+  const profileId = rowData[hdr['ProfileID'] - 1];
+  console.log(`Profile ID: ${profileId}`);
+  if (profileId !== '2_ROBS_Curious') {
+    console.log('❌ ERROR: Wrong profile ID!');
+    return;
+  }
+  
+  // Check key fields
+  console.log('\nKey Fields:');
+  console.log(`  Age: ${rowData[hdr['Current_Age'] - 1]}`);
+  console.log(`  Income: ${rowData[hdr['gross_annual_income'] - 1]}`);
+  console.log(`  Work Situation: ${rowData[hdr['Work_Situation'] - 1]}`);
+  console.log(`  Tax Focus: ${rowData[hdr['Tax_Minimization'] - 1]}`);
+  
+  // Check extra questions mapping
+  console.log('\nExtra Questions Mapping:');
+  console.log(`  ex_q1 (employer 401k): ${rowData[hdr['ex_q1'] - 1]}`);
+  console.log(`  ex_q2 (employer match): ${rowData[hdr['ex_q2'] - 1]}`);
+  console.log(`  ex_q3 (match percent): ${rowData[hdr['ex_q3'] - 1]}`);
+  console.log(`  ex_q4 (roth 401k): ${rowData[hdr['ex_q4'] - 1]}`);
+  console.log(`  ex_q5 (rollover balance): ${rowData[hdr['ex_q5'] - 1]}`);
+  console.log(`  ex_q6 (business savings): ${rowData[hdr['ex_q6'] - 1]}`);
+  console.log(`  ex_q7 (spouse in business): ${rowData[hdr['ex_q7'] - 1]}`);
+  
+  // Run profile helper
+  console.log('\nRunning Profile Helper...');
+  try {
+    const result = profileHelpers['2_ROBS_Curious'](rowData, hdr);
+    
+    console.log('\nGenerated Vehicle Order:');
+    result.vehicleOrders.Retirement.forEach(vehicle => {
+      if (vehicle.capMonthly === Infinity) {
+        console.log(`  - ${vehicle.name} (unlimited)`);
+      } else {
+        console.log(`  - ${vehicle.name}: $${Math.round(vehicle.capMonthly)}/mo`);
+      }
+      if (vehicle.note) {
+        console.log(`    Note: ${vehicle.note}`);
+      }
+    });
+    
+    console.log('\n✅ Profile helper executed successfully!');
+    return result;
+  } catch (error) {
+    console.log(`\n❌ ERROR: ${error.message}`);
+    console.log(error.stack);
+  }
 }

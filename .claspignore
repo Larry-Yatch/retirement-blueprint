@@ -7,6 +7,8 @@
 !appsscript.json
 !Testing_Complete_Profile2.js
 !Testing_Direct_Submission.js
+!Testing_Engine_Diagnostic.js
+!Testing_Quick_Fix.js
 
 # Explicitly exclude draft files
 form-mapping-implementation.js
