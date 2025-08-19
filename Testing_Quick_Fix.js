@@ -20,6 +20,8 @@ function fixTestDataRow9() {
   const fixes = {
     'hsa_eligibility': 'Yes',
     'cesa_num_children': 2,
+    'Net_Monthly_Income': 7500,
+    'Allocation_Percentage': 26.7,
     'p2_hsa_monthly_contrib': 500,
     'p2_cesa_monthly_contrib': 200,
     'p2_retirement_personal': 2000
