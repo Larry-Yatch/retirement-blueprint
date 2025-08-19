@@ -27,7 +27,7 @@ const LIMITS = {
     ROTH_IRA: 7000,
     CATCHUP_IRA: 1000,
     DEFINED_BENEFIT: 280000,
-    // Roth IRA income phase-out limits for 2024
+    // Roth IRA income phase-out limits for 2025
     ROTH_IRA_PHASE_OUT: {
       SINGLE: {
         START: 146000,
