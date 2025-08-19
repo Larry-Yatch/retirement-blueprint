@@ -730,7 +730,15 @@ function addEmployer401kVehicles(baseOrder, params) {
   const { rowArr, hdr, age, grossIncome } = params;
   
   // Get employer 401(k) information from extra questions
-  const hasEmployer401k = getValue(hdr, rowArr, HEADERS.P2_EX_Q1) === 'Yes';
+  const employer401kAnswer = getValue(hdr, rowArr, HEADERS.P2_EX_Q1);
+  
+  // Safety check - if ex_q1 doesn't contain valid Yes/No answer, skip
+  if (employer401kAnswer !== 'Yes' && employer401kAnswer !== 'No') {
+    console.log('Warning: No valid employer 401k data in ex_q1, skipping employer 401k vehicles');
+    return baseOrder;
+  }
+  
+  const hasEmployer401k = employer401kAnswer === 'Yes';
   const hasEmployerMatch = getValue(hdr, rowArr, HEADERS.P2_EX_Q2) === 'Yes';
   const matchPercentage = getValue(hdr, rowArr, HEADERS.P2_EX_Q3); // e.g. "50% up to 6%"
   const hasRoth401k = getValue(hdr, rowArr, HEADERS.P2_EX_Q4) === 'Yes';
@@ -1916,32 +1924,23 @@ const FORM_EX_Q_MAPPING = {
     50: 'ex_q7'   // spouse in business
   },
   '4_Roth_Reclaimer': {
-    11: 'ex_q1',  // employer 401k
-    12: 'ex_q2',  // employer match
-    13: 'ex_q3',  // match percentage
-    14: 'ex_q4',  // roth option
-    7: 'ex_q5',   // trad IRA balance (original)
-    8: 'ex_q6',   // after-tax contributions (original)
-    9: 'ex_q7',   // backdoor understanding (original)
-    10: 'ex_q8'   // conversion amount (original)
+    44: 'ex_q5',   // trad IRA balance
+    45: 'ex_q6',   // after-tax contributions
+    46: 'ex_q7',   // backdoor understanding
+    47: 'ex_q8'    // conversion amount
+    // NO employer 401k questions for this profile
   },
   '5_Bracket_Strategist': {
-    7: 'ex_q1',   // employer 401k (or wherever you added them)
-    8: 'ex_q2',   // employer match
-    9: 'ex_q3',   // match percentage
-    10: 'ex_q4'   // roth option
+    // NO employer 401k questions for this profile
+    // Profile questions don't map to ex_q fields
   },
   '6_Catch_Up': {
-    7: 'ex_q1',   // employer 401k
-    8: 'ex_q2',   // employer match
-    9: 'ex_q3',   // match percentage
-    10: 'ex_q4'   // roth option
+    // NO employer 401k questions for this profile
+    // Profile questions don't map to ex_q fields
   },
   '9_Late_Stage_Growth': {
-    7: 'ex_q1',   // employer 401k
-    8: 'ex_q2',   // employer match
-    9: 'ex_q3',   // match percentage
-    10: 'ex_q4'   // roth option
+    // NO employer 401k questions for this profile
+    // Profile questions don't map to ex_q fields
   }
   // Profiles 1, 3, 7, 8 don't need mapping (no changes or already correct)
 };
@@ -1953,17 +1952,6 @@ function remapFormValues(vals, profileId, startCol, hdr) {
   const mapping = FORM_EX_Q_MAPPING[profileId];
   if (!mapping) return vals; // No remapping needed
   
-  console.log(`remapFormValues: profileId=${profileId}, startCol=${startCol}, vals.length=${vals.length}`);
-  console.log('Mapping:', mapping);
-  
-  // Debug: Show ex_q column positions
-  for (let i = 1; i <= 7; i++) {
-    const header = `P2_EX_Q${i}`;
-    if (HEADERS[header] && hdr[HEADERS[header]]) {
-      console.log(`${header} (${HEADERS[header]}) is at column ${hdr[HEADERS[header]]}`);
-    }
-  }
-  
   // Create array to hold remapped values
   const remapped = [...vals];
   
@@ -1972,22 +1960,11 @@ function remapFormValues(vals, profileId, startCol, hdr) {
     const sourcePosNum = parseInt(sourcePos);
     const targetHeader = `P2_${targetExQ.toUpperCase()}`;
     
-    console.log(`Mapping form position ${sourcePos} to ${targetExQ}:`);
-    console.log(`  Source value: ${vals[sourcePosNum]}`);
-    console.log(`  Target header: ${targetHeader} (${HEADERS[targetHeader]})`);
-    
     if (sourcePosNum < vals.length && HEADERS[targetHeader]) {
       const targetCol = hdr[HEADERS[targetHeader]] - startCol;
-      console.log(`  Target column: ${hdr[HEADERS[targetHeader]]} - ${startCol} = ${targetCol}`);
-      
       if (targetCol >= 0 && targetCol < remapped.length) {
         remapped[targetCol] = vals[sourcePosNum];
-        console.log(`  ✓ Mapped successfully`);
-      } else {
-        console.log(`  ✗ Target column ${targetCol} out of range [0, ${remapped.length})`);
       }
-    } else {
-      console.log(`  ✗ Skipped: sourcePosNum=${sourcePosNum}, vals.length=${vals.length}, header exists=${!!HEADERS[targetHeader]}`);
     }
   });
   
@@ -2424,8 +2401,23 @@ function classifyClientProfileFromWorkingSheet() {
   }
 }
 
-
-
+/**
+ * Get all vehicle actual column keys from the Working Sheet headers
+ * @returns {Array<string>} Array of header names ending with '_actual'
+ */
+function listAllVehicleActualKeys() {
+  const ws = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Working Sheet');
+  const headers = ws.getRange(2, 1, 1, ws.getLastColumn()).getValues()[0];
+  
+  const actualKeys = [];
+  headers.forEach(header => {
+    if (header && header.toString().endsWith('_actual')) {
+      actualKeys.push(header);
+    }
+  });
+  
+  return actualKeys;
+}
 
 function handlePhase2(e) {
   // 0) Copy & notify into RawPhase2
