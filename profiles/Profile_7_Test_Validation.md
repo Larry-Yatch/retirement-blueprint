@@ -1,0 +1,186 @@
+# Profile 7 (Foundation Builder) Test Validation Report
+
+## Executive Summary
+
+Profile 7 "Foundation Builder" has been tested for young professionals starting their retirement journey. The profile shows correct vehicle generation but has issues with employer 401(k) integration not appearing in the actual allocations.
+
+## Test Scenario 1: Young Professional Starting Out
+
+### Input Data
+
+**Demographics:**
+- Age: 25
+- Gross Annual Income: $65,000
+- Filing Status: Single
+- Work Situation: W-2 employee
+- Tax Minimization: Both (balanced approach)
+
+**Benefits:**
+- HSA Eligibility: Yes
+- Number of Children: 0
+
+**Financial Planning:**
+- Net Monthly Income: $4,500
+- Allocation Percentage: 15%
+- Expected Monthly Allocation: $675
+
+**Foundation Building Details:**
+- Emergency Fund Goal: $5,000
+- Current Emergency Savings: $1,000
+- Risk Tolerance: Aggressive
+
+**Employer 401(k) Details:**
+- Has Employer 401(k): Yes
+- Has Employer Match: Yes
+- Match Details: 100% up to 3%
+- Has Roth 401(k) Option: Yes
+
+### Expected Vehicle Order & Rationale
+
+#### 1. Education Domain
+**Expected:** Education Bank only (no children)
+- **✅ ACTUAL:** Education Bank - $300/mo allocated
+
+#### 2. Health Domain
+**Expected:** HSA - $358/mo (single limit)
+- **Why:** Triple tax advantage for young professional
+- **✅ ACTUAL:** HSA - $300/mo allocated (partial)
+
+#### 3. Retirement Domain (Priority Order)
+
+##### 3.1 HSA (Retirement Portion) - $358/mo
+- **Why:** Best tax treatment available
+- **❌ MISSING:** Not shown in retirement allocations
+
+##### 3.2 401(k) Match Traditional - $325/mo
+- **Why:** Free money (100% up to 3%)
+- **Calculation:** $65,000 × 3% ÷ 12 = $162.50/mo employee + match
+- **❌ MISSING:** Not allocated
+
+##### 3.3 401(k) Roth - $1,958/mo
+- **Why:** Young age + "Both" preference = Roth priority
+- **❌ MISSING:** Not allocated
+
+##### 3.4 Roth IRA - $583/mo
+- **Why:** Additional tax-free growth
+- **✅ ACTUAL:** $300/mo allocated (partial)
+
+### Allocation Issues
+
+**Expected Total:** $675/mo
+**Actual Total:** $900/mo
+**Difference:** +$225 (33% over)
+
+**Distribution:**
+- Education: $300/mo (33.3%)
+- Health: $300/mo (33.3%)
+- Retirement: $300/mo (33.3%)
+
+The engine appears to be using a fixed $900/mo allocation instead of the expected $675/mo based on income and percentage.
+
+## Test Scenario 2: Family with Children
+
+### Input Data
+
+**Demographics:**
+- Age: 35
+- Gross Annual Income: $95,000
+- Filing Status: Married Filing Jointly
+- Work Situation: W-2 employee
+- Tax Minimization: Now (traditional focus)
+
+**Benefits:**
+- HSA Eligibility: Yes
+- Number of Children: 2
+
+**Financial Planning:**
+- Net Monthly Income: $6,500
+- Allocation Percentage: 20%
+- Expected Monthly Allocation: $1,300
+
+**Foundation Building Details:**
+- Emergency Fund Goal: $20,000
+- Current Emergency Savings: $8,000
+- Risk Tolerance: Moderate
+
+**Employer 401(k) Details:**
+- Has Employer 401(k): Yes
+- Has Employer Match: Yes
+- Match Details: 50% up to 6%
+- Has Roth 401(k) Option: No
+
+### Expected Vehicle Order & Rationale
+
+#### 1. Education Domain
+**Expected:** Combined CESA - $333/mo
+- **Why:** 2 children × $2,000 annual limit
+- **✅ ACTUAL:** CESA $333/mo + Roth IRA $100/mo
+
+#### 2. Health Domain
+**Expected:** HSA - $713/mo (family limit)
+- **✅ ACTUAL:** HSA - $433/mo allocated (partial)
+
+#### 3. Retirement Domain
+
+##### 3.1 401(k) Match Traditional - $475/mo
+- **Why:** 50% match up to 6%
+- **Calculation:** $95,000 × 6% × 50% ÷ 12 = $237.50/mo match
+- **❌ MISSING:** Not allocated
+
+##### 3.2 401(k) Traditional - $1,958/mo
+- **Why:** "Now" tax preference + no Roth option
+- **❌ MISSING:** Not allocated
+
+##### 3.3 Traditional IRA - $583/mo
+- **Why:** Additional tax deduction
+- **✅ ACTUAL:** $433/mo allocated (using IRA instead of 401k)
+
+### Allocation Results
+
+**Expected Total:** $1,300/mo
+**Actual Total:** $1,299/mo
+**Difference:** -$1 (essentially correct)
+
+**Distribution:**
+- Education: $433/mo (33.3%)
+- Health: $433/mo (33.3%)
+- Retirement: $433/mo (33.3%)
+
+## Issues Identified
+
+### 1. Missing Employer 401(k) Vehicles
+**Issue:** Neither test shows employer 401(k) match or employee contributions
+**Impact:** Missing significant tax-advantaged savings opportunities
+**Likely Cause:** The addEmployer401kVehicles function may not be working correctly
+
+### 2. Fixed Allocation Pattern
+**Issue:** Engine allocating fixed amounts rather than percentage-based
+**Test 1:** Used $900 instead of $675 (33% over)
+**Test 2:** Used $1,299 close to $1,300 (correct by chance)
+
+### 3. Simplified Vehicle Selection
+**Issue:** Only basic vehicles (IRA, HSA, CESA) appearing
+**Missing:** All 401(k) related vehicles
+
+## Recommendations
+
+### Immediate Actions
+1. **Debug addEmployer401kVehicles** - Verify it's being called and adding vehicles
+2. **Check allocation calculation** - Ensure Net_Monthly_Income × Allocation_Percentage is used
+3. **Verify ex_q mapping** - Ensure employer 401(k) questions map correctly
+
+### Testing Improvements
+1. Add logging to show which vehicles are generated by profile helper
+2. Compare profile helper output with engine allocations
+3. Test with different allocation percentages to confirm calculation
+
+## Conclusion
+
+Profile 7 (Foundation Builder) has the correct structure but is not fully functional due to:
+
+❌ Missing employer 401(k) integration in actual allocations
+❌ Incorrect total allocation calculation in some scenarios
+✅ Correct basic vehicle prioritization (HSA, IRA, CESA)
+✅ Proper handling of family vs individual scenarios
+
+The profile needs debugging to ensure employer 401(k) vehicles are properly allocated before it's ready for production use.

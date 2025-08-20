@@ -1273,15 +1273,47 @@ const profileHelpers = {
       baseRetirementOrder.push({ name: 'HSA', capMonthly: hsaCap });
     }
     
-    // Add employer 401(k) vehicles if available
-    if (hasEmployer401k) {
+    // ROTH RECLAIMER PRIORITY: Get employer match first (free money)
+    if (hasEmployer401k && hasEmployerMatch) {
       baseRetirementOrder = addEmployer401kVehicles(baseRetirementOrder, {
         rowArr,
         hdr,
         age,
         grossIncome
       });
-      
+    }
+    
+    // ROTH RECLAIMER PRIORITY: Backdoor Roth IRA before employee 401(k) contributions
+    // This is the core purpose of this profile - to reclaim Roth access
+    
+    // Calculate IRA limits with catch-up early for Roth Reclaimer logic
+    let iraCap = LIMITS.RETIREMENT.TRADITIONAL_IRA / 12;
+    if (age >= 50) {
+      iraCap = (LIMITS.RETIREMENT.TRADITIONAL_IRA + LIMITS.RETIREMENT.CATCHUP_IRA) / 12;
+    }
+    
+    // Determine if backdoor Roth is viable
+    const canDoBackdoor = tradIRABalance === 0 || (hasEmployer401k && understandsBackdoor);
+    
+    // Check if income allows direct Roth contributions
+    const rothPhaseout = applyRothIRAPhaseOut([{ name: 'Roth IRA', capMonthly: iraCap }], {
+      grossIncome,
+      filingStatus: filing,
+      taxFocus
+    });
+    const canDoDirectRoth = rothPhaseout.length > 0 && rothPhaseout[0].capMonthly > 0;
+    
+    // Add appropriate IRA vehicles BEFORE 401(k) employee contributions
+    if (canDoDirectRoth && tradIRABalance === 0) {
+      // Direct Roth contribution is available and no pro-rata issues
+      baseRetirementOrder.push({ name: 'Roth IRA', capMonthly: iraCap });
+    } else if (canDoBackdoor && understandsBackdoor) {
+      // Backdoor Roth strategy - THIS IS THE PRIORITY FOR ROTH RECLAIMER
+      baseRetirementOrder.push({ name: 'Backdoor Roth IRA', capMonthly: iraCap });
+    }
+    
+    // NOW add employee 401(k) contributions
+    if (hasEmployer401k) {
       // Calculate 401(k) employee limits with catch-up
       let employee401kCap = LIMITS.RETIREMENT.EMPLOYEE_401K / 12;
       if (age >= 50) {
@@ -1301,49 +1333,31 @@ const profileHelpers = {
       }
     }
     
-    // Calculate IRA limits with catch-up
-    let iraCap = LIMITS.RETIREMENT.TRADITIONAL_IRA / 12;
-    if (age >= 50) {
-      iraCap = (LIMITS.RETIREMENT.TRADITIONAL_IRA + LIMITS.RETIREMENT.CATCHUP_IRA) / 12;
+    // If we didn't add IRA vehicles earlier (no match or other reason), add them now
+    const hasIRAVehicle = baseRetirementOrder.some(v => 
+      v.name === 'Roth IRA' || v.name === 'Backdoor Roth IRA'
+    );
+    
+    if (!hasIRAVehicle) {
+      // Re-check if we should add IRA options
+      if (canDoDirectRoth && tradIRABalance === 0) {
+        baseRetirementOrder.push({ name: 'Roth IRA', capMonthly: iraCap });
+      } else if (canDoBackdoor && understandsBackdoor) {
+        baseRetirementOrder.push({ name: 'Backdoor Roth IRA', capMonthly: iraCap });
+      } else if (!canDoDirectRoth) {
+        // Can't do direct Roth due to income, but doesn't understand backdoor
+        baseRetirementOrder.push({ name: 'Traditional IRA', capMonthly: iraCap });
+      }
     }
     
-    // Determine if backdoor Roth is viable
-    const canDoBackdoor = tradIRABalance === 0 || (hasEmployer401k && understandsBackdoor);
-    
-    // Check if income allows direct Roth contributions
-    const rothPhaseout = applyRothIRAPhaseOut([{ name: 'Roth IRA', capMonthly: iraCap }], {
-      grossIncome,
-      filingStatus: filing,
-      taxFocus
-    });
-    const canDoDirectRoth = rothPhaseout.length > 0 && rothPhaseout[0].capMonthly > 0;
-    
-    // Add appropriate IRA vehicles
-    if (canDoDirectRoth && tradIRABalance === 0) {
-      // Direct Roth contribution is available and no pro-rata issues
-      baseRetirementOrder.push({ name: 'Roth IRA', capMonthly: iraCap });
-    } else if (canDoBackdoor && understandsBackdoor) {
-      // Backdoor Roth strategy
-      baseRetirementOrder.push({ name: 'Backdoor Roth IRA', capMonthly: iraCap });
-      
-      // If they have existing Traditional IRA, note the strategy
-      if (tradIRABalance > 0) {
+    // Add rollover note if needed for backdoor strategy
+    if (canDoBackdoor && understandsBackdoor && tradIRABalance > 0) {
+      const hasRolloverNote = baseRetirementOrder.some(v => v.name === 'IRA → 401(k) Rollover');
+      if (!hasRolloverNote) {
         baseRetirementOrder.push({ 
           name: 'IRA → 401(k) Rollover', 
           capMonthly: 0,
           note: 'Roll Traditional IRA to 401(k) to enable clean backdoor Roth'
-        });
-      }
-    } else if (!canDoDirectRoth) {
-      // Can't do direct Roth due to income, but doesn't understand backdoor
-      baseRetirementOrder.push({ name: 'Traditional IRA', capMonthly: iraCap });
-      
-      if (tradIRABalance === 0) {
-        // Add note about backdoor potential
-        baseRetirementOrder.push({ 
-          name: 'Backdoor Roth Potential', 
-          capMonthly: 0,
-          note: 'Consider learning about backdoor Roth strategy'
         });
       }
     }
