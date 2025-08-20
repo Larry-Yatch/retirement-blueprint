@@ -197,7 +197,11 @@ const PROFILE_7_SCENARIOS = {
       'hsa_eligibility': 'Yes',
       'cesa_num_children': 0,
       'Net_Monthly_Income': 4500,
-      'Allocation_Percentage': 15
+      'Allocation_Percentage': 15,
+      // Investment scoring questions (required for domain weights)
+      'investment_involvement': 3,  // 1-7 scale
+      'investment_time': 3,         // 1-7 scale  
+      'investment_confidence': 3    // 1-7 scale
     },
     phase2: {
       ex_q1: 'Yes',         // Has employer 401k
@@ -224,7 +228,11 @@ const PROFILE_7_SCENARIOS = {
       'hsa_eligibility': 'Yes',
       'cesa_num_children': 2,
       'Net_Monthly_Income': 6500,
-      'Allocation_Percentage': 20
+      'Allocation_Percentage': 20,
+      // Investment scoring questions (required for domain weights)
+      'investment_involvement': 4,  // 1-7 scale
+      'investment_time': 4,         // 1-7 scale  
+      'investment_confidence': 4    // 1-7 scale
     },
     phase2: {
       ex_q1: 'Yes',         // Has employer 401k
