@@ -75,7 +75,11 @@ const PROFILE_2_SCENARIOS = {
       'hsa_eligibility': 'Yes',
       'cesa_num_children': 2,
       'Net_Monthly_Income': 7500,
-      'Allocation_Percentage': 26.7
+      'Allocation_Percentage': 26.7,
+      // Investment scoring questions (required for domain weights)
+      'investment_involvement': 4,  // 1-7 scale
+      'investment_time': 4,         // 1-7 scale  
+      'investment_confidence': 4    // 1-7 scale
     },
     phase2: {
       ex_q1: 'Yes',          // Has employer 401k
@@ -102,7 +106,11 @@ const PROFILE_2_SCENARIOS = {
       'hsa_eligibility': 'Yes',
       'cesa_num_children': 0,
       'Net_Monthly_Income': 9000,
-      'Allocation_Percentage': 33.3
+      'Allocation_Percentage': 33.3,
+      // Investment scoring questions (required for domain weights)
+      'investment_involvement': 5,  // 1-7 scale (higher for business owner)
+      'investment_time': 5,         // 1-7 scale  
+      'investment_confidence': 5    // 1-7 scale
     },
     phase2: {
       ex_q1: 'No',
@@ -135,7 +143,11 @@ const PROFILE_4_SCENARIOS = {
       'hsa_eligibility': 'Yes',
       'cesa_num_children': 0,
       'Net_Monthly_Income': 11000,
-      'Allocation_Percentage': 30
+      'Allocation_Percentage': 30,
+      // Investment scoring questions (required for domain weights)
+      'investment_involvement': 4,  // 1-7 scale
+      'investment_time': 4,         // 1-7 scale  
+      'investment_confidence': 4    // 1-7 scale
     },
     phase2: {
       ex_q5: '50000',       // Traditional IRA balance
@@ -163,7 +175,11 @@ const PROFILE_4_SCENARIOS = {
       'hsa_eligibility': 'No',
       'cesa_num_children': 2,
       'Net_Monthly_Income': 5500,
-      'Allocation_Percentage': 15
+      'Allocation_Percentage': 15,
+      // Investment scoring questions (required for domain weights)
+      'investment_involvement': 4,  // 1-7 scale
+      'investment_time': 4,         // 1-7 scale  
+      'investment_confidence': 4    // 1-7 scale
     },
     phase2: {
       ex_q5: '0',           // No Traditional IRA balance
