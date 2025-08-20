@@ -706,6 +706,16 @@ function quickTest() {
   testProfile2W2();
 }
 
+// Profile 7 Retest Functions
+function testProfile7Retest() {
+  console.log('\n' + '='.repeat(80));
+  console.log('PROFILE 7 RETEST - VERIFYING 401(k) ALLOCATION FIX');
+  console.log('='.repeat(80));
+  
+  // Run young professional test
+  runCompleteScenarioTest('youngProfessional', PROFILE_7_SCENARIOS);
+}
+
 /**
  * Main entry point for testing
  */
