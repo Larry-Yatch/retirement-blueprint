@@ -1964,8 +1964,11 @@ const FORM_EX_Q_MAPPING = {
     44: 'ex_q5',   // trad IRA balance
     45: 'ex_q6',   // after-tax contributions
     46: 'ex_q7',   // backdoor understanding
-    47: 'ex_q8'    // conversion amount
-    // NO employer 401k questions for this profile
+    47: 'ex_q8',   // conversion amount
+    48: 'ex_q1',   // employer 401k
+    49: 'ex_q2',   // employer match
+    50: 'ex_q3',   // match percentage
+    51: 'ex_q4'    // roth 401k option
   },
   '5_Bracket_Strategist': {
     // NO employer 401k questions for this profile
@@ -1975,11 +1978,17 @@ const FORM_EX_Q_MAPPING = {
     // NO employer 401k questions for this profile
     // Profile questions don't map to ex_q fields
   },
+  '7_Foundation_Builder': {
+    44: 'ex_q1',   // employer 401k
+    45: 'ex_q2',   // employer match
+    46: 'ex_q3',   // match percentage
+    47: 'ex_q4'    // roth 401k option
+  },
   '9_Late_Stage_Growth': {
     // NO employer 401k questions for this profile
     // Profile questions don't map to ex_q fields
   }
-  // Profiles 1, 3, 7, 8 don't need mapping (no changes or already correct)
+  // Profiles 1, 3, 8 don't need mapping (no changes or already correct)
 };
 
 /**
