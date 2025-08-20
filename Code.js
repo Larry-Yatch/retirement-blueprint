@@ -771,14 +771,12 @@ function addEmployer401kVehicles(baseOrder, params) {
       }
     }
     
-    // Insert match at the beginning (after HSA if present)
-    const hsaIndex = updatedOrder.findIndex(v => v.name === 'HSA');
-    const insertIndex = hsaIndex >= 0 ? hsaIndex + 1 : 0;
+    // Insert match at the beginning - employer match is highest priority (free money!)
     const matchVehicle = { 
       name: `401(k) Match Traditional (${matchPercentage})`, 
       capMonthly: matchCap
     };
-    updatedOrder.splice(insertIndex, 0, matchVehicle);
+    updatedOrder.unshift(matchVehicle); // Add to beginning of array
   }
   
   // Optionally add full 401(k) contributions based on business rules
