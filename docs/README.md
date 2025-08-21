@@ -1,46 +1,66 @@
-# Documentation Guide
+# Retirement Blueprint Documentation
 
-This folder contains essential documentation for maintaining and extending the Retirement Blueprint system.
+This folder contains the consolidated documentation for the Retirement Blueprint system.
 
-## 📚 Documentation Files
+## 📚 Core Documentation
 
-### 1. **CRITICAL_BUGS.md**
-- **Purpose**: Track system-breaking bugs and their fixes
-- **When to use**: When you encounter a bug that prevents the engine from working
-- **Priority**: HIGH - Check this first when things break unexpectedly
+### 1. **[User_Guide.md](./User_Guide.md)** 🆕
+- Complete guide for end users
+- How the system works from user perspective
+- Understanding the 9 investor profiles
+- Interpreting your results
 
-### 2. **Profile_Tuning_Guide.md** 
-- **Purpose**: Complete guide for tuning profiles efficiently
-- **When to use**: Every time you tune a new profile
-- **Key content**: Quick reference, common patterns, lessons learned, gotchas to avoid
+### 2. **[System_Overview.md](./System_Overview.md)**
+- Project overview and architecture
+- System features and key findings
+- Profile status summary
+- Critical lessons learned
 
-### 3. **Header_Management_System.md**
-- **Purpose**: Prevent and fix header-related test failures
-- **When to use**: When tests fail with "header not found" or similar errors
-- **Key content**: Header constants, validation functions, debugging tips
+### 3. **[Profile_Implementation_Guide.md](./Profile_Implementation_Guide.md)**
+- Complete guide for implementing and tuning profiles
+- Standard structures and patterns
+- Profile-specific details and status
+- Priority order for remaining work
 
-### 4. **Form_Mapping_Guide.md**
-- **Purpose**: Map form question positions to Working Sheet columns correctly
-- **When to use**: When adding profile-specific questions to forms
-- **Critical info**: Profile questions always start at position 44+
+### 4. **[Testing_Guide.md](./Testing_Guide.md)**
+- Comprehensive testing framework documentation
+- Test data requirements and templates
+- Common failures and solutions
+- Debug helpers and troubleshooting
 
-## 🚀 Quick Start
+### 5. **[Technical_Reference.md](./Technical_Reference.md)**
+- Header management system
+- Form mapping system
+- Critical bugs and fixes
+- API deployment instructions
+- Contribution limits and constants
 
-**Tuning a new profile?**
-1. Start with `Profile_Tuning_Guide.md`
-2. Check `CRITICAL_BUGS.md` for known issues
-3. Reference `Form_Mapping_Guide.md` when adding questions
+### 6. **[Quick_Start.md](./Quick_Start.md)**
+- "I need to..." task reference
+- Common workflows
+- Troubleshooting decision tree
+- Key commands reference
 
-**Tests failing?**
-1. Check `Header_Management_System.md` first
-2. Look at `CRITICAL_BUGS.md` for known issues
+### 7. **[Development_Notes.md](./Development_Notes.md)** 🆕
+- Known issues and action items
+- Future enhancement ideas
+- Implementation priorities
+- Maintenance guidelines
 
-**Adding new questions?**
-1. Read `Form_Mapping_Guide.md` carefully
-2. Remember: Profile questions start at position 44+
+## 🚀 Where to Start
 
-## 📝 Maintenance
+**New to the project?**
+- Start with [System_Overview.md](./System_Overview.md)
+- Review [Quick_Start.md](./Quick_Start.md) for common tasks
 
-- Update `CRITICAL_BUGS.md` when discovering new system-breaking issues
-- Keep `Profile_Tuning_Guide.md` updated with new patterns and lessons learned
-- Document any header changes in `Header_Management_System.md`
+**Implementing a profile?**
+- Go to [Profile_Implementation_Guide.md](./Profile_Implementation_Guide.md)
+- Reference [Testing_Guide.md](./Testing_Guide.md) for testing
+
+**Debugging issues?**
+- Check [Quick_Start.md](./Quick_Start.md) troubleshooting
+- Deep dive with [Technical_Reference.md](./Technical_Reference.md)
+
+## 📁 Archive
+
+Historical documentation and session summaries are stored in the `archive/` folder for reference.

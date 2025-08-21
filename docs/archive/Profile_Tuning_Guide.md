@@ -14,6 +14,11 @@ const age = getValue(hdr, rowArr, 'Current_Age');       // ❌
 // 3. ALWAYS provide defaults
 const income = Number(getValue(...)) || 75000;  // ✅
 const income = Number(getValue(...));            // ❌
+
+// 4. NEW! Debug helpers when something's wrong
+diagnoseProfile('7_Foundation_Builder');     // Full diagnosis
+showVehicleOrder('7_Foundation_Builder');    // See priority order
+traceAllocation('7_Foundation_Builder');     // See why vehicles skip
 ```
 
 ## 📋 Universal Functions Checklist
@@ -67,8 +72,17 @@ Every profile MUST call these:
 
 ### Phase 4: Testing (30 minutes)
 1. Run header validation first
-2. Test basic scenario
-3. Test complex scenario with all features
+2. Use debug helpers FIRST if issues:
+   ```javascript
+   diagnoseProfile(profileId);        // Full diagnosis
+   showVehicleOrder(profileId);       // Vehicle priority
+   traceAllocation(profileId);        // Allocation details
+   ```
+3. Test with assertions:
+   ```javascript
+   assertVehicleAllocated(result, '401(k) Match');
+   assertAllocationAmount(result, '401(k) Match', 163);
+   ```
 4. Test edge cases (phase-outs, limits)
 5. Verify no Taxable Brokerage appears
 

@@ -84,8 +84,8 @@ const PROFILE_CONFIG = {
     vehicleOrder_Retirement: [
       { name: 'ROBS Solo 401(k) – Profit Distribution', capMonthly: Infinity },
       { name: 'ROBS Solo 401(k) – Roth',                capMonthly: LIMITS.RETIREMENT.EMPLOYEE_401K / 12 },
-      { name: 'ROBS Solo 401(k) – Traditional',         capMonthly: LIMITS.RETIREMENT.EMPLOYEE_401K / 12 },
       { name: 'HSA',                                    capMonthly: LIMITS.HEALTH.HSA.INDIVIDUAL  / 12 },
+      { name: 'ROBS Solo 401(k) – Traditional',         capMonthly: LIMITS.RETIREMENT.EMPLOYEE_401K / 12 },
       { name: 'Roth IRA',                               capMonthly: LIMITS.RETIREMENT.ROTH_IRA     / 12 }
       
     ],
@@ -1236,6 +1236,12 @@ const profileHelpers = {
     const understandsBackdoor = getValue(hdr, rowArr, HEADERS.P2_EX_Q7) === 'Yes';
     const desiredConversion = Number(getValue(hdr, rowArr, HEADERS.P2_EX_Q8)) || 0;
     
+    // Get employment situation
+    const workSituation = getValue(hdr, rowArr, HEADERS.WORK_SITUATION);
+    const isSelfEmployed = workSituation === 'Self-employed' || workSituation === 'Both';
+    const isW2Employee = workSituation === 'W-2 employee' || workSituation === 'Both';
+    const isBoth = workSituation === 'Both';
+    
     // Get employer 401(k) info
     const hasEmployer401k = getValue(hdr, rowArr, HEADERS.P2_EX_Q1) === 'Yes';
     const hasEmployerMatch = getValue(hdr, rowArr, HEADERS.P2_EX_Q2) === 'Yes';
@@ -1263,28 +1269,17 @@ const profileHelpers = {
       : []
     ).concat({ name: 'Health Bank', capMonthly: Infinity });
 
-    // Build retirement order based on Traditional IRA status
+    // Build retirement order based on employment situation
     let baseRetirementOrder = [];
     
-    // HSA goes first if eligible (triple tax advantage)
-    if (hsaElig) {
-      baseRetirementOrder.push({ name: 'HSA', capMonthly: hsaCap });
+    // Calculate 401(k) employee limits with catch-up
+    let employee401kCap = LIMITS.RETIREMENT.EMPLOYEE_401K / 12;
+    if (age >= 50) {
+      const catchup401k = age >= 60 ? LIMITS.RETIREMENT.CATCHUP_401K_60 : LIMITS.RETIREMENT.CATCHUP_401K_50;
+      employee401kCap = (LIMITS.RETIREMENT.EMPLOYEE_401K + catchup401k) / 12;
     }
     
-    // ROTH RECLAIMER PRIORITY: Get employer match first (free money)
-    if (hasEmployer401k && hasEmployerMatch) {
-      baseRetirementOrder = addEmployer401kVehicles(baseRetirementOrder, {
-        rowArr,
-        hdr,
-        age,
-        grossIncome
-      });
-    }
-    
-    // ROTH RECLAIMER PRIORITY: Backdoor Roth IRA before employee 401(k) contributions
-    // This is the core purpose of this profile - to reclaim Roth access
-    
-    // Calculate IRA limits with catch-up early for Roth Reclaimer logic
+    // Calculate IRA limits with catch-up
     let iraCap = LIMITS.RETIREMENT.TRADITIONAL_IRA / 12;
     if (age >= 50) {
       iraCap = (LIMITS.RETIREMENT.TRADITIONAL_IRA + LIMITS.RETIREMENT.CATCHUP_IRA) / 12;
@@ -1301,51 +1296,124 @@ const profileHelpers = {
     });
     const canDoDirectRoth = rothPhaseout.length > 0 && rothPhaseout[0].capMonthly > 0;
     
-    // Add appropriate IRA vehicles BEFORE 401(k) employee contributions
-    if (canDoDirectRoth && tradIRABalance === 0) {
-      // Direct Roth contribution is available and no pro-rata issues
-      baseRetirementOrder.push({ name: 'Roth IRA', capMonthly: iraCap });
-    } else if (canDoBackdoor && understandsBackdoor) {
-      // Backdoor Roth strategy - THIS IS THE PRIORITY FOR ROTH RECLAIMER
-      baseRetirementOrder.push({ name: 'Backdoor Roth IRA', capMonthly: iraCap });
-    }
-    
-    // NOW add employee 401(k) contributions
-    if (hasEmployer401k) {
-      // Calculate 401(k) employee limits with catch-up
-      let employee401kCap = LIMITS.RETIREMENT.EMPLOYEE_401K / 12;
-      if (age >= 50) {
-        const catchup401k = age >= 60 ? LIMITS.RETIREMENT.CATCHUP_401K_60 : LIMITS.RETIREMENT.CATCHUP_401K_50;
-        employee401kCap = (LIMITS.RETIREMENT.EMPLOYEE_401K + catchup401k) / 12;
+    // Branch based on employment situation
+    if (isW2Employee && !isBoth) {
+      // W-2 Employee only
+      // 1. Get employer match first (free money)
+      if (hasEmployer401k && hasEmployerMatch) {
+        baseRetirementOrder = addEmployer401kVehicles(baseRetirementOrder, {
+          rowArr,
+          hdr,
+          age,
+          grossIncome
+        });
       }
       
-      // Add employee 401(k) contributions based on tax preference and availability
-      if (hasRoth401k && taxFocus !== 'Now') {
-        baseRetirementOrder.push({ name: '401(k) – Roth', capMonthly: employee401kCap });
-        baseRetirementOrder.push({ name: '401(k) – Traditional', capMonthly: employee401kCap });
-      } else {
-        baseRetirementOrder.push({ name: '401(k) – Traditional', capMonthly: employee401kCap });
-        if (hasRoth401k) {
-          baseRetirementOrder.push({ name: '401(k) – Roth', capMonthly: employee401kCap });
-        }
+      // 2. HSA (triple tax advantage)
+      if (hsaElig) {
+        baseRetirementOrder.push({ name: 'HSA', capMonthly: hsaCap });
       }
-    }
-    
-    // If we didn't add IRA vehicles earlier (no match or other reason), add them now
-    const hasIRAVehicle = baseRetirementOrder.some(v => 
-      v.name === 'Roth IRA' || v.name === 'Backdoor Roth IRA'
-    );
-    
-    if (!hasIRAVehicle) {
-      // Re-check if we should add IRA options
-      if (canDoDirectRoth && tradIRABalance === 0) {
-        baseRetirementOrder.push({ name: 'Roth IRA', capMonthly: iraCap });
-      } else if (canDoBackdoor && understandsBackdoor) {
+      
+      // 3. 401(k) Roth (Roth focus for this profile)
+      if (hasEmployer401k && hasRoth401k) {
+        baseRetirementOrder.push({ name: '401(k) Roth', capMonthly: employee401kCap });
+      }
+      
+      // 4. Mega Backdoor Roth if available
+      if (hasEmployer401k && afterTaxContributions && understandsBackdoor) {
+        const afterTaxCap = (LIMITS.RETIREMENT.TOTAL_401K_457_403B - LIMITS.RETIREMENT.EMPLOYEE_401K) / 12;
+        baseRetirementOrder.push({ 
+          name: 'Mega Backdoor Roth', 
+          capMonthly: afterTaxCap 
+        });
+      }
+      
+      // 5. Backdoor Roth IRA
+      if (canDoBackdoor && understandsBackdoor) {
         baseRetirementOrder.push({ name: 'Backdoor Roth IRA', capMonthly: iraCap });
-      } else if (!canDoDirectRoth) {
-        // Can't do direct Roth due to income, but doesn't understand backdoor
-        baseRetirementOrder.push({ name: 'Traditional IRA', capMonthly: iraCap });
+      } else if (canDoDirectRoth && tradIRABalance === 0) {
+        baseRetirementOrder.push({ name: 'Roth IRA', capMonthly: iraCap });
       }
+      
+      // 6. Traditional IRA as fallback
+      baseRetirementOrder.push({ name: 'Traditional IRA', capMonthly: iraCap });
+      
+    } else if (isSelfEmployed && !isBoth) {
+      // Self-Employed only
+      // 1. HSA first
+      if (hsaElig) {
+        baseRetirementOrder.push({ name: 'HSA', capMonthly: hsaCap });
+      }
+      
+      // 2. Solo 401(k) – Employee Roth (Roth focus)
+      baseRetirementOrder.push({ name: 'Solo 401(k) – Employee Roth', capMonthly: employee401kCap });
+      
+      // 3. Solo 401(k) – Employer
+      const employerCap = Math.round(grossIncome * 0.20 / 12); // Simplified 20% calculation
+      baseRetirementOrder.push({ name: 'Solo 401(k) – Employer', capMonthly: employerCap });
+      
+      // 4. Backdoor Roth IRA
+      if (canDoBackdoor && understandsBackdoor) {
+        baseRetirementOrder.push({ name: 'Backdoor Roth IRA', capMonthly: iraCap });
+      } else if (canDoDirectRoth && tradIRABalance === 0) {
+        baseRetirementOrder.push({ name: 'Roth IRA', capMonthly: iraCap });
+      }
+      
+      // 5. SEP IRA alternative
+      baseRetirementOrder.push({ name: 'SEP IRA', capMonthly: employerCap });
+      
+      // 6. Traditional IRA
+      baseRetirementOrder.push({ name: 'Traditional IRA', capMonthly: iraCap });
+      
+    } else if (isBoth) {
+      // Both W-2 and Self-Employed
+      // 1. 401(k) Match (W-2)
+      if (hasEmployer401k && hasEmployerMatch) {
+        baseRetirementOrder = addEmployer401kVehicles(baseRetirementOrder, {
+          rowArr,
+          hdr,
+          age,
+          grossIncome
+        });
+      }
+      
+      // 2. HSA
+      if (hsaElig) {
+        baseRetirementOrder.push({ name: 'HSA', capMonthly: hsaCap });
+      }
+      
+      // 3. 401(k) Roth (W-2) - Split employee limit
+      if (hasEmployer401k && hasRoth401k) {
+        const w2Portion = Math.round(employee401kCap * 0.6); // 60% to W-2
+        baseRetirementOrder.push({ name: '401(k) Roth', capMonthly: w2Portion });
+      }
+      
+      // 4. Solo 401(k) – Employee (Self-employed) - Remaining employee limit
+      const soloPortion = Math.round(employee401kCap * 0.4); // 40% to Solo
+      baseRetirementOrder.push({ name: 'Solo 401(k) – Employee', capMonthly: soloPortion });
+      
+      // 5. Solo 401(k) – Employer (Self-employed)
+      const employerCap = Math.round(grossIncome * 0.20 / 12);
+      baseRetirementOrder.push({ name: 'Solo 401(k) – Employer', capMonthly: employerCap });
+      
+      // 6. Mega Backdoor Roth (if available)
+      if (hasEmployer401k && afterTaxContributions && understandsBackdoor) {
+        const afterTaxCap = (LIMITS.RETIREMENT.TOTAL_401K_457_403B - LIMITS.RETIREMENT.EMPLOYEE_401K) / 12;
+        baseRetirementOrder.push({ 
+          name: 'Mega Backdoor Roth', 
+          capMonthly: afterTaxCap 
+        });
+      }
+      
+      // 7. Backdoor Roth IRA
+      if (canDoBackdoor && understandsBackdoor) {
+        baseRetirementOrder.push({ name: 'Backdoor Roth IRA', capMonthly: iraCap });
+      } else if (canDoDirectRoth && tradIRABalance === 0) {
+        baseRetirementOrder.push({ name: 'Roth IRA', capMonthly: iraCap });
+      }
+      
+      // 8. Traditional IRA
+      baseRetirementOrder.push({ name: 'Traditional IRA', capMonthly: iraCap });
     }
     
     // Add rollover note if needed for backdoor strategy
@@ -1358,15 +1426,6 @@ const profileHelpers = {
           note: 'Roll Traditional IRA to 401(k) to enable clean backdoor Roth'
         });
       }
-    }
-    
-    // Add mega backdoor if they understand it and have after-tax capacity
-    if (hasEmployer401k && afterTaxContributions && understandsBackdoor) {
-      const afterTaxCap = (LIMITS.RETIREMENT.TOTAL_401K_457_403B - LIMITS.RETIREMENT.EMPLOYEE_401K) / 12;
-      baseRetirementOrder.push({ 
-        name: 'After-tax 401(k) → Mega Backdoor', 
-        capMonthly: afterTaxCap 
-      });
     }
     
     // Family Bank is the final overflow vehicle
@@ -1393,56 +1452,140 @@ const profileHelpers = {
     // Get gross income for phase-out calculations
     const grossIncome = Number(getValue(hdr, rowArr, HEADERS.GROSS_ANNUAL_INCOME)) || 65000;
     
+    // Get employment situation
+    const workSituation = getValue(hdr, rowArr, HEADERS.WORK_SITUATION);
+    const isSelfEmployed = workSituation === 'Self-employed' || workSituation === 'Both';
+    const isW2Employee = workSituation === 'W-2 employee' || workSituation === 'Both';
+    const isBoth = workSituation === 'Both';
+    
+    // Get employer 401(k) info
+    const hasEmployer401k = getValue(hdr, rowArr, HEADERS.P2_EX_Q1) === 'Yes';
+    const hasEmployerMatch = getValue(hdr, rowArr, HEADERS.P2_EX_Q2) === 'Yes';
+    const hasRoth401k = getValue(hdr, rowArr, HEADERS.P2_EX_Q4) === 'Yes';
+    
     // Calculate monthly capacities using utility functions
     const hsaCap = calculateHsaMonthlyCapacity(hsaElig, age, filing);
     const cesaCap = calculateCesaMonthlyCapacity(numKids);
 
     const seeds = { Education: {}, Health: {}, Retirement: {} };
     
-    const cfg = PROFILE_CONFIG['5_Bracket_Strategist'];
+    // Education vehicles
     const educationOrder = (numKids > 0
-      ? cfg.vehicleOrder_Education.map(v => ({
-          name: v.name,
-          capMonthly: v.name === 'Combined CESA' ? cesaCap : v.capMonthly
-        }))
+      ? [{ name: 'Combined CESA', capMonthly: cesaCap }]
       : []
     ).concat({ name: 'Education Bank', capMonthly: Infinity });
 
-    const healthOrder = cfg.vehicleOrder_Health
-      .map(v => ({
-        name: v.name,
-        capMonthly: v.name === 'HSA' ? hsaCap : v.capMonthly
-      }))
-      .filter(v => !(v.name === 'HSA' && !hsaElig))
-      .concat({ name: 'Health Bank', capMonthly: Infinity });
+    // Health vehicles
+    const healthOrder = (hsaElig
+      ? [{ name: 'HSA', capMonthly: hsaCap }]
+      : []
+    ).concat({ name: 'Health Bank', capMonthly: Infinity });
 
-    // Build base retirement order with catch-up logic
-    let baseRetirementOrder = cfg.vehicleOrder_Retirement
-      .map(v => {
-        let adjustedCap = v.capMonthly;
-        
-        // Apply catch-up contributions for age 50+
-        if (age >= 50) {
-          if (v.name.includes('401')) {
-            // 401(k) catch-up: $7,500 for 50-59, $11,250 for 60+
-            const catchup401k = age >= 60 ? LIMITS.RETIREMENT.CATCHUP_401K_60 : LIMITS.RETIREMENT.CATCHUP_401K_50;
-            adjustedCap = (v.capMonthly * 12 + catchup401k) / 12;
-          } else if (v.name.includes('IRA')) {
-            // IRA catch-up: $1,000 for 50+
-            adjustedCap = (v.capMonthly * 12 + LIMITS.RETIREMENT.CATCHUP_IRA) / 12;
-          }
-        }
-        
-        return { name: v.name, capMonthly: adjustedCap };
-      });
+    // Build retirement order based on employment situation
+    let baseRetirementOrder = [];
     
-    // Add employer 401(k) vehicles if applicable
-    baseRetirementOrder = addEmployer401kVehicles(baseRetirementOrder, {
-      rowArr,
-      hdr,
-      age,
-      grossIncome
-    });
+    // Calculate 401(k) employee limits with catch-up
+    let employee401kCap = LIMITS.RETIREMENT.EMPLOYEE_401K / 12;
+    if (age >= 50) {
+      const catchup401k = age >= 60 ? LIMITS.RETIREMENT.CATCHUP_401K_60 : LIMITS.RETIREMENT.CATCHUP_401K_50;
+      employee401kCap = (LIMITS.RETIREMENT.EMPLOYEE_401K + catchup401k) / 12;
+    }
+    
+    // Calculate IRA limits with catch-up
+    let iraCap = LIMITS.RETIREMENT.TRADITIONAL_IRA / 12;
+    if (age >= 50) {
+      iraCap = (LIMITS.RETIREMENT.TRADITIONAL_IRA + LIMITS.RETIREMENT.CATCHUP_IRA) / 12;
+    }
+    
+    // Branch based on employment situation
+    if (isW2Employee && !isBoth) {
+      // W-2 Employee only
+      // 1. Get employer match first (free money)
+      if (hasEmployer401k && hasEmployerMatch) {
+        baseRetirementOrder = addEmployer401kVehicles(baseRetirementOrder, {
+          rowArr,
+          hdr,
+          age,
+          grossIncome
+        });
+      }
+      
+      // 2. HSA (triple tax advantage - moved up!)
+      if (hsaElig) {
+        baseRetirementOrder.push({ name: 'HSA', capMonthly: hsaCap });
+      }
+      
+      // 3. Traditional 401(k) (tax reduction focus)
+      if (hasEmployer401k) {
+        baseRetirementOrder.push({ name: 'Traditional 401(k)', capMonthly: employee401kCap });
+      }
+      
+      // 4. Traditional IRA
+      baseRetirementOrder.push({ name: 'Traditional IRA', capMonthly: iraCap });
+      
+      // 5. Roth IRA or Backdoor Roth IRA (based on income)
+      baseRetirementOrder.push({ name: 'Roth IRA', capMonthly: iraCap });
+      
+    } else if (isSelfEmployed && !isBoth) {
+      // Self-Employed only
+      // 1. HSA first (triple tax advantage)
+      if (hsaElig) {
+        baseRetirementOrder.push({ name: 'HSA', capMonthly: hsaCap });
+      }
+      
+      // 2. Solo 401(k) – Employee Traditional (tax reduction focus)
+      baseRetirementOrder.push({ name: 'Solo 401(k) – Employee Traditional', capMonthly: employee401kCap });
+      
+      // 3. Solo 401(k) – Employer
+      const employerCap = Math.round(grossIncome * 0.20 / 12); // Simplified 20% calculation
+      baseRetirementOrder.push({ name: 'Solo 401(k) – Employer', capMonthly: employerCap });
+      
+      // 4. SEP IRA (alternative)
+      baseRetirementOrder.push({ name: 'SEP IRA', capMonthly: employerCap });
+      
+      // 5. Traditional IRA
+      baseRetirementOrder.push({ name: 'Traditional IRA', capMonthly: iraCap });
+      
+      // 6. Roth IRA or Backdoor Roth IRA
+      baseRetirementOrder.push({ name: 'Roth IRA', capMonthly: iraCap });
+      
+    } else if (isBoth) {
+      // Both W-2 and Self-Employed
+      // 1. 401(k) Match (W-2)
+      if (hasEmployer401k && hasEmployerMatch) {
+        baseRetirementOrder = addEmployer401kVehicles(baseRetirementOrder, {
+          rowArr,
+          hdr,
+          age,
+          grossIncome
+        });
+      }
+      
+      // 2. HSA (triple tax advantage)
+      if (hsaElig) {
+        baseRetirementOrder.push({ name: 'HSA', capMonthly: hsaCap });
+      }
+      
+      // 3. Traditional 401(k) (W-2) - Split employee limit
+      if (hasEmployer401k) {
+        const w2Portion = Math.round(employee401kCap * 0.6); // 60% to W-2
+        baseRetirementOrder.push({ name: 'Traditional 401(k)', capMonthly: w2Portion });
+      }
+      
+      // 4. Solo 401(k) – Employee (Self) - Remaining employee limit
+      const soloPortion = Math.round(employee401kCap * 0.4); // 40% to Solo
+      baseRetirementOrder.push({ name: 'Solo 401(k) – Employee', capMonthly: soloPortion });
+      
+      // 5. Solo 401(k) – Employer (Self)
+      const employerCap = Math.round(grossIncome * 0.20 / 12);
+      baseRetirementOrder.push({ name: 'Solo 401(k) – Employer', capMonthly: employerCap });
+      
+      // 6. Traditional IRA
+      baseRetirementOrder.push({ name: 'Traditional IRA', capMonthly: iraCap });
+      
+      // 7. Roth IRA or Backdoor Roth IRA
+      baseRetirementOrder.push({ name: 'Roth IRA', capMonthly: iraCap });
+    }
     
     // Apply Roth IRA phase-out rules
     baseRetirementOrder = applyRothIRAPhaseOut(baseRetirementOrder, {
@@ -1484,56 +1627,137 @@ const profileHelpers = {
     // Get gross income for phase-out calculations
     const grossIncome = Number(getValue(hdr, rowArr, HEADERS.GROSS_ANNUAL_INCOME)) || 78000;
     
+    // Get employment situation
+    const workSituation = getValue(hdr, rowArr, HEADERS.WORK_SITUATION);
+    const isSelfEmployed = workSituation === 'Self-employed' || workSituation === 'Both';
+    const isW2Employee = workSituation === 'W-2 employee' || workSituation === 'Both';
+    const isBoth = workSituation === 'Both';
+    
+    // Get employer 401(k) info
+    const hasEmployer401k = getValue(hdr, rowArr, HEADERS.P2_EX_Q1) === 'Yes';
+    const hasEmployerMatch = getValue(hdr, rowArr, HEADERS.P2_EX_Q2) === 'Yes';
+    const hasRoth401k = getValue(hdr, rowArr, HEADERS.P2_EX_Q4) === 'Yes';
+    
     // Calculate monthly capacities using utility functions
     const hsaCap = calculateHsaMonthlyCapacity(hsaElig, age, filing);
     const cesaCap = calculateCesaMonthlyCapacity(numKids);
 
     const seeds = { Education: {}, Health: {}, Retirement: {} };
     
-    const cfg = PROFILE_CONFIG['6_Catch_Up'];
+    // Education vehicles
     const educationOrder = (numKids > 0
-      ? cfg.vehicleOrder_Education.map(v => ({
-          name: v.name,
-          capMonthly: v.name === 'Combined CESA' ? cesaCap : v.capMonthly
-        }))
+      ? [{ name: 'Combined CESA', capMonthly: cesaCap }]
       : []
     ).concat({ name: 'Education Bank', capMonthly: Infinity });
 
-    const healthOrder = cfg.vehicleOrder_Health
-      .map(v => ({
-        name: v.name,
-        capMonthly: v.name === 'HSA' ? hsaCap : v.capMonthly
-      }))
-      .filter(v => !(v.name === 'HSA' && !hsaElig))
-      .concat({ name: 'Health Bank', capMonthly: Infinity });
+    // Health vehicles
+    const healthOrder = (hsaElig
+      ? [{ name: 'HSA', capMonthly: hsaCap }]
+      : []
+    ).concat({ name: 'Health Bank', capMonthly: Infinity });
 
-    // Build base retirement order with catch-up logic
-    let baseRetirementOrder = cfg.vehicleOrder_Retirement
-      .map(v => {
-        let adjustedCap = v.capMonthly;
-        
-        // Apply catch-up contributions for age 50+
-        if (age >= 50) {
-          if (v.name.includes('401')) {
-            // 401(k) catch-up: $7,500 for 50-59, $11,250 for 60+
-            const catchup401k = age >= 60 ? LIMITS.RETIREMENT.CATCHUP_401K_60 : LIMITS.RETIREMENT.CATCHUP_401K_50;
-            adjustedCap = (v.capMonthly * 12 + catchup401k) / 12;
-          } else if (v.name.includes('IRA')) {
-            // IRA catch-up: $1,000 for 50+
-            adjustedCap = (v.capMonthly * 12 + LIMITS.RETIREMENT.CATCHUP_IRA) / 12;
-          }
-        }
-        
-        return { name: v.name, capMonthly: adjustedCap };
-      });
+    // Build retirement order based on employment situation
+    let baseRetirementOrder = [];
     
-    // Add employer 401(k) vehicles if applicable
-    baseRetirementOrder = addEmployer401kVehicles(baseRetirementOrder, {
-      rowArr,
-      hdr,
-      age,
-      grossIncome
-    });
+    // Calculate 401(k) employee limits with catch-up (REQUIRED for 50+)
+    let employee401kCap = LIMITS.RETIREMENT.EMPLOYEE_401K / 12;
+    if (age >= 50) {
+      const catchup401k = age >= 60 ? LIMITS.RETIREMENT.CATCHUP_401K_60 : LIMITS.RETIREMENT.CATCHUP_401K_50;
+      employee401kCap = (LIMITS.RETIREMENT.EMPLOYEE_401K + catchup401k) / 12;
+    }
+    
+    // Calculate IRA limits with catch-up (REQUIRED for 50+)
+    let iraCap = (LIMITS.RETIREMENT.TRADITIONAL_IRA + LIMITS.RETIREMENT.CATCHUP_IRA) / 12;
+    
+    // Branch based on employment situation
+    if (isW2Employee && !isBoth) {
+      // W-2 Employee only
+      // 1. Get employer match first (free money)
+      if (hasEmployer401k && hasEmployerMatch) {
+        baseRetirementOrder = addEmployer401kVehicles(baseRetirementOrder, {
+          rowArr,
+          hdr,
+          age,
+          grossIncome
+        });
+      }
+      
+      // 2. HSA (triple tax advantage - moved up!)
+      if (hsaElig) {
+        baseRetirementOrder.push({ name: 'HSA', capMonthly: hsaCap });
+      }
+      
+      // 3. 401(k) Catch-Up (key vehicle for this profile)
+      if (hasEmployer401k) {
+        baseRetirementOrder.push({ name: '401(k) Catch-Up', capMonthly: employee401kCap });
+      }
+      
+      // 4. IRA Catch-Up
+      baseRetirementOrder.push({ name: 'IRA Catch-Up', capMonthly: iraCap });
+      
+      // 5. Backdoor Roth IRA Catch-Up (if high income)
+      baseRetirementOrder.push({ name: 'Backdoor Roth IRA Catch-Up', capMonthly: iraCap });
+      
+    } else if (isSelfEmployed && !isBoth) {
+      // Self-Employed only
+      // 1. HSA first
+      if (hsaElig) {
+        baseRetirementOrder.push({ name: 'HSA', capMonthly: hsaCap });
+      }
+      
+      // 2. Solo 401(k) – Employee Catch-Up
+      baseRetirementOrder.push({ name: 'Solo 401(k) – Employee Catch-Up', capMonthly: employee401kCap });
+      
+      // 3. Solo 401(k) – Employer
+      const employerCap = Math.round(grossIncome * 0.20 / 12);
+      baseRetirementOrder.push({ name: 'Solo 401(k) – Employer', capMonthly: employerCap });
+      
+      // 4. SEP IRA (alternative with catch-up)
+      baseRetirementOrder.push({ name: 'SEP IRA', capMonthly: iraCap });
+      
+      // 5. IRA Catch-Up
+      baseRetirementOrder.push({ name: 'IRA Catch-Up', capMonthly: iraCap });
+      
+      // 6. Backdoor Roth IRA Catch-Up
+      baseRetirementOrder.push({ name: 'Backdoor Roth IRA Catch-Up', capMonthly: iraCap });
+      
+    } else if (isBoth) {
+      // Both W-2 and Self-Employed
+      // 1. 401(k) Match (W-2)
+      if (hasEmployer401k && hasEmployerMatch) {
+        baseRetirementOrder = addEmployer401kVehicles(baseRetirementOrder, {
+          rowArr,
+          hdr,
+          age,
+          grossIncome
+        });
+      }
+      
+      // 2. HSA
+      if (hsaElig) {
+        baseRetirementOrder.push({ name: 'HSA', capMonthly: hsaCap });
+      }
+      
+      // 3. 401(k) Catch-Up (W-2) - Split limit
+      if (hasEmployer401k) {
+        const w2Portion = Math.round(employee401kCap * 0.6);
+        baseRetirementOrder.push({ name: '401(k) Catch-Up', capMonthly: w2Portion });
+      }
+      
+      // 4. Solo 401(k) – Employee (Self) - Remaining limit
+      const soloPortion = Math.round(employee401kCap * 0.4);
+      baseRetirementOrder.push({ name: 'Solo 401(k) – Employee', capMonthly: soloPortion });
+      
+      // 5. Solo 401(k) – Employer (Self)
+      const employerCap = Math.round(grossIncome * 0.20 / 12);
+      baseRetirementOrder.push({ name: 'Solo 401(k) – Employer', capMonthly: employerCap });
+      
+      // 6. IRA Catch-Up
+      baseRetirementOrder.push({ name: 'IRA Catch-Up', capMonthly: iraCap });
+      
+      // 7. Backdoor Roth IRA Catch-Up
+      baseRetirementOrder.push({ name: 'Backdoor Roth IRA Catch-Up', capMonthly: iraCap });
+    }
     
     // Apply Roth IRA phase-out rules
     baseRetirementOrder = applyRothIRAPhaseOut(baseRetirementOrder, {
@@ -1544,13 +1768,10 @@ const profileHelpers = {
     
     // Adjust order based on tax preference
     if (taxFocus === 'Now') {
-      // Prioritize Traditional over Roth for current tax savings
       baseRetirementOrder = prioritizeTraditionalAccounts(baseRetirementOrder);
     } else if (taxFocus === 'Later') {
-      // Prioritize Roth over Traditional for tax-free growth
       baseRetirementOrder = prioritizeRothAccounts(baseRetirementOrder);
     }
-    // For 'Both' or undefined, keep original order (balanced approach)
     
     const retirementOrder = baseRetirementOrder.concat({ name: 'Family Bank', capMonthly: Infinity });
 
@@ -1681,25 +1902,68 @@ const profileHelpers = {
       .filter(v => !(v.name === 'HSA' && !hsaElig))
       .concat({ name: 'Health Bank', capMonthly: Infinity });
 
-    // Build base retirement order with catch-up logic
-    let baseRetirementOrder = cfg.vehicleOrder_Retirement
-      .map(v => {
-        let adjustedCap = v.capMonthly;
-        
-        // Apply catch-up contributions for age 50+
-        if (age >= 50) {
-          if (v.name.includes('401')) {
-            // 401(k) catch-up: $7,500 for 50-59, $11,250 for 60+
-            const catchup401k = age >= 60 ? LIMITS.RETIREMENT.CATCHUP_401K_60 : LIMITS.RETIREMENT.CATCHUP_401K_50;
-            adjustedCap = (v.capMonthly * 12 + catchup401k) / 12;
-          } else if (v.name.includes('IRA')) {
-            // IRA catch-up: $1,000 for 50+
-            adjustedCap = (v.capMonthly * 12 + LIMITS.RETIREMENT.CATCHUP_IRA) / 12;
-          }
-        }
-        
-        return { name: v.name, capMonthly: adjustedCap };
+    // Build base retirement order with sophisticated vehicles for business owners
+    let baseRetirementOrder = [];
+    
+    // Calculate 401(k) employee limits with catch-up
+    let employee401kCap = LIMITS.RETIREMENT.EMPLOYEE_401K / 12;
+    if (age >= 50) {
+      const catchup401k = age >= 60 ? LIMITS.RETIREMENT.CATCHUP_401K_60 : LIMITS.RETIREMENT.CATCHUP_401K_50;
+      employee401kCap = (LIMITS.RETIREMENT.EMPLOYEE_401K + catchup401k) / 12;
+    }
+    
+    // Calculate IRA limits with catch-up
+    let iraCap = LIMITS.RETIREMENT.TRADITIONAL_IRA / 12;
+    if (age >= 50) {
+      iraCap = (LIMITS.RETIREMENT.TRADITIONAL_IRA + LIMITS.RETIREMENT.CATCHUP_IRA) / 12;
+    }
+    
+    // 1. Defined Benefit Plan (highest contribution potential)
+    baseRetirementOrder.push({ 
+      name: 'Defined Benefit Plan', 
+      capMonthly: LIMITS.RETIREMENT.DEFINED_BENEFIT / 12,
+      note: 'Age-based limits apply, consult actuary'
+    });
+    
+    // 2. Group 401(k) – Employee
+    baseRetirementOrder.push({ 
+      name: 'Group 401(k) – Employee', 
+      capMonthly: employee401kCap 
+    });
+    
+    // 3. Group 401(k) – Employer Profit Sharing
+    const employerProfitSharing = (LIMITS.RETIREMENT.TOTAL_401K_457_403B - LIMITS.RETIREMENT.EMPLOYEE_401K) / 12;
+    baseRetirementOrder.push({ 
+      name: 'Group 401(k) – Employer Profit Sharing', 
+      capMonthly: employerProfitSharing 
+    });
+    
+    // 4. HSA (moved up for tax efficiency)
+    if (hsaElig) {
+      baseRetirementOrder.push({ name: 'HSA', capMonthly: hsaCap });
+    }
+    
+    // 5. Cash Balance Plan (NEW - modern DB alternative)
+    if (age >= 45) {
+      // Simplified Cash Balance calculation based on age
+      const cashBalanceCap = age >= 60 ? 23333 : age >= 55 ? 16667 : age >= 50 ? 12500 : 8333;
+      baseRetirementOrder.push({ 
+        name: 'Cash Balance Plan', 
+        capMonthly: cashBalanceCap,
+        note: 'Modern DB alternative, consult actuary for exact limits'
       });
+    }
+    
+    // 6. Backdoor Roth IRA
+    baseRetirementOrder.push({ name: 'Backdoor Roth IRA', capMonthly: iraCap });
+    
+    // 7. After-Tax 401(k) → Mega Backdoor Roth (NEW)
+    const megaBackdoorCap = employerProfitSharing; // Simplified - same as profit sharing space
+    baseRetirementOrder.push({ 
+      name: 'After-Tax 401(k) → Mega Backdoor Roth', 
+      capMonthly: megaBackdoorCap,
+      note: 'Requires plan to allow after-tax contributions and in-service conversions'
+    });
     
     // Apply Roth IRA phase-out rules
     baseRetirementOrder = applyRothIRAPhaseOut(baseRetirementOrder, {
@@ -1741,56 +2005,164 @@ const profileHelpers = {
     // Get gross income for phase-out calculations
     const grossIncome = Number(getValue(hdr, rowArr, HEADERS.GROSS_ANNUAL_INCOME)) || 110000;
     
+    // Get employment situation (may be phased retirement)
+    const workSituation = getValue(hdr, rowArr, HEADERS.WORK_SITUATION);
+    const isSelfEmployed = workSituation === 'Self-employed' || workSituation === 'Both';
+    const isW2Employee = workSituation === 'W-2 employee' || workSituation === 'Both';
+    const isBoth = workSituation === 'Both';
+    
+    // Get employer 401(k) info
+    const hasEmployer401k = getValue(hdr, rowArr, HEADERS.P2_EX_Q1) === 'Yes';
+    const hasEmployerMatch = getValue(hdr, rowArr, HEADERS.P2_EX_Q2) === 'Yes';
+    const hasRoth401k = getValue(hdr, rowArr, HEADERS.P2_EX_Q4) === 'Yes';
+    
     // Calculate monthly capacities using utility functions
     const hsaCap = calculateHsaMonthlyCapacity(hsaElig, age, filing);
     const cesaCap = calculateCesaMonthlyCapacity(numKids);
 
     const seeds = { Education: {}, Health: {}, Retirement: {} };
     
-    const cfg = PROFILE_CONFIG['9_Late_Stage_Growth'];
+    // Education vehicles
     const educationOrder = (numKids > 0
-      ? cfg.vehicleOrder_Education.map(v => ({
-          name: v.name,
-          capMonthly: v.name === 'Combined CESA' ? cesaCap : v.capMonthly
-        }))
+      ? [{ name: 'Combined CESA', capMonthly: cesaCap }]
       : []
     ).concat({ name: 'Education Bank', capMonthly: Infinity });
 
-    const healthOrder = cfg.vehicleOrder_Health
-      .map(v => ({
-        name: v.name,
-        capMonthly: v.name === 'HSA' ? hsaCap : v.capMonthly
-      }))
-      .filter(v => !(v.name === 'HSA' && !hsaElig))
-      .concat({ name: 'Health Bank', capMonthly: Infinity });
+    // Health vehicles
+    const healthOrder = (hsaElig
+      ? [{ name: 'HSA', capMonthly: hsaCap }]
+      : []
+    ).concat({ name: 'Health Bank', capMonthly: Infinity });
 
-    // Build base retirement order with catch-up logic
-    let baseRetirementOrder = cfg.vehicleOrder_Retirement
-      .map(v => {
-        let adjustedCap = v.capMonthly;
-        
-        // Apply catch-up contributions for age 50+
-        if (age >= 50) {
-          if (v.name.includes('401')) {
-            // 401(k) catch-up: $7,500 for 50-59, $11,250 for 60+
-            const catchup401k = age >= 60 ? LIMITS.RETIREMENT.CATCHUP_401K_60 : LIMITS.RETIREMENT.CATCHUP_401K_50;
-            adjustedCap = (v.capMonthly * 12 + catchup401k) / 12;
-          } else if (v.name.includes('IRA')) {
-            // IRA catch-up: $1,000 for 50+
-            adjustedCap = (v.capMonthly * 12 + LIMITS.RETIREMENT.CATCHUP_IRA) / 12;
-          }
-        }
-        
-        return { name: v.name, capMonthly: adjustedCap };
-      });
+    // Build retirement order based on employment situation
+    let baseRetirementOrder = [];
     
-    // Add employer 401(k) vehicles if applicable
-    baseRetirementOrder = addEmployer401kVehicles(baseRetirementOrder, {
-      rowArr,
-      hdr,
-      age,
-      grossIncome
-    });
+    // Calculate 401(k) employee limits with catch-up (CRITICAL for this profile)
+    let employee401kCap = LIMITS.RETIREMENT.EMPLOYEE_401K / 12;
+    if (age >= 50) {
+      const catchup401k = age >= 60 ? LIMITS.RETIREMENT.CATCHUP_401K_60 : LIMITS.RETIREMENT.CATCHUP_401K_50;
+      employee401kCap = (LIMITS.RETIREMENT.EMPLOYEE_401K + catchup401k) / 12;
+    }
+    
+    // Calculate IRA limits with catch-up
+    let iraCap = (LIMITS.RETIREMENT.TRADITIONAL_IRA + LIMITS.RETIREMENT.CATCHUP_IRA) / 12;
+    
+    // Branch based on employment situation
+    if (isW2Employee && !isBoth) {
+      // W-2 Employee (still working near retirement)
+      // 1. Get employer match first
+      if (hasEmployer401k && hasEmployerMatch) {
+        baseRetirementOrder = addEmployer401kVehicles(baseRetirementOrder, {
+          rowArr,
+          hdr,
+          age,
+          grossIncome
+        });
+      }
+      
+      // 2. HSA (critical for Medicare bridge ages 62-65)
+      if (hsaElig) {
+        baseRetirementOrder.push({ name: 'HSA', capMonthly: hsaCap });
+      }
+      
+      // 3. 401(k) Catch-Up
+      if (hasEmployer401k) {
+        baseRetirementOrder.push({ name: '401(k) Catch-Up', capMonthly: employee401kCap });
+      }
+      
+      // 4. Roth Conversions (strategy placeholder)
+      baseRetirementOrder.push({ 
+        name: 'Roth Conversions', 
+        capMonthly: 0,
+        note: 'Strategic conversions to fill tax brackets'
+      });
+      
+      // 5. IRA Catch-Up
+      baseRetirementOrder.push({ name: 'IRA Catch-Up', capMonthly: iraCap });
+      
+      // 6. Backdoor Roth IRA Catch-Up
+      baseRetirementOrder.push({ name: 'Backdoor Roth IRA Catch-Up', capMonthly: iraCap });
+      
+    } else if (isSelfEmployed && !isBoth) {
+      // Self-Employed (consulting in retirement common)
+      // 1. HSA first
+      if (hsaElig) {
+        baseRetirementOrder.push({ name: 'HSA', capMonthly: hsaCap });
+      }
+      
+      // 2. Solo 401(k) – Employee Catch-Up
+      baseRetirementOrder.push({ name: 'Solo 401(k) – Employee Catch-Up', capMonthly: employee401kCap });
+      
+      // 3. Solo 401(k) – Employer
+      const employerCap = Math.round(grossIncome * 0.20 / 12);
+      baseRetirementOrder.push({ name: 'Solo 401(k) – Employer', capMonthly: employerCap });
+      
+      // 4. Roth Conversions
+      baseRetirementOrder.push({ 
+        name: 'Roth Conversions', 
+        capMonthly: 0,
+        note: 'Strategic conversions in low-income years'
+      });
+      
+      // 5. IRA Catch-Up
+      baseRetirementOrder.push({ name: 'IRA Catch-Up', capMonthly: iraCap });
+      
+      // 6. Backdoor Roth IRA Catch-Up
+      baseRetirementOrder.push({ name: 'Backdoor Roth IRA Catch-Up', capMonthly: iraCap });
+      
+    } else if (isBoth) {
+      // Both (common for phased retirement)
+      // 1. 401(k) Match (W-2)
+      if (hasEmployer401k && hasEmployerMatch) {
+        baseRetirementOrder = addEmployer401kVehicles(baseRetirementOrder, {
+          rowArr,
+          hdr,
+          age,
+          grossIncome
+        });
+      }
+      
+      // 2. HSA
+      if (hsaElig) {
+        baseRetirementOrder.push({ name: 'HSA', capMonthly: hsaCap });
+      }
+      
+      // 3. 401(k) Catch-Up (W-2) - partial
+      if (hasEmployer401k) {
+        const w2Portion = Math.round(employee401kCap * 0.5);
+        baseRetirementOrder.push({ name: '401(k) Catch-Up', capMonthly: w2Portion });
+      }
+      
+      // 4. Solo 401(k) – Employee (Self) - remaining
+      const soloPortion = Math.round(employee401kCap * 0.5);
+      baseRetirementOrder.push({ name: 'Solo 401(k) – Employee', capMonthly: soloPortion });
+      
+      // 5. Solo 401(k) – Employer
+      const employerCap = Math.round(grossIncome * 0.20 / 12);
+      baseRetirementOrder.push({ name: 'Solo 401(k) – Employer', capMonthly: employerCap });
+      
+      // 6. Roth Conversions
+      baseRetirementOrder.push({ 
+        name: 'Roth Conversions', 
+        capMonthly: 0,
+        note: 'Strategic conversions to optimize lifetime taxes'
+      });
+      
+      // 7. IRA Catch-Up
+      baseRetirementOrder.push({ name: 'IRA Catch-Up', capMonthly: iraCap });
+      
+      // 8. Backdoor Roth IRA Catch-Up
+      baseRetirementOrder.push({ name: 'Backdoor Roth IRA Catch-Up', capMonthly: iraCap });
+    }
+    
+    // Add QCD Planning for age 70.5+
+    if (age >= 70.5) {
+      baseRetirementOrder.push({ 
+        name: 'Qualified Charitable Distribution Planning', 
+        capMonthly: Math.min(100000/12, 8333), // Up to $100k/year
+        note: 'Satisfy RMDs tax-free through charity'
+      });
+    }
     
     // Apply Roth IRA phase-out rules
     baseRetirementOrder = applyRothIRAPhaseOut(baseRetirementOrder, {
@@ -1801,13 +2173,10 @@ const profileHelpers = {
     
     // Adjust order based on tax preference
     if (taxFocus === 'Now') {
-      // Prioritize Traditional over Roth for current tax savings
       baseRetirementOrder = prioritizeTraditionalAccounts(baseRetirementOrder);
     } else if (taxFocus === 'Later') {
-      // Prioritize Roth over Traditional for tax-free growth
       baseRetirementOrder = prioritizeRothAccounts(baseRetirementOrder);
     }
-    // For 'Both' or undefined, keep original order (balanced approach)
     
     const retirementOrder = baseRetirementOrder.concat({ name: 'Family Bank', capMonthly: Infinity });
 

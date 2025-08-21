@@ -1,0 +1,143 @@
+Session Summary: Profile Tuning & Testing Lessons Learned
+
+  Initial Context
+
+  - Project: Retirement Blueprint - tuning allocation profiles
+  - Deadline: 3 days
+  - Starting Point: Continuing Profile 2 (ROBS Curious) tuning
+  from previous session
+  - Previous Work: Had created improved testing infrastructure
+  that immediately failed
+
+  Major Issues Discovered
+
+  1. The $300/$300/$300 Equal Split Problem
+
+  Symptom: All domains getting equal allocations regardless of
+  importance
+  Root Causes:
+  - Missing investment scoring fields (investment_involvement,
+  investment_time, investment_confidence)
+  - Missing domain importance fields (retirement_importance,
+  education_importance, health_importance)
+  - Missing years_until_need fields
+
+  Fix: Added all ~92 required fields to test data
+
+  2. Profile 7 401(k) Allocation Bug
+
+  Symptom: 401(k) vehicles generated but receiving $0
+  allocation
+  Root Cause: 401(k) match was being inserted AFTER HSA in
+  vehicle priority order
+  // BROKEN: Insert after HSA
+  const hsaIndex = updatedOrder.findIndex(v => v.name ===
+  'HSA');
+  const insertIndex = hsaIndex >= 0 ? hsaIndex + 1 : 0;
+
+  // FIXED: Insert at beginning (highest priority)
+  updatedOrder.unshift(matchVehicle);
+  Key Learning: Employer match should ALWAYS be first priority
+  (free money)
+
+  3. Test Data Inconsistency Issues
+
+  Problem: "Lazy copying" between profiles created
+  contradictions
+  - Profile 2 copied Profile 7's base data
+  - Had education_importance=1 despite having 2 kids
+  - Total_Monthly_Savings_Capacity not recalculated when income
+   changed
+  - Missing CESA goals for families with children
+
+  Solution: Created complete, profile-specific test suites with
+   coherent data
+
+  Critical Lessons Learned
+
+  1. Testing Approach
+
+  - What Failed: Creating complex testing infrastructure
+  without running it
+  - What Worked: Simple, direct test execution with immediate
+  feedback
+  - Key Quote: "We have not run a test that has worked the
+  first time"
+
+  2. Data Completeness vs Data Coherence
+
+  - Having all fields isn't enough - they must make sense
+  together
+  - A 52-year-old should have CATCH_UP_ELIGIBLE=TRUE
+  - Families with kids should have education_importance > 1
+  - Income/tax/savings calculations must align
+
+  3. Domain Knowledge
+
+  - HSA in retirement order is intentional (triple tax
+  advantage)
+  - Don't remove features without understanding their purpose
+  - The universal engine works fine - testing was the issue
+
+  4. Development Process
+
+  What We Should Have Done:
+  - Test immediately after each change
+  - Use the same working pattern (like testProfile7All)
+  - Get actual output before building on assumptions
+  - Recognize when we're over-engineering
+
+  Tools Created
+
+  1. Test_Data_Validator.js
+
+  - Validates test data consistency
+  - Catches issues like age/flag mismatches
+  - Auto-fix function for common problems
+
+  2. Complete_Test_Suites_Fixed.js
+
+  - Profile-specific complete base data
+  - No cross-profile references
+  - Coherent scenario overrides
+
+  3. Debug_Helpers.js
+
+  - Vehicle order visualization
+  - Allocation trace debugging
+  - Common issues checker
+
+  Current Status
+
+  ✅ Completed
+
+  - Profile 7 (Foundation Builder) - Fixed and tested
+  - Profile 2 (ROBS Curious) - Fixed and tested
+  - Test data validation infrastructure
+  - Complete test suites for Profiles 2, 4, 7
+
+  🟡 Profile 2 Final Test Results
+
+  W-2 Employee with Family:
+  - CESA: $333/mo ✅
+  - Education Total: $866/mo
+  - Proper domain weighting based on importance
+
+  Self-Employed:
+  - Solo 401(k): $1396/mo ✅
+  - No education (no kids)
+  - Health prioritized
+
+  📋 Next Steps
+
+  1. Test Profile 4 (Roth Reclaimer) with fixed test suite
+  2. Create placeholder test suites for remaining profiles
+  3. Continue tuning profiles in priority order: 5, 6, 9, 3, 1,
+   8
+
+  Key Takeaway
+
+  The universal allocation engine was never broken. Our testing
+   approach was flawed due to incomplete/inconsistent test data
+   and over-engineered testing infrastructure. Simple, direct
+  testing with complete, coherent data works best.

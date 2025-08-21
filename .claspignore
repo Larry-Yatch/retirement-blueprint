@@ -5,6 +5,12 @@
 !Form_Management.js
 !Current_Forms_Full.js
 !appsscript.json
+!Complete_Test_Suites.js
+!Complete_Test_Suites_Fixed.js
+!Test_Data_Validator.js
+!Debug_Helpers.js
+!Test_Profile_2_Fixed.js
+!TestP2.js
 
 # Explicitly exclude draft files
 form-mapping-implementation.js

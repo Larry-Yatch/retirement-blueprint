@@ -77,9 +77,17 @@ const PROFILE_2_SCENARIOS = {
       'Net_Monthly_Income': 7500,
       'Allocation_Percentage': 26.7,
       // Investment scoring questions (required for domain weights)
-      'investment_involvement': 4,  // 1-7 scale
-      'investment_time': 4,         // 1-7 scale  
-      'investment_confidence': 4    // 1-7 scale
+      'investment_involvement': 3,  // 1-7 scale (lower = more conservative, affects risk)
+      'investment_time': 3,         // 1-7 scale  
+      'investment_confidence': 3,   // 1-7 scale
+      // Domain importance (1-7 scale, affects allocation split)
+      'retirement_importance': 5,   // Moderate-high importance
+      'education_importance': 5,    // Has 2 kids, education important
+      'health_importance': 5,       // HSA eligible, health important
+      // Years until need (affects urgency)
+      'retirement_years_until_target': 20,  // 45 years old, retire at 65
+      'cesa_years_until_first_need': 10,    // Kids need college in ~10 years
+      'hsa_years_until_need': 15             // Health needs increase with age
     },
     phase2: {
       ex_q1: 'Yes',          // Has employer 401k
@@ -110,7 +118,15 @@ const PROFILE_2_SCENARIOS = {
       // Investment scoring questions (required for domain weights)
       'investment_involvement': 5,  // 1-7 scale (higher for business owner)
       'investment_time': 5,         // 1-7 scale  
-      'investment_confidence': 5    // 1-7 scale
+      'investment_confidence': 5,   // 1-7 scale
+      // Domain importance (1-7 scale, affects allocation split)
+      'retirement_importance': 6,   // Business owner prioritizes retirement
+      'education_importance': 1,    // No kids
+      'health_importance': 5,       // HSA eligible, health important
+      // Years until need (affects urgency)
+      'retirement_years_until_target': 13,  // 52 years old, retire at 65
+      'cesa_years_until_first_need': 99,    // No kids (set high)
+      'hsa_years_until_need': 10             // Older, health needs sooner
     },
     phase2: {
       ex_q1: 'No',
@@ -145,9 +161,17 @@ const PROFILE_4_SCENARIOS = {
       'Net_Monthly_Income': 11000,
       'Allocation_Percentage': 30,
       // Investment scoring questions (required for domain weights)
-      'investment_involvement': 4,  // 1-7 scale
-      'investment_time': 4,         // 1-7 scale  
-      'investment_confidence': 4    // 1-7 scale
+      'investment_involvement': 3,  // 1-7 scale (lower = more conservative, affects risk)
+      'investment_time': 3,         // 1-7 scale  
+      'investment_confidence': 3,   // 1-7 scale
+      // Domain importance (1-7 scale, affects allocation split)
+      'retirement_importance': 6,   // High income wants strong retirement
+      'education_importance': 1,    // No kids
+      'health_importance': 5,       // HSA eligible
+      // Years until need (affects urgency)
+      'retirement_years_until_target': 25,  // 40 years old, retire at 65
+      'cesa_years_until_first_need': 99,    // No kids
+      'hsa_years_until_need': 20             // Relatively young
     },
     phase2: {
       ex_q5: '50000',       // Traditional IRA balance
@@ -177,9 +201,17 @@ const PROFILE_4_SCENARIOS = {
       'Net_Monthly_Income': 5500,
       'Allocation_Percentage': 15,
       // Investment scoring questions (required for domain weights)
-      'investment_involvement': 4,  // 1-7 scale
-      'investment_time': 4,         // 1-7 scale  
-      'investment_confidence': 4    // 1-7 scale
+      'investment_involvement': 3,  // 1-7 scale (lower = more conservative, affects risk)
+      'investment_time': 3,         // 1-7 scale  
+      'investment_confidence': 3,   // 1-7 scale
+      // Domain importance (1-7 scale, affects allocation split)
+      'retirement_importance': 5,   // Moderate importance
+      'education_importance': 6,    // Has 2 kids, very important
+      'health_importance': 3,       // No HSA, lower priority
+      // Years until need (affects urgency)
+      'retirement_years_until_target': 35,  // 30 years old, retire at 65
+      'cesa_years_until_first_need': 8,     // Kids need college soon
+      'hsa_years_until_need': 30             // Young, health needs later
     },
     phase2: {
       ex_q5: '0',           // No Traditional IRA balance
@@ -217,7 +249,15 @@ const PROFILE_7_SCENARIOS = {
       // Investment scoring questions (required for domain weights)
       'investment_involvement': 3,  // 1-7 scale
       'investment_time': 3,         // 1-7 scale  
-      'investment_confidence': 3    // 1-7 scale
+      'investment_confidence': 3,   // 1-7 scale
+      // Domain importance (1-7 scale, affects allocation split)
+      'retirement_importance': 6,   // Young professional prioritizes retirement
+      'education_importance': 1,    // No kids
+      'health_importance': 4,       // HSA eligible, moderate importance
+      // Years until need (affects urgency)
+      'retirement_years_until_target': 40,  // 25 years old, retire at 65
+      'cesa_years_until_first_need': 99,    // No kids
+      'hsa_years_until_need': 30             // Young, health needs later
     },
     phase2: {
       ex_q1: 'Yes',         // Has employer 401k
@@ -246,9 +286,17 @@ const PROFILE_7_SCENARIOS = {
       'Net_Monthly_Income': 6500,
       'Allocation_Percentage': 20,
       // Investment scoring questions (required for domain weights)
-      'investment_involvement': 4,  // 1-7 scale
-      'investment_time': 4,         // 1-7 scale  
-      'investment_confidence': 4    // 1-7 scale
+      'investment_involvement': 3,  // 1-7 scale (lower = more conservative, affects risk)
+      'investment_time': 3,         // 1-7 scale  
+      'investment_confidence': 3,   // 1-7 scale
+      // Domain importance (1-7 scale, affects allocation split)
+      'retirement_importance': 5,   // Moderate importance
+      'education_importance': 6,    // Has 2 kids, very important
+      'health_importance': 5,       // Family health important
+      // Years until need (affects urgency)
+      'retirement_years_until_target': 30,  // 35 years old, retire at 65
+      'cesa_years_until_first_need': 10,    // Kids need college in 10 years
+      'hsa_years_until_need': 20             // Middle age health needs
     },
     phase2: {
       ex_q1: 'Yes',         // Has employer 401k
@@ -585,7 +633,52 @@ function verifyWorkingSheetColumns() {
 }
 
 // ============================================
-// SECTION 6: TEST MENU AND RUNNERS
+// SECTION 6: ASSERTION HELPERS
+// ============================================
+
+/**
+ * Simple assertion helper for tests
+ */
+function assert(condition, message) {
+  if (!condition) {
+    throw new Error(`❌ ASSERTION FAILED: ${message}`);
+  }
+}
+
+/**
+ * Assert that a vehicle was allocated
+ */
+function assertVehicleAllocated(result, vehicleName, domain = 'Retirement') {
+  const vehicles = result.vehicles[domain] || {};
+  const allocated = Object.entries(vehicles)
+    .some(([name, amount]) => name.includes(vehicleName) && amount > 0);
+  
+  assert(allocated, `${vehicleName} should be allocated in ${domain} domain`);
+}
+
+/**
+ * Assert that allocation matches expected amount
+ */
+function assertAllocationAmount(result, vehicleName, expectedAmount, tolerance = 5) {
+  let actualAmount = 0;
+  
+  Object.values(result.vehicles).forEach(domainVehicles => {
+    Object.entries(domainVehicles).forEach(([name, amount]) => {
+      if (name.includes(vehicleName)) {
+        actualAmount += amount;
+      }
+    });
+  });
+  
+  const difference = Math.abs(actualAmount - expectedAmount);
+  assert(
+    difference <= tolerance, 
+    `${vehicleName} should be ~$${expectedAmount}/mo, got $${Math.round(actualAmount)}/mo`
+  );
+}
+
+// ============================================
+// SECTION 7: TEST MENU AND RUNNERS
 // ============================================
 
 /**
