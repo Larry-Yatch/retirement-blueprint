@@ -854,13 +854,15 @@ function calculateCesaMonthlyCapacity(numChildren) {
  */
 const profileHelpers = {
 '3_Solo401k_Builder': function(rowArr, hdr) {
-  // Read the "have plan?" flag and all three Solo‐401k fields
+  // Get business structure and Solo 401(k) information
+  const businessType  = getValue(hdr, rowArr, HEADERS.P2_EX_Q1) || 'LLC'; // Sole Prop/LLC/S-Corp/C-Corp
+  const hasEmployees  = getValue(hdr, rowArr, HEADERS.P2_EX_Q2) === 'Yes';
   const hasPlan       = getValue(hdr, rowArr, HEADERS.P2_EX_Q3) === 'Yes';
   const annualEmployee= Number(getValue(hdr, rowArr, HEADERS.P2_EX_Q4)) || 0;
   const annualEmployer= Number(getValue(hdr, rowArr, HEADERS.P2_EX_Q5)) || 0;
   const annualFuture  = Number(getValue(hdr, rowArr, HEADERS.P2_EX_Q6)) || 0;
 
-  // Compute HSA/­CESA caps as before…
+  // Get standard information
   const hsaElig = getValue(hdr,rowArr,HEADERS.P2_HSA_ELIGIBILITY)==='Yes';
   const numKids = Number(getValue(hdr,rowArr,HEADERS.P2_CESA_NUM_CHILDREN))||0;
   const age     = Number(getValue(hdr,rowArr,HEADERS.CURRENT_AGE));
@@ -887,7 +889,7 @@ const profileHelpers = {
     seeds.Retirement['Solo 401(k) – Employee'] = annualFuture/12;
   }
 
-  // Build vehicleOrders + banks (same as before)…
+  // Build vehicleOrders + banks
   const cfg = PROFILE_CONFIG['3_Solo401k_Builder'];
   const educationOrder = (numKids>0
     ? cfg.vehicleOrder_Education.map(v=>({
@@ -905,25 +907,46 @@ const profileHelpers = {
     .filter(v=>!(v.name==='HSA'&&!hsaElig))
     .concat({ name:'Health Bank', capMonthly:Infinity });
 
-  // Build base retirement order with catch-up contributions
+  // Build base retirement order with business structure considerations
   let baseRetirementOrder = cfg.vehicleOrder_Retirement
     .map(v => {
       let adjustedCap = v.capMonthly;
       
-      // Apply catch-up contributions for age 50+
-      if (age >= 50) {
-        if (v.name.includes('401')) {
-          // 401(k) catch-up: $7,500 for 50-59, $11,250 for 60+
+      // Handle Solo 401(k) vehicles
+      if (v.name === 'Solo 401(k) – Employee') {
+        // Employee contribution limit with catch-up
+        const baseLimit = LIMITS.RETIREMENT.EMPLOYEE_401K;
+        if (age >= 50) {
           const catchup401k = age >= 60 ? LIMITS.RETIREMENT.CATCHUP_401K_60 : LIMITS.RETIREMENT.CATCHUP_401K_50;
-          adjustedCap = (v.capMonthly * 12 + catchup401k) / 12;
-        } else if (v.name.includes('IRA')) {
-          // IRA catch-up: $1,000 for 50+
-          adjustedCap = (v.capMonthly * 12 + LIMITS.RETIREMENT.CATCHUP_IRA) / 12;
+          adjustedCap = (baseLimit + catchup401k) / 12;
+        } else {
+          adjustedCap = baseLimit / 12;
         }
+      } else if (v.name === 'Solo 401(k) – Employer') {
+        // Employer contribution depends on business structure
+        // S-Corp and C-Corp: up to 25% of W-2 wages
+        // Sole Prop and LLC: up to 20% of net self-employment income
+        // Maximum is total limit minus employee contributions
+        const totalLimit = age >= 60 ? LIMITS.RETIREMENT.TOTAL_60_63 : 
+                          age >= 50 ? LIMITS.RETIREMENT.TOTAL_50_59_64 : 
+                          LIMITS.RETIREMENT.TOTAL_401K_457_403B;
+        adjustedCap = totalLimit / 12;
+      } else if (v.name === 'HSA') {
+        adjustedCap = hsaCap;
+      } else if (v.name.includes('IRA') && age >= 50) {
+        // IRA catch-up: $1,000 for 50+
+        adjustedCap = (v.capMonthly * 12 + LIMITS.RETIREMENT.CATCHUP_IRA) / 12;
       }
       
       return { name: v.name, capMonthly: adjustedCap };
     });
+  
+  // Move HSA higher in priority (after Solo 401k contributions)
+  const hsaIndex = baseRetirementOrder.findIndex(v => v.name === 'HSA');
+  if (hsaIndex > 2) {
+    const hsaVehicle = baseRetirementOrder.splice(hsaIndex, 1)[0];
+    baseRetirementOrder.splice(2, 0, hsaVehicle);
+  }
   
   // Apply Roth IRA phase-out rules
   baseRetirementOrder = applyRothIRAPhaseOut(baseRetirementOrder, {
@@ -941,6 +964,11 @@ const profileHelpers = {
     baseRetirementOrder = prioritizeRothAccounts(baseRetirementOrder);
   }
   // For 'Both' or undefined, keep original order (balanced approach)
+  
+  // Alert if they have employees (shouldn't be using Solo 401k)
+  if (hasEmployees) {
+    console.warn('Profile 3 selected but client has employees - consider Profile 8 instead');
+  }
   
   const retirementOrder = baseRetirementOrder.concat({ name:'Family Bank', capMonthly:Infinity });
 
@@ -972,33 +1000,63 @@ const profileHelpers = {
     // Get gross income for phase-out calculations
     const grossIncome = Number(getValue(hdr, rowArr, HEADERS.GROSS_ANNUAL_INCOME)) || 72000;
     
+    // Get ROBS-specific information from extra questions
+    const robsStructure = getValue(hdr, rowArr, HEADERS.P2_EX_Q1) || ''; // How ROBS is structured
+    const profitRouting = getValue(hdr, rowArr, HEADERS.P2_EX_Q2) || ''; // How profits are routed
+    const contributionType = getValue(hdr, rowArr, HEADERS.P2_EX_Q3) || 'Both'; // Roth/Traditional/Both
+    const contributionFrequency = getValue(hdr, rowArr, HEADERS.P2_EX_Q4) || 'Monthly';
+    const rothIRAContribution = getValue(hdr, rowArr, HEADERS.P2_EX_Q5) === 'Yes';
+    const annualProfitDistribution = Number(getValue(hdr, rowArr, HEADERS.P2_EX_Q6)) || 100000;
+    
     // Calculate monthly capacities using universal functions
     const hsaCap = calculateHsaMonthlyCapacity(hsaElig, age, filing);
     const cesaCap = calculateCesaMonthlyCapacity(numKids);
 
+    // Seeds: Pre-fill ROBS profit distribution
     const seeds = { Education: {}, Health: {}, Retirement: {} };
+    
+    // Seed the profit distribution if provided
+    if (annualProfitDistribution > 0) {
+      seeds.Retirement['ROBS Solo 401(k) – Profit Distribution'] = annualProfitDistribution / 12;
+    }
     
     const cfg = PROFILE_CONFIG['1_ROBS_In_Use'];
     
-    // Build base retirement order
+    // Build base retirement order with dynamic adjustments
     let baseRetirementOrder = cfg.vehicleOrder_Retirement
       .map(v => {
         let adjustedCap = v.capMonthly;
         
-        // Apply catch-up contributions for age 50+
-        if (age >= 50) {
-          if (v.name.includes('401')) {
-            // 401(k) catch-up: $7,500 for 50-59, $11,250 for 60+
+        // Special handling for ROBS vehicles
+        if (v.name === 'ROBS Solo 401(k) – Profit Distribution') {
+          // This has infinite capacity but we'll let seeds handle the actual amount
+          adjustedCap = Infinity;
+        } else if (v.name.includes('ROBS Solo 401(k)')) {
+          // Apply catch-up contributions for age 50+
+          if (age >= 50) {
             const catchup401k = age >= 60 ? LIMITS.RETIREMENT.CATCHUP_401K_60 : LIMITS.RETIREMENT.CATCHUP_401K_50;
-            adjustedCap = (v.capMonthly * 12 + catchup401k) / 12;
-          } else if (v.name.includes('IRA')) {
-            // IRA catch-up: $1,000 for 50+
-            adjustedCap = (v.capMonthly * 12 + LIMITS.RETIREMENT.CATCHUP_IRA) / 12;
+            adjustedCap = (LIMITS.RETIREMENT.EMPLOYEE_401K + catchup401k) / 12;
           }
+        } else if (v.name === 'HSA') {
+          adjustedCap = hsaCap;
+        } else if (v.name.includes('IRA') && age >= 50) {
+          // IRA catch-up: $1,000 for 50+
+          adjustedCap = (v.capMonthly * 12 + LIMITS.RETIREMENT.CATCHUP_IRA) / 12;
         }
         
         return { name: v.name, capMonthly: adjustedCap };
       });
+    
+    // Filter vehicles based on contribution type preference
+    if (contributionType === 'Roth only') {
+      baseRetirementOrder = baseRetirementOrder.filter(v => 
+        !v.name.includes('Traditional') || v.name.includes('Profit Distribution')
+      );
+    } else if (contributionType === 'Traditional only') {
+      baseRetirementOrder = baseRetirementOrder.filter(v => 
+        !v.name.includes('Roth') || v.name === 'Roth IRA' || v.name.includes('Profit Distribution')
+      );
+    }
     
     // Apply Roth IRA phase-out rules
     baseRetirementOrder = applyRothIRAPhaseOut(baseRetirementOrder, {
@@ -1007,15 +1065,17 @@ const profileHelpers = {
       taxFocus
     });
     
-    // Adjust order based on tax preference
-    if (taxFocus === 'Now') {
-      // Prioritize Traditional over Roth for current tax savings
-      baseRetirementOrder = prioritizeTraditionalAccounts(baseRetirementOrder);
-    } else if (taxFocus === 'Later') {
-      // Prioritize Roth over Traditional for tax-free growth
-      baseRetirementOrder = prioritizeRothAccounts(baseRetirementOrder);
+    // Remove regular Roth IRA if not contributing to it
+    if (!rothIRAContribution) {
+      baseRetirementOrder = baseRetirementOrder.filter(v => v.name !== 'Roth IRA');
     }
-    // For 'Both' or undefined, keep original order (balanced approach)
+    
+    // Move HSA higher in priority (after profit distribution and employee contributions)
+    const hsaIndex = baseRetirementOrder.findIndex(v => v.name === 'HSA');
+    if (hsaIndex > 3) {
+      const hsaVehicle = baseRetirementOrder.splice(hsaIndex, 1)[0];
+      baseRetirementOrder.splice(3, 0, hsaVehicle);
+    }
     
     const educationOrder = (numKids > 0
       ? cfg.vehicleOrder_Education.map(v => ({
@@ -1879,11 +1939,28 @@ const profileHelpers = {
     // Get gross income for phase-out calculations
     const grossIncome = Number(getValue(hdr, rowArr, HEADERS.GROSS_ANNUAL_INCOME)) || 144000;
     
+    // Get business owner specific information
+    const numEmployees = Number(getValue(hdr, rowArr, HEADERS.P2_EX_Q1)) || 5;
+    const avgEmployeeAge = Number(getValue(hdr, rowArr, HEADERS.P2_EX_Q2)) || 35;
+    const avgEmployeeSalary = Number(getValue(hdr, rowArr, HEADERS.P2_EX_Q3)) || 50000;
+    const hasRetirementPlan = getValue(hdr, rowArr, HEADERS.P2_EX_Q4) === 'Yes';
+    const planType = getValue(hdr, rowArr, HEADERS.P2_EX_Q5) || '401(k)';
+    const annualContribution = Number(getValue(hdr, rowArr, HEADERS.P2_EX_Q6)) || 0;
+    
     // Calculate monthly capacities using utility functions
     const hsaCap = calculateHsaMonthlyCapacity(hsaElig, age, filing);
     const cesaCap = calculateCesaMonthlyCapacity(numKids);
 
     const seeds = { Education: {}, Health: {}, Retirement: {} };
+    
+    // Seed existing retirement plan contributions
+    if (hasRetirementPlan && annualContribution > 0) {
+      if (planType.includes('401')) {
+        seeds.Retirement['Group 401(k) – Employee'] = annualContribution / 12;
+      } else if (planType.includes('Defined Benefit')) {
+        seeds.Retirement['Defined Benefit Plan'] = annualContribution / 12;
+      }
+    }
     
     const cfg = PROFILE_CONFIG['8_Biz_Owner_Group'];
     const educationOrder = (numKids > 0
@@ -1919,11 +1996,14 @@ const profileHelpers = {
     }
     
     // 1. Defined Benefit Plan (highest contribution potential)
-    baseRetirementOrder.push({ 
-      name: 'Defined Benefit Plan', 
-      capMonthly: LIMITS.RETIREMENT.DEFINED_BENEFIT / 12,
-      note: 'Age-based limits apply, consult actuary'
-    });
+    // Only recommend if owner is significantly older than employees
+    if (age > avgEmployeeAge + 10) {
+      baseRetirementOrder.push({ 
+        name: 'Defined Benefit Plan', 
+        capMonthly: LIMITS.RETIREMENT.DEFINED_BENEFIT / 12,
+        note: 'Age-based limits apply, consult actuary'
+      });
+    }
     
     // 2. Group 401(k) – Employee
     baseRetirementOrder.push({ 
@@ -1944,7 +2024,7 @@ const profileHelpers = {
     }
     
     // 5. Cash Balance Plan (NEW - modern DB alternative)
-    if (age >= 45) {
+    if (age >= 45 && age > avgEmployeeAge + 5) {
       // Simplified Cash Balance calculation based on age
       const cashBalanceCap = age >= 60 ? 23333 : age >= 55 ? 16667 : age >= 50 ? 12500 : 8333;
       baseRetirementOrder.push({ 

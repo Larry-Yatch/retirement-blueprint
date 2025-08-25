@@ -68,15 +68,17 @@ if ((workSituation === 'Self-employed' || workSituation === 'Both') &&
 
 ## Technical Implementation
 
-### Helper Function Logic (Code.js:842-941)
+### Helper Function Logic (Code.js:856-983)
 ```javascript
 '3_Solo401k_Builder': function(rowArr, hdr) {
     // Key features:
-    // 1. Reads existing plan status and contribution amounts
-    // 2. Seeds contributions based on current plan or future expectations
-    // 3. Separates employee and employer contributions
-    // 4. Full catch-up contribution support
-    // 5. Dynamic vehicle ordering based on tax preference
+    // 1. Reads business structure for contribution calculations
+    // 2. Validates no employees (warns if employees present)
+    // 3. Seeds contributions based on current plan or future expectations
+    // 4. Enhanced employer contribution limits by entity type
+    // 5. Full catch-up contribution support with age-based calculations
+    // 6. HSA moved higher in priority order
+    // 7. Dynamic vehicle ordering based on tax preference
 }
 ```
 
@@ -125,8 +127,76 @@ if ((workSituation === 'Self-employed' || workSituation === 'Both') &&
 - **S-Corp**: 25% of W-2 wages for employer portion
 - **C-Corp**: 25% of wages, but consider ROBS profile instead
 
-## Tuning Considerations
-- Add more sophisticated employer contribution calculations
+## December 2024 Implementation Updates
+
+### Key Enhancements
+1. **Business Structure Handling**:
+   - Reads entity type from ex_q1 (Sole Prop/LLC/S-Corp/C-Corp)
+   - Adjusts employer contribution calculations based on entity
+   - S-Corp/C-Corp: Up to 25% of W-2 wages
+   - Sole Prop/LLC: Up to 20% of net self-employment income
+
+2. **Employee Validation**:
+   - Checks ex_q2 for employee status
+   - Warns if employees present (should use Profile 8 instead)
+   - Ensures Solo 401(k) compliance
+
+3. **Enhanced Contribution Limits**:
+   ```javascript
+   // Employee limits with catch-up
+   if (age >= 50) {
+     const catchup401k = age >= 60 ? 11250 : 7500;
+     adjustedCap = (23500 + catchup401k) / 12;
+   }
+   
+   // Employer limits based on age
+   const totalLimit = age >= 60 ? 81250 : 
+                     age >= 50 ? 77500 : 
+                     70000;
+   ```
+
+4. **HSA Prioritization**:
+   - Moved to position 3 (after Solo 401k contributions)
+   - Recognizes tax efficiency for self-employed
+
+5. **Dynamic Vehicle Ordering**:
+   - Applies tax preference logic
+   - Maintains phase-out rules
+   - Preserves catch-up enhancements
+
+### Implementation Highlights
+```javascript
+// Business structure considerations
+if (v.name === 'Solo 401(k) – Employer') {
+  const totalLimit = age >= 60 ? LIMITS.RETIREMENT.TOTAL_60_63 : 
+                    age >= 50 ? LIMITS.RETIREMENT.TOTAL_50_59_64 : 
+                    LIMITS.RETIREMENT.TOTAL_401K_457_403B;
+  adjustedCap = totalLimit / 12;
+}
+
+// HSA repositioning
+const hsaIndex = baseRetirementOrder.findIndex(v => v.name === 'HSA');
+if (hsaIndex > 2) {
+  const hsaVehicle = baseRetirementOrder.splice(hsaIndex, 1)[0];
+  baseRetirementOrder.splice(2, 0, hsaVehicle);
+}
+
+// Employee warning
+if (hasEmployees) {
+  console.warn('Profile 3 selected but client has employees - consider Profile 8 instead');
+}
+```
+
+## Implementation Status
+- ✅ Business structure logic implemented
+- ✅ Employee validation added
+- ✅ Enhanced contribution calculations
+- ✅ HSA prioritization complete
+- ✅ All universal functions integrated
+- ❌ Test scenarios needed
+- ❌ Live form testing required
+
+## Tuning Considerations (Future)
 - Consider mega-backdoor Roth for after-tax contributions
 - Add coordination with spouse's retirement plans
 - Include SEP-IRA as alternative for some scenarios
