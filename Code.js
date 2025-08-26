@@ -160,7 +160,7 @@ const PROFILE_CONFIG = {
     description: 'High-earner who seeks backdoor Roth or IRA consolidation.',
     extraQuestions: [
       'What is the current balance in your Traditional IRA or other old retirement account?',
-      'Have you ever made after-tax (non-deductible) contributions to an IRA?',
+      'Does your employer 401(k) plan accept incoming IRA rollovers?',
       'Do you understand or have you used the "Backdoor Roth" IRA strategy?',
       'Would you like to move some or all of your Traditional IRA money into a Roth IRA? If so, how much?',
       'Does your employer offer a 401(k) retirement plan?',
@@ -1322,7 +1322,7 @@ const profileHelpers = {
     // Get tax preference and backdoor Roth info
     const taxFocus = getValue(hdr, rowArr, HEADERS.TAX_MINIMIZATION);
     const tradIRABalance = Number(getValue(hdr, rowArr, HEADERS.P2_EX_Q5)) || 0;
-    const afterTaxContributions = getValue(hdr, rowArr, HEADERS.P2_EX_Q6) === 'Yes';
+    const can401kAcceptRollins = getValue(hdr, rowArr, HEADERS.P2_EX_Q6) === 'Yes';
     const understandsBackdoor = getValue(hdr, rowArr, HEADERS.P2_EX_Q7) === 'Yes';
     const desiredConversion = Number(getValue(hdr, rowArr, HEADERS.P2_EX_Q8)) || 0;
     
@@ -1409,19 +1409,34 @@ const profileHelpers = {
         baseRetirementOrder.push({ name: '401(k) Roth', capMonthly: employee401kCap });
       }
       
-      // 4. Mega Backdoor Roth if available
-      if (hasEmployer401k && afterTaxContributions && understandsBackdoor) {
-        const afterTaxCap = (LIMITS.RETIREMENT.TOTAL_401K_457_403B - LIMITS.RETIREMENT.EMPLOYEE_401K) / 12;
-        baseRetirementOrder.push({ 
-          name: 'Mega Backdoor Roth', 
-          capMonthly: afterTaxCap 
-        });
+      // 4. Traditional 401(k) for additional tax-deferred savings
+      if (hasEmployer401k) {
+        baseRetirementOrder.push({ name: 'Traditional 401(k)', capMonthly: employee401kCap });
       }
       
-      // 5. Backdoor Roth IRA
-      if (canDoBackdoor && understandsBackdoor) {
-        baseRetirementOrder.push({ name: 'Backdoor Roth IRA', capMonthly: iraCap });
-      } else if (canDoDirectRoth && tradIRABalance === 0) {
+      // 5. Backdoor Roth IRA (with pro-rata considerations)
+      if (tradIRABalance > 0) {
+        if (understandsBackdoor && can401kAcceptRollins) {
+          baseRetirementOrder.push({ 
+            name: 'Backdoor Roth IRA', 
+            capMonthly: iraCap,
+            note: 'Roll Traditional IRA to 401(k) first for tax-free conversion'
+          });
+        } else if (understandsBackdoor) {
+          baseRetirementOrder.push({ 
+            name: 'Backdoor Roth IRA', 
+            capMonthly: iraCap,
+            note: 'Pro-rata rule applies - most of conversion will be taxable'
+          });
+        }
+      } else if (!canDoDirectRoth && understandsBackdoor) {
+        // Clean backdoor possible - no IRA balance
+        baseRetirementOrder.push({ 
+          name: 'Backdoor Roth IRA', 
+          capMonthly: iraCap 
+        });
+      } else if (canDoDirectRoth) {
+        // Income allows direct Roth
         baseRetirementOrder.push({ name: 'Roth IRA', capMonthly: iraCap });
       }
       
@@ -1442,10 +1457,19 @@ const profileHelpers = {
       const employerCap = Math.round(grossIncome * 0.20 / 12); // Simplified 20% calculation
       baseRetirementOrder.push({ name: 'Solo 401(k) – Employer', capMonthly: employerCap });
       
-      // 4. Backdoor Roth IRA
-      if (canDoBackdoor && understandsBackdoor) {
+      // 4. Backdoor Roth IRA (with pro-rata considerations)
+      if (tradIRABalance > 0) {
+        if (understandsBackdoor) {
+          baseRetirementOrder.push({ 
+            name: 'Backdoor Roth IRA', 
+            capMonthly: iraCap,
+            note: 'Pro-rata rule applies - consider Solo 401(k) with IRA rollover feature'
+          });
+        }
+      } else if (!canDoDirectRoth && understandsBackdoor) {
+        // Clean backdoor possible
         baseRetirementOrder.push({ name: 'Backdoor Roth IRA', capMonthly: iraCap });
-      } else if (canDoDirectRoth && tradIRABalance === 0) {
+      } else if (canDoDirectRoth) {
         baseRetirementOrder.push({ name: 'Roth IRA', capMonthly: iraCap });
       }
       
@@ -1486,19 +1510,30 @@ const profileHelpers = {
       const employerCap = Math.round(grossIncome * 0.20 / 12);
       baseRetirementOrder.push({ name: 'Solo 401(k) – Employer', capMonthly: employerCap });
       
-      // 6. Mega Backdoor Roth (if available)
-      if (hasEmployer401k && afterTaxContributions && understandsBackdoor) {
-        const afterTaxCap = (LIMITS.RETIREMENT.TOTAL_401K_457_403B - LIMITS.RETIREMENT.EMPLOYEE_401K) / 12;
-        baseRetirementOrder.push({ 
-          name: 'Mega Backdoor Roth', 
-          capMonthly: afterTaxCap 
-        });
+      // 6. Traditional 401(k) for additional savings
+      if (hasEmployer401k) {
+        const w2TraditionalPortion = Math.round(employee401kCap * 0.6); // 60% to W-2
+        baseRetirementOrder.push({ name: 'Traditional 401(k)', capMonthly: w2TraditionalPortion });
       }
       
-      // 7. Backdoor Roth IRA
-      if (canDoBackdoor && understandsBackdoor) {
+      // 7. Backdoor Roth IRA (with pro-rata considerations)
+      if (tradIRABalance > 0) {
+        if (understandsBackdoor && can401kAcceptRollins) {
+          baseRetirementOrder.push({ 
+            name: 'Backdoor Roth IRA', 
+            capMonthly: iraCap,
+            note: 'Roll Traditional IRA to 401(k) first for clean conversion'
+          });
+        } else if (understandsBackdoor) {
+          baseRetirementOrder.push({ 
+            name: 'Backdoor Roth IRA', 
+            capMonthly: iraCap,
+            note: 'Pro-rata rule applies - most of conversion will be taxable'
+          });
+        }
+      } else if (!canDoDirectRoth && understandsBackdoor) {
         baseRetirementOrder.push({ name: 'Backdoor Roth IRA', capMonthly: iraCap });
-      } else if (canDoDirectRoth && tradIRABalance === 0) {
+      } else if (canDoDirectRoth) {
         baseRetirementOrder.push({ name: 'Roth IRA', capMonthly: iraCap });
       }
       
@@ -1507,13 +1542,13 @@ const profileHelpers = {
     }
     
     // Add rollover note if needed for backdoor strategy
-    if (canDoBackdoor && understandsBackdoor && tradIRABalance > 0) {
+    if (understandsBackdoor && tradIRABalance > 0 && can401kAcceptRollins) {
       const hasRolloverNote = baseRetirementOrder.some(v => v.name === 'IRA → 401(k) Rollover');
       if (!hasRolloverNote) {
         baseRetirementOrder.push({ 
           name: 'IRA → 401(k) Rollover', 
           capMonthly: 0,
-          note: 'Roll Traditional IRA to 401(k) to enable clean backdoor Roth'
+          note: 'Action item: Roll Traditional IRA to 401(k) to enable tax-free backdoor Roth conversions'
         });
       }
     }
