@@ -104,11 +104,11 @@ const PROFILE_CONFIG = {
     extraQuestions: [
       'What is the approximate balance you plan to rollover initially into your ROBS-funded C-corp?',
       'What is your expected annual business income available for retirement savings? (Enter total amount you can save from your business)',
-      'Does your spouse work in your business (or plan to)?',
-      'Does your employer offer a 401(k) retirement plan?',
-      'Does your employer match your 401(k) contributions?',
-      'What percentage does your employer match?',
-      'Does your employer 401(k) plan have a Roth option?'
+      'Do you have access to an employer-sponsored retirement plan (401k, 403b, etc.)?',
+      'If yes, does your employer offer matching contributions?',
+      'If yes, what percentage does your employer match?',
+      'Does your plan offer a Roth 401(k) option?',
+      'If you have a business, does your spouse work in your business (or plan to)?'
     ],
     formId:     '1FAIpQLSchOqMFkphypcStnZ92i-oWhQ_Oysn4gIiWimJYVt3e-sjhXQ',
     entryToken: 'entry.110058618',
@@ -186,7 +186,12 @@ const PROFILE_CONFIG = {
   '5_Bracket_Strategist': {
     title:       'Bracket-Balanced Strategist',
     description: 'Focus on current tax reduction with flexibility for future Roth conversions.',
-    extraQuestions: [/* ... */],
+    extraQuestions: [
+      'Do you have access to an employer-sponsored retirement plan (401k, 403b, etc.)?',
+      'If yes, does your employer offer matching contributions?',
+      'If yes, what percentage does your employer match?',
+      'Does your plan offer a Roth 401(k) option?'
+    ],
     formId:     '1FAIpQLSc10zXxJ-aWWzjp8Dk70joUiPOCT47EWvYqrOWMdI0J9WMUYA',
     entryToken: 'entry.383767276',
     vehicleOrder_Retirement: [
@@ -210,7 +215,12 @@ const PROFILE_CONFIG = {
   '6_Catch_Up': {
     title:       'Catch-Up Visionary',
     description: 'Age 50+ who wants aggressive, tax-smart catch-up planning.',
-    extraQuestions: [/* ... */],
+    extraQuestions: [
+      'Do you have access to an employer-sponsored retirement plan (401k, 403b, etc.)?',
+      'If yes, does your employer offer matching contributions?',
+      'If yes, what percentage does your employer match?',
+      'Does your plan offer a Roth 401(k) option?'
+    ],
     formId:     '1FAIpQLSeTZgJ05mFpsu8dkckLEvHjXtKaPCg0-TOPMMYafjl1_XZwPg',
     entryToken: 'entry.859920868',
     vehicleOrder_Retirement: [
@@ -230,7 +240,12 @@ const PROFILE_CONFIG = {
   '7_Foundation_Builder': {
     title:       'Foundation Builder',
     description: 'Standard investor building retirement foundation. May have employer 401(k) or Roth accounts.',
-    extraQuestions: [/* ... */],
+    extraQuestions: [
+      'Do you have access to an employer-sponsored retirement plan (401k, 403b, etc.)?',
+      'If yes, does your employer offer matching contributions?',
+      'If yes, what percentage does your employer match?',
+      'Does your plan offer a Roth 401(k) option?'
+    ],
     formId:     '1FAIpQLSc4oMG-yUnGnucmWLcx9trxMXIp2DWwVZijbp0OfTtQ3f8wqg',
     entryToken: 'entry.188501795',
     vehicleOrder_Retirement: [
@@ -253,7 +268,12 @@ const PROFILE_CONFIG = {
   '8_Biz_Owner_Group': {
     title:       'Business Owner with Employee Group',
     description: 'Owns one or more businesses with W-2 employees; seeking advanced or defined-benefit strategies.',
-    extraQuestions: [/* ... */],
+    extraQuestions: [
+      'How many W-2 employees do you have (not including you or your spouse)?',
+      'Are your businesses linked together for benefits (controlled group)?',
+      'Which retirement plans do you offer or participate in? (401(k), Profit-Sharing, DB Pension, Other)',
+      'Are you interested in adding advanced plans? (Profit-Sharing / Defined Benefit / No)?'
+    ],
     formId:     '1FAIpQLScWP0EfDPcO46vRywpc0rkzuorCQJh0DCzeJs8EcDxAMrPC7A',
     entryToken: 'entry.568866179',
     vehicleOrder_Retirement: [
@@ -275,7 +295,12 @@ const PROFILE_CONFIG = {
   '9_Late_Stage_Growth': {
     title:       'Late-Stage Growth Strategist',
     description: 'Near-retirement with sizable savings; interested in alts like real estate or private equity.',
-    extraQuestions: [/* ... */],
+    extraQuestions: [
+      'Do you have access to an employer-sponsored retirement plan (401k, 403b, etc.)?',
+      'If yes, does your employer offer matching contributions?',
+      'If yes, what percentage does your employer match?',
+      'Does your plan offer a Roth 401(k) option?'
+    ],
     formId:     '1FAIpQLSeuw5G3w75vLZl0uJtA9zEs4GuEF5XYoNc3h0zz0fB8mBVh2A',
     entryToken: 'entry.58001264',
     vehicleOrder_Retirement: [
@@ -1118,8 +1143,8 @@ const profileHelpers = {
     const isW2Employee = workSituation === 'W-2 employee' || workSituation === 'Both';
     
     // Get ROBS planning info from extra questions
-    const plannedRollover = Number(getValue(hdr, rowArr, HEADERS.P2_EX_Q5)) || 0;
-    const businessSavingsCapacity = Number(getValue(hdr, rowArr, HEADERS.P2_EX_Q6)) || 0;
+    const plannedRollover = Number(getValue(hdr, rowArr, HEADERS.P2_EX_Q1)) || 0;
+    const businessSavingsCapacity = Number(getValue(hdr, rowArr, HEADERS.P2_EX_Q2)) || 0;
     const spouseInBusiness = getValue(hdr, rowArr, HEADERS.P2_EX_Q7) === 'Yes';
     
     // Calculate monthly capacities using utility functions
@@ -1220,15 +1245,20 @@ const profileHelpers = {
     
     // Add employer 401(k) vehicles if W-2 employee
     if (isW2Employee) {
-      baseRetirementOrder = addEmployer401kVehicles(baseRetirementOrder, {
-        rowArr,
-        hdr,
-        age,
-        grossIncome
-      });
+      // Profile 2 has employer questions in different positions
+      const hasEmployer401k = getValue(hdr, rowArr, HEADERS.P2_EX_Q3) === 'Yes';
+      const hasEmployerMatch = getValue(hdr, rowArr, HEADERS.P2_EX_Q4) === 'Yes';
+      const matchPercentage = getValue(hdr, rowArr, HEADERS.P2_EX_Q5); // e.g. "50% up to 6%"
+      const hasRoth401k = getValue(hdr, rowArr, HEADERS.P2_EX_Q6) === 'Yes';
       
-      // Add employee 401(k) contribution vehicles
-      const hasRoth401k = getValue(hdr, rowArr, HEADERS.P2_EX_Q4) === 'Yes';
+      if (hasEmployer401k && hasEmployerMatch) {
+        // Insert 401(k) Match at the beginning (free money)
+        baseRetirementOrder.unshift({ 
+          name: '401(k) Match', 
+          capMonthly: 500, // Default estimate, would need to calculate based on match %
+          note: `Employer match: ${matchPercentage || 'See plan details'}`
+        });
+      }
       
       // Calculate 401(k) employee limits with catch-up
       let employee401kCap = LIMITS.RETIREMENT.EMPLOYEE_401K / 12;
@@ -2398,14 +2428,8 @@ const HEADERS = {
 // ═══════════════════════════════════════════════════════════════════════════════
 const FORM_EX_Q_MAPPING = {
   '2_ROBS_Curious': {
-    // position_in_form: 'target_ex_q'
-    46: 'ex_q1',  // employer 401k
-    47: 'ex_q2',  // employer match
-    48: 'ex_q3',  // match percentage
-    49: 'ex_q4',  // roth option
-    44: 'ex_q5',  // rollover balance
-    45: 'ex_q6',  // business income for retirement
-    50: 'ex_q7'   // spouse in business
+    // No mapping needed - form puts answers in ex_q1-7 sequentially
+    // Code needs to be updated to read from the correct positions
   },
   '4_Roth_Reclaimer': {
     44: 'ex_q5',   // trad IRA balance
@@ -2418,12 +2442,16 @@ const FORM_EX_Q_MAPPING = {
     51: 'ex_q4'    // roth 401k option
   },
   '5_Bracket_Strategist': {
-    // NO employer 401k questions for this profile
-    // Profile questions don't map to ex_q fields
+    44: 'ex_q1',   // employer 401k
+    45: 'ex_q2',   // employer match
+    46: 'ex_q3',   // match percentage
+    47: 'ex_q4'    // roth option
   },
   '6_Catch_Up': {
-    // NO employer 401k questions for this profile
-    // Profile questions don't map to ex_q fields
+    87: 'ex_q1',   // employer 401k
+    88: 'ex_q2',   // employer match
+    89: 'ex_q3',   // match percentage
+    90: 'ex_q4'    // roth option
   },
   '7_Foundation_Builder': {
     44: 'ex_q1',   // employer 401k
@@ -2432,8 +2460,7 @@ const FORM_EX_Q_MAPPING = {
     47: 'ex_q4'    // roth 401k option
   },
   '9_Late_Stage_Growth': {
-    // NO employer 401k questions for this profile
-    // Profile questions don't map to ex_q fields
+    // Form puts answers in ex_q1-4 sequentially - no mapping needed
   }
   // Profiles 1, 3, 8 don't need mapping (no changes or already correct)
 };
