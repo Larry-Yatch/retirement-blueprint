@@ -161,8 +161,6 @@ const PROFILE_CONFIG = {
     extraQuestions: [
       'What is the current balance in your Traditional IRA or other old retirement account?',
       'Does your employer 401(k) plan accept incoming IRA rollovers?',
-      'Do you understand or have you used the "Backdoor Roth" IRA strategy?',
-      'Would you like to move some or all of your Traditional IRA money into a Roth IRA? If so, how much?',
       'Does your employer offer a 401(k) retirement plan?',
       'Does your employer match your 401(k) contributions?',
       'What percentage does your employer match?',
@@ -1321,10 +1319,8 @@ const profileHelpers = {
     
     // Get tax preference and backdoor Roth info
     const taxFocus = getValue(hdr, rowArr, HEADERS.TAX_MINIMIZATION);
-    const tradIRABalance = Number(getValue(hdr, rowArr, HEADERS.P2_EX_Q5)) || 0;
-    const can401kAcceptRollins = getValue(hdr, rowArr, HEADERS.P2_EX_Q6) === 'Yes';
-    const understandsBackdoor = getValue(hdr, rowArr, HEADERS.P2_EX_Q7) === 'Yes';
-    const desiredConversion = Number(getValue(hdr, rowArr, HEADERS.P2_EX_Q8)) || 0;
+    const tradIRABalance = Number(getValue(hdr, rowArr, HEADERS.P2_EX_Q1)) || 0;
+    const can401kAcceptRollins = getValue(hdr, rowArr, HEADERS.P2_EX_Q2) === 'Yes';
     
     // Get employment situation
     const workSituation = getValue(hdr, rowArr, HEADERS.WORK_SITUATION);
@@ -1333,9 +1329,9 @@ const profileHelpers = {
     const isBoth = workSituation === 'Both';
     
     // Get employer 401(k) info
-    const hasEmployer401k = getValue(hdr, rowArr, HEADERS.P2_EX_Q1) === 'Yes';
-    const hasEmployerMatch = getValue(hdr, rowArr, HEADERS.P2_EX_Q2) === 'Yes';
-    const hasRoth401k = getValue(hdr, rowArr, HEADERS.P2_EX_Q4) === 'Yes';
+    const hasEmployer401k = getValue(hdr, rowArr, HEADERS.P2_EX_Q5) === 'Yes';
+    const hasEmployerMatch = getValue(hdr, rowArr, HEADERS.P2_EX_Q6) === 'Yes';
+    const hasRoth401k = getValue(hdr, rowArr, HEADERS.P2_EX_Q8) === 'Yes';
     
     // Calculate monthly capacities using utility functions
     const hsaCap = calculateHsaMonthlyCapacity(hsaElig, age, filing);
@@ -1376,7 +1372,7 @@ const profileHelpers = {
     }
     
     // Determine if backdoor Roth is viable
-    const canDoBackdoor = tradIRABalance === 0 || (hasEmployer401k && understandsBackdoor);
+    const canDoBackdoor = tradIRABalance === 0 || hasEmployer401k;
     
     // Check if income allows direct Roth contributions
     const rothPhaseout = applyRothIRAPhaseOut([{ name: 'Roth IRA', capMonthly: iraCap }], {
@@ -1415,26 +1411,30 @@ const profileHelpers = {
       }
       
       // 5. Backdoor Roth IRA (with pro-rata considerations)
-      if (tradIRABalance > 0) {
-        if (understandsBackdoor && can401kAcceptRollins) {
+      if (!canDoDirectRoth) {
+        // Need backdoor due to income limits
+        if (tradIRABalance > 0) {
+          if (can401kAcceptRollins) {
+            baseRetirementOrder.push({ 
+              name: 'Backdoor Roth IRA', 
+              capMonthly: iraCap,
+              note: 'Backdoor Roth: 1) Contribute to Traditional IRA (non-deductible) 2) Roll existing IRA to 401(k) 3) Convert to Roth tax-free'
+            });
+          } else {
+            baseRetirementOrder.push({ 
+              name: 'Backdoor Roth IRA', 
+              capMonthly: iraCap,
+              note: 'Backdoor Roth with pro-rata tax: 1) Contribute to Traditional IRA 2) Convert to Roth (taxable due to existing IRA balance)'
+            });
+          }
+        } else {
+          // Clean backdoor possible - no IRA balance
           baseRetirementOrder.push({ 
             name: 'Backdoor Roth IRA', 
             capMonthly: iraCap,
-            note: 'Roll Traditional IRA to 401(k) first for tax-free conversion'
-          });
-        } else if (understandsBackdoor) {
-          baseRetirementOrder.push({ 
-            name: 'Backdoor Roth IRA', 
-            capMonthly: iraCap,
-            note: 'Pro-rata rule applies - most of conversion will be taxable'
+            note: 'Backdoor Roth: 1) Contribute to Traditional IRA (non-deductible) 2) Convert to Roth immediately (tax-free)'
           });
         }
-      } else if (!canDoDirectRoth && understandsBackdoor) {
-        // Clean backdoor possible - no IRA balance
-        baseRetirementOrder.push({ 
-          name: 'Backdoor Roth IRA', 
-          capMonthly: iraCap 
-        });
       } else if (canDoDirectRoth) {
         // Income allows direct Roth
         baseRetirementOrder.push({ name: 'Roth IRA', capMonthly: iraCap });
@@ -1458,18 +1458,24 @@ const profileHelpers = {
       baseRetirementOrder.push({ name: 'Solo 401(k) – Employer', capMonthly: employerCap });
       
       // 4. Backdoor Roth IRA (with pro-rata considerations)
-      if (tradIRABalance > 0) {
-        if (understandsBackdoor) {
+      if (!canDoDirectRoth) {
+        // Need backdoor due to income limits
+        if (tradIRABalance > 0) {
           baseRetirementOrder.push({ 
             name: 'Backdoor Roth IRA', 
             capMonthly: iraCap,
-            note: 'Pro-rata rule applies - consider Solo 401(k) with IRA rollover feature'
+            note: 'Backdoor Roth with pro-rata: Consider Solo 401(k) with rollover feature to avoid taxes'
+          });
+        } else {
+          // Clean backdoor possible
+          baseRetirementOrder.push({ 
+            name: 'Backdoor Roth IRA', 
+            capMonthly: iraCap,
+            note: 'Backdoor Roth: 1) Contribute to Traditional IRA 2) Convert to Roth immediately (tax-free)'
           });
         }
-      } else if (!canDoDirectRoth && understandsBackdoor) {
-        // Clean backdoor possible
-        baseRetirementOrder.push({ name: 'Backdoor Roth IRA', capMonthly: iraCap });
       } else if (canDoDirectRoth) {
+        // Income allows direct Roth
         baseRetirementOrder.push({ name: 'Roth IRA', capMonthly: iraCap });
       }
       
@@ -1517,22 +1523,29 @@ const profileHelpers = {
       }
       
       // 7. Backdoor Roth IRA (with pro-rata considerations)
-      if (tradIRABalance > 0) {
-        if (understandsBackdoor && can401kAcceptRollins) {
+      if (!canDoDirectRoth) {
+        // Need backdoor due to income limits
+        if (tradIRABalance > 0) {
+          if (can401kAcceptRollins) {
+            baseRetirementOrder.push({ 
+              name: 'Backdoor Roth IRA', 
+              capMonthly: iraCap,
+              note: 'Backdoor Roth: 1) Roll IRA to employer 401(k) 2) Contribute to Traditional IRA 3) Convert tax-free'
+            });
+          } else {
+            baseRetirementOrder.push({ 
+              name: 'Backdoor Roth IRA', 
+              capMonthly: iraCap,
+              note: 'Backdoor Roth with pro-rata tax: Consider Solo 401(k) with rollover feature'
+            });
+          }
+        } else {
           baseRetirementOrder.push({ 
             name: 'Backdoor Roth IRA', 
             capMonthly: iraCap,
-            note: 'Roll Traditional IRA to 401(k) first for clean conversion'
-          });
-        } else if (understandsBackdoor) {
-          baseRetirementOrder.push({ 
-            name: 'Backdoor Roth IRA', 
-            capMonthly: iraCap,
-            note: 'Pro-rata rule applies - most of conversion will be taxable'
+            note: 'Backdoor Roth: 1) Contribute to Traditional IRA 2) Convert immediately (tax-free)'
           });
         }
-      } else if (!canDoDirectRoth && understandsBackdoor) {
-        baseRetirementOrder.push({ name: 'Backdoor Roth IRA', capMonthly: iraCap });
       } else if (canDoDirectRoth) {
         baseRetirementOrder.push({ name: 'Roth IRA', capMonthly: iraCap });
       }
@@ -1541,8 +1554,8 @@ const profileHelpers = {
       baseRetirementOrder.push({ name: 'Traditional IRA', capMonthly: iraCap });
     }
     
-    // Add rollover note if needed for backdoor strategy
-    if (understandsBackdoor && tradIRABalance > 0 && can401kAcceptRollins) {
+    // Add rollover action item if beneficial for backdoor strategy
+    if (tradIRABalance > 0 && can401kAcceptRollins && !canDoDirectRoth) {
       const hasRolloverNote = baseRetirementOrder.some(v => v.name === 'IRA → 401(k) Rollover');
       if (!hasRolloverNote) {
         baseRetirementOrder.push({ 
@@ -2455,7 +2468,9 @@ const HEADERS = {
   EDUCATION_COMBINED_CESA_IDEAL:     'education_combined_cesa_ideal',
 
   // Family Bank
-  FAMILY_BANK_IDEAL:                 'family_bank_ideal'
+  FAMILY_BANK_IDEAL:                 'family_bank_ideal',
+  // Vehicle Recommendations
+  VEHICLE_RECOMMENDATIONS:           'vehicle_recommendations'
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -2467,14 +2482,12 @@ const FORM_EX_Q_MAPPING = {
     // Code needs to be updated to read from the correct positions
   },
   '4_Roth_Reclaimer': {
-    44: 'ex_q5',   // trad IRA balance
-    45: 'ex_q6',   // after-tax contributions
-    46: 'ex_q7',   // backdoor understanding
-    47: 'ex_q8',   // conversion amount
-    48: 'ex_q1',   // employer 401k
-    49: 'ex_q2',   // employer match
-    50: 'ex_q3',   // match percentage
-    51: 'ex_q4'    // roth 401k option
+    44: 'ex_q1',   // trad IRA balance
+    45: 'ex_q2',   // 401k accepts IRA rollovers
+    46: 'ex_q5',   // employer 401k
+    47: 'ex_q6',   // employer match
+    48: 'ex_q7',   // match percentage
+    49: 'ex_q8'    // roth 401k option
   },
   '5_Bracket_Strategist': {
     44: 'ex_q1',   // employer 401k
@@ -3084,7 +3097,35 @@ function handlePhase2(e) {
     Logger.log('⚠️ Missing header: family_bank_ideal');
   }
 
-  // 10) Zero-fill any remaining _actual or _ideal
+  // 10) Collect and store vehicle recommendations with notes
+  const recommendations = [];
+  ['Retirement','Education','Health'].forEach(domain => {
+    // Find vehicles with notes from the original vehicleOrders
+    const domainVehicles = results.vehicleOrders[domain];
+    if (domainVehicles && Array.isArray(domainVehicles)) {
+      domainVehicles.forEach(vehicle => {
+        if (vehicle.note) {
+          // Only include vehicles that have an allocated amount
+          const amtRaw = results.vehicles[domain][vehicle.name];
+          if (amtRaw > 0) {
+            recommendations.push(`${vehicle.name}: ${vehicle.note}`);
+          } else if (vehicle.note.includes('Action item:')) {
+            // Include action items even without allocation
+            recommendations.push(vehicle.note);
+          }
+        }
+      });
+    }
+  });
+  
+  // Write recommendations to new field
+  const recCol = hdr[HEADERS.VEHICLE_RECOMMENDATIONS];
+  if (recCol && recommendations.length > 0) {
+    ws.getRange(rowNum, recCol)
+      .setValue(recommendations.join('\n'));
+  }
+
+  // 11) Zero-fill any remaining _actual or _ideal
   Object.entries(hdr).forEach(([name, col]) => {
     const cell = ws.getRange(rowNum, col);
     if (name.endsWith('_actual') && !(name in actualMap)) {
@@ -3236,5 +3277,5 @@ function runUniversalEngine(rowNum) {
   }
 
   Logger.log('runUniversalEngine ▶ COMPLETE row=%s', rowNum);
-  return { domains, vehicles };
+  return { domains, vehicles, vehicleOrders };
 }
