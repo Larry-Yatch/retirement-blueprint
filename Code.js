@@ -3054,7 +3054,7 @@ function handlePhase2(e) {
 
   // 5) Read back "actual" inputs - ENHANCED to capture all current contributions
   const rowArr     = ws.getRange(rowNum,1,1,ws.getLastColumn()).getValues()[0];
-  const profileId = getValue(hdr, rowArr, HEADERS.PROFILE_ID);
+  // profileId already declared above, reuse it
   
   // Universal current contributions
   const actualHsa  = Number(getValue(hdr,rowArr,HEADERS.P2_HSA_MONTHLY_CONTRIB))||0;
@@ -3076,8 +3076,9 @@ function handlePhase2(e) {
   actualMap['retirement_traditional_401k_actual'] = actualRet;
   
   // Profile-specific actual contributions
+  let actualDist = 0;
   if (profileId === '1_ROBS_In_Use') {
-    const actualDist = (Number(getValue(hdr,rowArr,HEADERS.P2_EX_Q6))||0)/12;
+    actualDist = (Number(getValue(hdr,rowArr,HEADERS.P2_EX_Q6))||0)/12;
     actualMap['retirement_robs_solo_401k_profit_distribution_actual'] = actualDist;
   } else if (profileId === '3_Solo401k_Builder') {
     const annualEmployee = Number(getValue(hdr,rowArr,HEADERS.P2_EX_Q4))||0;
@@ -3109,7 +3110,7 @@ function handlePhase2(e) {
   const nonDiscretionarySeeds = { Education: {}, Health: {}, Retirement: {} };
   
   // Profile-specific non-discretionary identification
-  const profileId = getValue(hdr, rowArr, HEADERS.PROFILE_ID);
+  // profileId already declared above, reuse it
   if (profileId === '1_ROBS_In_Use' && actualDist > 0) {
     // ROBS distributions are non-discretionary
     nonDiscretionarySeeds.Retirement['ROBS Solo 401(k) – Profit Distribution'] = actualDist;
