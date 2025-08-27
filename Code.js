@@ -3167,10 +3167,7 @@ function handlePhase2(e) {
     // Safe harbor contributions would also be non-discretionary
   }
   
-  // Profiles with employer match: 2, 4, 5, 6, 7, 9
-  const matchProfiles = ['2_ROBS_Curious', '4_Roth_Reclaimer', '5_Bracket_Strategist', 
-                         '6_Catch_Up', '7_Foundation_Builder', '9_Late_Stage_Growth'];
-  
+  // Check profiles with employer match (already defined above)
   if (matchProfiles.includes(profileId)) {
     // Get employer match info based on profile question mapping
     let hasMatch = false;
