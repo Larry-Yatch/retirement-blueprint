@@ -318,7 +318,8 @@ function runSingleActualIdealTest(scenario) {
   console.log(`Expected discretionary: $${scenario.expected.discretionaryPool}`);
   console.log(`Expected non-discretionary: $${scenario.expected.nonDiscretionary}`);
   console.log(`Expected ideal total: $${scenario.expected.idealTotal}`);
-  console.log(`\nEngine allocation total: $${engineTotal}`);
+  console.log(`\nEngine allocation total: $${engineTotal} (discretionary only)`);
+  console.log('Note: Non-discretionary items are added during Phase 2 generation, not by engine');
   
   // For Profile 1, check if non-discretionary is being added
   if (scenario.profile === '1_ROBS_In_Use') {
@@ -328,9 +329,8 @@ function runSingleActualIdealTest(scenario) {
   
   // Check if test passed based on engine output
   const tolerance = 100; // Allow $100 tolerance for rounding
-  const expectedEngineTotal = scenario.profile === '1_ROBS_In_Use' 
-    ? scenario.expected.discretionaryPool  // Engine doesn't include non-discretionary in new logic
-    : scenario.expected.idealTotal;
+  // With new logic, engine only returns discretionary allocations
+  const expectedEngineTotal = scenario.expected.discretionaryPool;
   const passed = Math.abs(engineTotal - expectedEngineTotal) <= tolerance;
   
   if (passed) {
