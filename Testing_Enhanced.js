@@ -83,7 +83,7 @@ function testNewActualIdealLogic() {
   
   // Test Profile 1 (ROBS) with non-discretionary distributions
   const testData = {
-    'Profile_ID': '1_ROBS_In_Use',
+    'ProfileID': '1_ROBS_In_Use',
     'Net_Monthly_Income': 10000,
     'Allocation_Percentage': 25, // User wants 25% TOTAL
     'ex_q6': 48000, // $4000/month ROBS distributions (non-discretionary)
@@ -261,7 +261,7 @@ function runSingleActualIdealTest(scenario) {
   
   // Build complete test data
   const fullTestData = Object.assign({
-    'Profile_ID': scenario.profile,
+    'ProfileID': scenario.profile,
     'gross_annual_income': 120000,
     'filing_status': 'Single',
     'current_age': 40,
@@ -284,9 +284,19 @@ function runSingleActualIdealTest(scenario) {
     const col = hdr[field];
     if (col) {
       dataArray[col - 1] = value;
+    } else if (field === 'Profile_ID') {
+      console.log(`WARNING: Profile_ID header not found! Looking for '${field}'`);
+      console.log('Available headers:', Object.keys(hdr).filter(k => k.includes('rofile')));
     }
   });
   ws.getRange(testRow, 1, 1, dataArray.length).setValues([dataArray]);
+  
+  // Debug: Check what was written
+  const writtenData = ws.getRange(testRow, 1, 1, ws.getLastColumn()).getValues()[0];
+  const profileCol = hdr['Profile_ID'] || hdr['profile_id'] || hdr['Profile ID'];
+  if (profileCol) {
+    console.log(`Profile ID written to column ${profileCol}: "${writtenData[profileCol - 1]}"`);
+  }
   
   // Run the engine
   const results = runUniversalEngine(testRow);
