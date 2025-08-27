@@ -36,19 +36,21 @@ if (hasEmployees === 'Yes') {
 ### Current State
 - ✅ Profile Helper Function
 - ✅ Universal Functions Integration
-- ✅ Form Questions Added
-- ✅ Form Mapping Configured
+- ✅ Form Questions Updated (6 questions)
+- ✅ Form Mapping Configured (no mapping needed - sequential)
 - ✅ Employee Demographics Logic
 - ✅ Cash Balance Plan Implementation
 - ✅ Mega Backdoor Roth Implementation
+- ✅ Age-Based DB Contribution Calculator
+- ✅ HSA Prioritization (moved to position 2)
+- ✅ Safe Harbor Guidance Added
 - ❌ Test Scenarios Written
 - ❌ Live Form Testing
-- ❌ Production Ready
 
 ### Status Summary
-**Status**: Full Implementation Complete - Needs Testing
-**Last Updated**: December 2024 - Added employee demographics and conditional logic
-**Next Steps**: Create test scenarios and validate calculations
+**Status**: Code Complete - Ready for Testing
+**Last Updated**: January 2025 - Fixed all critical issues
+**Next Steps**: Test with live form submissions
 
 ## 💻 Technical Implementation
 
@@ -126,40 +128,49 @@ The profile now reads employee demographics to optimize plans:
 
 ### Retirement Domain
 
-#### Base Order
-1. **Defined Benefit Plan** - Up to $23,333/mo
-   - Why: Massive deductions for high-income owners
-   - Conditions: Best if age 45+ and high stable income
-   - Note: Must cover employees but can be designed favorably
+#### Base Order (Updated January 2025)
+1. **Defined Benefit Plan** - Age-based contributions
+   - Age 60+: $20,833/mo (~$250k/year)
+   - Age 55-59: $16,667/mo (~$200k/year)
+   - Age 50-54: $12,500/mo (~$150k/year)
+   - Age 45-49: $8,333/mo (~$100k/year)
+   - Under 45: $6,250/mo (~$75k/year)
+   - Conditions: Owner must be 10+ years older than average employee
+   - Note: Consult actuary for exact limits
 
-2. **Group 401(k) – Employee** - $1,958/mo
+2. **HSA** - Individual: $358/mo, Family: $713/mo
+   - Why: Triple tax advantage (deduction, growth, withdrawal)
+   - Conditions: If HSA eligible
+   - Catch-up: +$83/mo if age 55+
+   - Note: MOVED UP from position 4 for tax efficiency
+
+3. **Group 401(k) – Employee** - $1,958/mo
    - Why: Personal deferrals up to limit
    - Conditions: Primary defined contribution vehicle
    - Catch-up (50+): $2,583/mo
    - Catch-up (60+): $2,896/mo
+   - Note: Consider safe harbor to avoid discrimination testing
 
-3. **Group 401(k) – Employer Profit Sharing** - Up to $5,833/mo
+4. **Group 401(k) – Employer Profit Sharing** - Up to $5,833/mo
    - Why: Additional deductible contributions
    - Conditions: Must satisfy nondiscrimination testing
-   - Note: Combined employee + employer cap: $70,000/yr
-
-4. **HSA** - (retirement portion)
-   - Why: Triple tax advantage
-   - Conditions: If HSA eligible
-   - Note: Moved up for superior tax treatment
+   - Note: 3% safe harbor or up to 25% discretionary
 
 5. **Cash Balance Plan** - Varies by age
-   - Why: Modern DB alternative with more predictable costs
-   - Conditions: If age 45+ and want DB benefits with DC-like structure
-   - Note: Can be combined with 401(k) profit sharing
+   - Age 60+: $23,333/mo
+   - Age 55-59: $16,667/mo
+   - Age 50-54: $12,500/mo
+   - Age 45-49: $8,333/mo
+   - Conditions: Owner must be 45+ and 5+ years older than employees
+   - Note: Modern DB alternative, consult actuary
 
 6. **Backdoor Roth IRA** - $583/mo ($667/mo if 50+)
-   - Why: Most will be phased out of direct Roth
+   - Why: High earners phased out of direct Roth
    - Conditions: High income assumption
 
 7. **After-Tax 401(k) → Mega Backdoor Roth** - Varies
    - Why: Additional Roth savings for high earners
-   - Conditions: If plan allows after-tax contributions and in-service conversions
+   - Conditions: Plan must allow after-tax contributions and in-service conversions
    - Note: Up to total $70,000 limit minus other contributions
 
 8. **Family Bank** - Unlimited
@@ -247,28 +258,27 @@ testProfile8All()
 
 ## 📈 Optimization & Tuning
 
-### Current Limitations
-1. **No Employee Analysis**: Can't optimize plan design
-2. **Static DB Amount**: Not calculated based on age/income
-3. **No Safe Harbor Logic**: Missing automatic safe harbor
-4. **No Multi-Entity**: Can't handle multiple businesses
+### Issues Fixed (January 2025)
+1. ✅ **Age-Based DB Contributions**: Now calculates based on owner age
+2. ✅ **HSA Priority**: Moved to position 2 for tax efficiency
+3. ✅ **Safe Harbor Guidance**: Added notes to vehicles
+4. ✅ **Employee Demographics**: Questions collect age/salary data
+5. ✅ **Form Questions**: All 6 questions properly mapped
 
-### Future Enhancements
-1. **Plan Design Optimizer**: Calculate optimal 401(k) formula
-2. **DB/DC Combo**: Optimize combination plans
-3. **Employee Demographics**: Tailor to workforce
-4. **Cash Balance Plans**: Modern DB alternative
-5. **NQDC Options**: For amounts above qualified limits
+### Future Enhancements (Post-Launch)
+1. **Discrimination Testing**: Use salary data for testing estimates
+2. **Cost-Benefit Analysis**: Calculate ROI of DB plans vs employee costs
+3. **Multi-Entity Support**: Handle controlled groups
+4. **NQDC Options**: For amounts above qualified limits
+5. **Vesting Strategies**: Optimize for employee retention
 
-### Tuning Checklist
-- [ ] Add employee demographic questions
-- [ ] Create DB contribution calculator
-- [ ] Add safe harbor decision logic
-- [ ] Test with various business types
-- [ ] Add profit sharing formulas
-- [ ] Include vesting strategies
-- [ ] Test nondiscrimination rules
-- [ ] Add family employee optimization
+### Production Checklist
+- [x] Employee demographic questions added
+- [x] DB contribution calculator implemented
+- [x] Safe harbor guidance included
+- [ ] Live form testing needed
+- [ ] Test with various scenarios
+- [ ] Validate calculations with actuary
 
 ## 📊 Common Calculations
 
@@ -310,33 +320,41 @@ Passes nondiscrimination testing
 3. **Wrong contribution limits**: Check age for catch-up
 4. **Phase-out issues**: Most should show backdoor Roth
 
-## 🔧 December 2024 Implementation Updates
+## 🔧 January 2025 Implementation Updates
 
 ### Key Enhancements
-1. **Employee Demographics Integration**:
-   - Reads number of employees (ex_q1)
-   - Gets average employee age (ex_q2)
-   - Captures average salary (ex_q3)
-   - Uses demographics to optimize plan recommendations
+1. **Complete Form Integration**:
+   - All 6 questions properly collected
+   - No mapping needed (sequential ex_q1-6)
+   - Smart defaults for missing data
 
-2. **Smart Plan Recommendations**:
+2. **Age-Based DB Contributions**:
+   ```javascript
+   // Age-based DB contribution limits (approximate)
+   const dbContribution = age >= 60 ? 20833 :    // ~$250k/year
+                        age >= 55 ? 16667 :      // ~$200k/year
+                        age >= 50 ? 12500 :      // ~$150k/year
+                        age >= 45 ? 8333 :       // ~$100k/year
+                        6250;                    // ~$75k/year
+   ```
+
+3. **Smart Plan Recommendations**:
    ```javascript
    // Defined Benefit Plan - only if significant age gap
    if (age > avgEmployeeAge + 10) {
      baseRetirementOrder.push({ 
        name: 'Defined Benefit Plan', 
-       capMonthly: LIMITS.RETIREMENT.DEFINED_BENEFIT / 12
+       capMonthly: dbContribution,
+       note: 'Age-based contribution limit, consult actuary'
      });
    }
    
    // Cash Balance Plan - moderate age gap required
    if (age >= 45 && age > avgEmployeeAge + 5) {
-     const cashBalanceCap = age >= 60 ? 23333 : 
-                           age >= 55 ? 16667 : 
-                           age >= 50 ? 12500 : 8333;
      baseRetirementOrder.push({ 
        name: 'Cash Balance Plan', 
-       capMonthly: cashBalanceCap
+       capMonthly: cashBalanceCap,
+       note: 'Modern DB alternative, consult actuary'
      });
    }
    ```
@@ -401,16 +419,18 @@ calculateDBContribution(age, income)
 ## ✅ Production Readiness Checklist
 
 - [ ] All test scenarios pass
-- [x] Form questions properly mapped
-- [x] Edge cases handled
-- [x] Documentation complete
+- [x] Form questions properly mapped (6 questions, no mapping needed)
+- [x] Edge cases handled (age gaps, defaults)
+- [x] Documentation complete and updated
 - [ ] Live form tested
 - [ ] Allocation results verified
 - [x] Error handling implemented
+- [x] Age-based DB calculator implemented
+- [x] HSA prioritization fixed
+- [x] Safe harbor guidance added
 
-**Production Status**: Implementation Complete - Needs Testing
+**Production Status**: Code Complete - Ready for Testing
 **Blockers**: 
-- Test scenarios need creation
-- Live form validation required
-- Complex calculations need verification
-**Sign-off**: Pending testing
+- Live form testing needed
+- Test scenarios need execution
+**Sign-off**: Pending live testing

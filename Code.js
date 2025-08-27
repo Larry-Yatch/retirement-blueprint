@@ -267,10 +267,12 @@ const PROFILE_CONFIG = {
     title:       'Business Owner with Employee Group',
     description: 'Owns one or more businesses with W-2 employees; seeking advanced or defined-benefit strategies.',
     extraQuestions: [
-      'How many W-2 employees do you have (not including you or your spouse)?',
-      'Are your businesses linked together for benefits (controlled group)?',
-      'Which retirement plans do you offer or participate in? (401(k), Profit-Sharing, DB Pension, Other)',
-      'Are you interested in adding advanced plans? (Profit-Sharing / Defined Benefit / No)?'
+      'How many W-2 employees do you have (not including you or your spouse)? [This helps determine plan requirements and administrative complexity]',
+      'What is the average age of your employees? [Age differences between you and employees can unlock powerful defined benefit strategies worth $100k+ in annual tax savings]',
+      'What is the average annual salary of your employees? [This helps calculate discrimination testing requirements and optimal contribution strategies]',
+      'Do you currently have a retirement plan for your business? (Yes/No) [We\'ll build on existing plans or recommend new ones]',
+      'What type of retirement plan(s) do you currently have? (None, 401(k), Profit Sharing, Defined Benefit, Cash Balance, SEP-IRA, SIMPLE-IRA, Other) [Different plans have different rules and combination opportunities]',
+      'How much do you contribute annually to retirement plans (employer + employee contributions)? [We\'ll optimize from your current baseline]'
     ],
     formId:     '1FAIpQLScWP0EfDPcO46vRywpc0rkzuorCQJh0DCzeJs8EcDxAMrPC7A',
     entryToken: 'entry.568866179',
@@ -2076,32 +2078,41 @@ const profileHelpers = {
     // 1. Defined Benefit Plan (highest contribution potential)
     // Only recommend if owner is significantly older than employees
     if (age > avgEmployeeAge + 10) {
+      // Age-based DB contribution limits (approximate)
+      const dbContribution = age >= 60 ? 20833 :    // ~$250k/year
+                           age >= 55 ? 16667 :      // ~$200k/year
+                           age >= 50 ? 12500 :      // ~$150k/year
+                           age >= 45 ? 8333 :       // ~$100k/year
+                           6250;                    // ~$75k/year
+      
       baseRetirementOrder.push({ 
         name: 'Defined Benefit Plan', 
-        capMonthly: LIMITS.RETIREMENT.DEFINED_BENEFIT / 12,
-        note: 'Age-based limits apply, consult actuary'
+        capMonthly: dbContribution,
+        note: 'Age-based contribution limit, consult actuary for exact amount'
       });
     }
     
-    // 2. Group 401(k) – Employee
-    baseRetirementOrder.push({ 
-      name: 'Group 401(k) – Employee', 
-      capMonthly: employee401kCap 
-    });
-    
-    // 3. Group 401(k) – Employer Profit Sharing
-    const employerProfitSharing = (LIMITS.RETIREMENT.TOTAL_401K_457_403B - LIMITS.RETIREMENT.EMPLOYEE_401K) / 12;
-    baseRetirementOrder.push({ 
-      name: 'Group 401(k) – Employer Profit Sharing', 
-      capMonthly: employerProfitSharing 
-    });
-    
-    // 4. HSA (moved up for tax efficiency)
+    // 2. HSA (moved up for triple tax advantage)
     if (hsaElig) {
       baseRetirementOrder.push({ name: 'HSA', capMonthly: hsaCap });
     }
     
-    // 5. Cash Balance Plan (NEW - modern DB alternative)
+    // 3. Group 401(k) – Employee
+    baseRetirementOrder.push({ 
+      name: 'Group 401(k) – Employee', 
+      capMonthly: employee401kCap,
+      note: 'Consider safe harbor to avoid discrimination testing'
+    });
+    
+    // 4. Group 401(k) – Employer Profit Sharing
+    const employerProfitSharing = (LIMITS.RETIREMENT.TOTAL_401K_457_403B - LIMITS.RETIREMENT.EMPLOYEE_401K) / 12;
+    baseRetirementOrder.push({ 
+      name: 'Group 401(k) – Employer Profit Sharing', 
+      capMonthly: employerProfitSharing,
+      note: '3% safe harbor or up to 25% discretionary'
+    });
+    
+    // 5. Cash Balance Plan (modern DB alternative)
     if (age >= 45 && age > avgEmployeeAge + 5) {
       // Simplified Cash Balance calculation based on age
       const cashBalanceCap = age >= 60 ? 23333 : age >= 55 ? 16667 : age >= 50 ? 12500 : 8333;
@@ -2112,7 +2123,7 @@ const profileHelpers = {
       });
     }
     
-    // 6. Backdoor Roth IRA
+    // 6. Backdoor Roth IRA (high earners likely phased out of direct Roth)
     baseRetirementOrder.push({ name: 'Backdoor Roth IRA', capMonthly: iraCap });
     
     // 7. After-Tax 401(k) → Mega Backdoor Roth (NEW)
