@@ -439,12 +439,12 @@ function testPhase2ActualIdealWriting() {
   const rowData = ws.getRange(testRow, 1, 1, ws.getLastColumn()).getValues()[0];
   
   // Check actual columns
-  const actualHsa = getValue(hdr, rowData, 'health_hsa_actual') || 0;
-  const actual401k = getValue(hdr, rowData, 'retirement_traditional_401k_actual') || 0;
-  console.log('ACTUAL columns written:');
-  console.log(`- HSA: $${actualHsa}`);
-  console.log(`- 401k: $${actual401k}`);
-  console.log(`- Total: $${Number(actualHsa) + Number(actual401k)}\n`);
+  const actualHsaWritten = getValue(hdr, rowData, 'health_hsa_actual') || 0;
+  const actual401kWritten = getValue(hdr, rowData, 'retirement_traditional_401k_actual') || 0;
+  console.log('\nACTUAL columns written:');
+  console.log(`- HSA: $${actualHsaWritten}`);
+  console.log(`- 401k: $${actual401kWritten}`);
+  console.log(`- Total: $${Number(actualHsaWritten) + Number(actual401kWritten)}\n`);
   
   // Check ideal columns - look for all possible retirement vehicles
   const idealHsa = getValue(hdr, rowData, 'health_hsa_ideal') || 0;
@@ -460,9 +460,15 @@ function testPhase2ActualIdealWriting() {
   const totalIdeal = sumIdealAllocations(rowData, hdr);
   console.log(`\nTotal Ideal (using sumIdealAllocations): $${totalIdeal}`);
   
-  // Debug: Show what the engine returned
-  const engineResults = getValue(hdr, rowData, 'Engine_Results') || '';
-  console.log('\nEngine Results (raw):', engineResults);
+  // Debug: Show total allocation vs expected
+  console.log('\nSummary:');
+  console.log(`Expected total (20% of $5,000): $1,000`);
+  console.log(`Actual total being saved: $700`);
+  console.log(`Ideal total recommended: $${totalIdeal} (seems low - missing employer match?)`);
+  
+  // Check if we need to look for the match in a different column
+  const match401k = getValue(hdr, rowData, 'retirement_401k_match_traditional_ideal') || 0;
+  console.log(`\nLooking for employer match: $${match401k}`);
   
   return testRow;
 }
