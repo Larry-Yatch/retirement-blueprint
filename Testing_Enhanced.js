@@ -368,11 +368,8 @@ function testPhase2ActualIdealWriting() {
   console.log('- Current: HSA $200, 401k $500');
   console.log('- Employer match: 100% up to 3% = $188/month\n');
   
-  // Run engine and Phase 2 generation
+  // Run engine (which includes Phase 2 generation)
   runUniversalEngine(testRow);
-  
-  // Force Phase 2 generation manually
-  generatePhase2ForRow(testRow);
   
   // Read the results
   const rowData = ws.getRange(testRow, 1, 1, ws.getLastColumn()).getValues()[0];
@@ -385,15 +382,24 @@ function testPhase2ActualIdealWriting() {
   console.log(`- 401k: $${actual401k}`);
   console.log(`- Total: $${Number(actualHsa) + Number(actual401k)}\n`);
   
-  // Check ideal columns
+  // Check ideal columns - look for all possible retirement vehicles
   const idealHsa = getValue(hdr, rowData, 'health_hsa_ideal') || 0;
-  const ideal401k = getValue(hdr, rowData, 'retirement_traditional_401k_ideal') || 0;
+  const ideal401k = getValue(hdr, rowData, 'retirement_401k_traditional_ideal') || 0;
   const idealMatch = getValue(hdr, rowData, 'retirement_401k_match_traditional_ideal') || 0;
+  const idealRoth401k = getValue(hdr, rowData, 'retirement_401k_roth_ideal') || 0;
+  const idealRothIRA = getValue(hdr, rowData, 'retirement_roth_ira_ideal') || 0;
+  
   console.log('IDEAL columns written:');
   console.log(`- HSA: $${idealHsa}`);
-  console.log(`- 401k: $${ideal401k}`);
-  console.log(`- Match: $${idealMatch}`);
-  console.log(`- Total: $${Number(idealHsa) + Number(ideal401k) + Number(idealMatch)}`);
+  console.log(`- 401k Traditional: $${ideal401k}`);
+  console.log(`- 401k Match: $${idealMatch}`);
+  console.log(`- 401k Roth: $${idealRoth401k}`);
+  console.log(`- Roth IRA: $${idealRothIRA}`);
+  console.log(`- Total: $${Number(idealHsa) + Number(ideal401k) + Number(idealMatch) + Number(idealRoth401k) + Number(idealRothIRA)}`);
+  
+  // Also sum using the helper function
+  const totalIdeal = sumIdealAllocations(rowData, hdr);
+  console.log(`\nTotal Ideal (using sumIdealAllocations): $${totalIdeal}`);
   
   return testRow;
 }
