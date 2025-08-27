@@ -1,11 +1,33 @@
 # Ignore files that shouldn't be pushed to Google Apps Script
 **/**
+
+# Core functionality
 !Code.js
-!Testing.js
-!Testing_Enhanced.js
-!Form_Management.js
-!Current_Forms_Full.js
 !appsscript.json
 
-# Explicitly exclude draft files
+# Testing framework (keep these for future testing needs)
+!Testing.js
+!Testing_Scenarios.js
+
+# Form management
+!Form_Management.js
+!Current_Forms_Full.js
+
+# Keep the header fix utility (might be needed again)
+!Fix_Missing_Headers.js
+
+# Explicitly exclude all other files
+*.md
+*.txt
+*.json
+package*.json
+.git*
+node_modules/
+docs/
+profiles/
+Test_*.js
+Quick_*.js
+Fix_Profile*.js
+Run_*.js
 form-mapping-implementation.js
+Testing_Enhanced.js

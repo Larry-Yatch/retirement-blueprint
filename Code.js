@@ -1340,6 +1340,7 @@ const profileHelpers = {
     // Get employer 401(k) info
     const hasEmployer401k = getValue(hdr, rowArr, HEADERS.P2_EX_Q5) === 'Yes';
     const hasEmployerMatch = getValue(hdr, rowArr, HEADERS.P2_EX_Q6) === 'Yes';
+    const matchPercentage = getValue(hdr, rowArr, HEADERS.P2_EX_Q7) || '';
     const hasRoth401k = getValue(hdr, rowArr, HEADERS.P2_EX_Q8) === 'Yes';
     
     // Calculate monthly capacities using utility functions
@@ -1389,19 +1390,28 @@ const profileHelpers = {
       filingStatus: filing,
       taxFocus
     });
-    const canDoDirectRoth = rothPhaseout.length > 0 && rothPhaseout[0].capMonthly > 0;
+    const canDoDirectRoth = rothPhaseout.some(v => v.name === 'Roth IRA');
     
     // Branch based on employment situation
     if (isW2Employee && !isBoth) {
       // W-2 Employee only
       // 1. Get employer match first (free money)
-      if (hasEmployer401k && hasEmployerMatch) {
-        baseRetirementOrder = addEmployer401kVehicles(baseRetirementOrder, {
-          rowArr,
-          hdr,
-          age,
-          grossIncome
-        });
+      if (hasEmployer401k && hasEmployerMatch && matchPercentage) {
+        // Profile 4 specific: Calculate match from ex_q7
+        let matchCap = 0;
+        const match = matchPercentage.match(/(\d+)%\s*up to\s*(\d+)%/);
+        if (match) {
+          const matchRate = Number(match[1]) / 100;
+          const matchLimit = Number(match[2]) / 100;
+          matchCap = Math.round(grossIncome * matchLimit / 12);
+        }
+        
+        if (matchCap > 0) {
+          baseRetirementOrder.push({ 
+            name: `401(k) Match Traditional (${matchPercentage})`,
+            capMonthly: matchCap
+          });
+        }
       }
       
       // 2. HSA (triple tax advantage)
@@ -1497,13 +1507,22 @@ const profileHelpers = {
     } else if (isBoth) {
       // Both W-2 and Self-Employed
       // 1. 401(k) Match (W-2)
-      if (hasEmployer401k && hasEmployerMatch) {
-        baseRetirementOrder = addEmployer401kVehicles(baseRetirementOrder, {
-          rowArr,
-          hdr,
-          age,
-          grossIncome
-        });
+      if (hasEmployer401k && hasEmployerMatch && matchPercentage) {
+        // Profile 4 specific: Calculate match from ex_q7
+        let matchCap = 0;
+        const match = matchPercentage.match(/(\d+)%\s*up to\s*(\d+)%/);
+        if (match) {
+          const matchRate = Number(match[1]) / 100;
+          const matchLimit = Number(match[2]) / 100;
+          matchCap = Math.round(grossIncome * matchLimit / 12);
+        }
+        
+        if (matchCap > 0) {
+          baseRetirementOrder.push({ 
+            name: `401(k) Match Traditional (${matchPercentage})`,
+            capMonthly: matchCap
+          });
+        }
       }
       
       // 2. HSA
@@ -2481,9 +2500,77 @@ const HEADERS = {
   RETIREMENT_BACKDOOR_ROTH_IRA_ACTUAL: 'retirement_backdoor_roth_ira_actual',
   RETIREMENT_BACKDOOR_ROTH_IRA_IDEAL:  'retirement_backdoor_roth_ira_ideal',
 
+  // Group 401(k) vehicles
+  RETIREMENT_GROUP_401K_EMPLOYEE_ACTUAL: 'retirement_group_401k_employee_actual',
+  RETIREMENT_GROUP_401K_EMPLOYEE_IDEAL: 'retirement_group_401k_employee_ideal',
+  RETIREMENT_GROUP_401K_EMPLOYER_ACTUAL: 'retirement_group_401k_employer_actual',
+  RETIREMENT_GROUP_401K_EMPLOYER_IDEAL: 'retirement_group_401k_employer_ideal',
+  
+  // Defined Benefit Plan
+  RETIREMENT_DEFINED_BENEFIT_PLAN_ACTUAL: 'retirement_defined_benefit_plan_actual',
+  RETIREMENT_DEFINED_BENEFIT_PLAN_IDEAL: 'retirement_defined_benefit_plan_ideal',
+  
+  // Cash Balance Plan
+  RETIREMENT_CASH_BALANCE_PLAN_ACTUAL: 'retirement_cash_balance_plan_actual',
+  RETIREMENT_CASH_BALANCE_PLAN_IDEAL: 'retirement_cash_balance_plan_ideal',
+  
+  // Solo 401(k) vehicles
+  RETIREMENT_SOLO_401K_EMPLOYEE_ACTUAL: 'retirement_solo_401k_employee_actual',
+  RETIREMENT_SOLO_401K_EMPLOYEE_IDEAL: 'retirement_solo_401k_employee_ideal',
+  RETIREMENT_SOLO_401K_EMPLOYER_ACTUAL: 'retirement_solo_401k_employer_actual',
+  RETIREMENT_SOLO_401K_EMPLOYER_IDEAL: 'retirement_solo_401k_employer_ideal',
+  RETIREMENT_SOLO_401K_ROTH_ACTUAL: 'retirement_solo_401k_roth_actual',
+  RETIREMENT_SOLO_401K_ROTH_IDEAL: 'retirement_solo_401k_roth_ideal',
+  RETIREMENT_SOLO_401K_TRADITIONAL_ACTUAL: 'retirement_solo_401k_traditional_actual',
+  RETIREMENT_SOLO_401K_TRADITIONAL_IDEAL: 'retirement_solo_401k_traditional_ideal',
+  RETIREMENT_SOLO_401K_EMPLOYEE_ROTH_ACTUAL: 'retirement_solo_401k_employee_roth_actual',
+  RETIREMENT_SOLO_401K_EMPLOYEE_ROTH_IDEAL: 'retirement_solo_401k_employee_roth_ideal',
+  RETIREMENT_SOLO_401K_EMPLOYEE_TRADITIONAL_ACTUAL: 'retirement_solo_401k_employee_traditional_actual',
+  RETIREMENT_SOLO_401K_EMPLOYEE_TRADITIONAL_IDEAL: 'retirement_solo_401k_employee_traditional_ideal',
+  RETIREMENT_SOLO_401K_EMPLOYEE_CATCHUP_ACTUAL: 'retirement_solo_401k_employee_catch_up_actual',
+  RETIREMENT_SOLO_401K_EMPLOYEE_CATCHUP_IDEAL: 'retirement_solo_401k_employee_catch_up_ideal',
+  
+  // ROBS Solo 401(k) vehicles
+  RETIREMENT_ROBS_SOLO_401K_PROFIT_DISTRIBUTION_ACTUAL: 'retirement_robs_solo_401k_profit_distribution_actual',
+  RETIREMENT_ROBS_SOLO_401K_PROFIT_DISTRIBUTION_IDEAL: 'retirement_robs_solo_401k_profit_distribution_ideal',
+  RETIREMENT_ROBS_SOLO_401K_ROTH_ACTUAL: 'retirement_robs_solo_401k_roth_actual',
+  RETIREMENT_ROBS_SOLO_401K_ROTH_IDEAL: 'retirement_robs_solo_401k_roth_ideal',
+  RETIREMENT_ROBS_SOLO_401K_TRADITIONAL_ACTUAL: 'retirement_robs_solo_401k_traditional_actual',
+  RETIREMENT_ROBS_SOLO_401K_TRADITIONAL_IDEAL: 'retirement_robs_solo_401k_traditional_ideal',
+  
+  // Regular 401(k) vehicles
+  RETIREMENT_401K_TRADITIONAL_ACTUAL: 'retirement_401k_traditional_actual',
+  RETIREMENT_401K_TRADITIONAL_IDEAL: 'retirement_401k_traditional_ideal',
+  RETIREMENT_401K_ROTH_ACTUAL: 'retirement_401k_roth_actual',
+  RETIREMENT_401K_ROTH_IDEAL: 'retirement_401k_roth_ideal',
+  RETIREMENT_TRADITIONAL_401K_ACTUAL: 'retirement_traditional_401k_actual',
+  RETIREMENT_TRADITIONAL_401K_IDEAL: 'retirement_traditional_401k_ideal',
+  RETIREMENT_401K_CATCHUP_ACTUAL: 'retirement_401k_catch_up_actual',
+  RETIREMENT_401K_CATCHUP_IDEAL: 'retirement_401k_catch_up_ideal',
+  RETIREMENT_401K_MATCH_TRADITIONAL_ACTUAL: 'retirement_401k_match_traditional_actual',
+  RETIREMENT_401K_MATCH_TRADITIONAL_IDEAL: 'retirement_401k_match_traditional_ideal',
+  
+  // IRA catch-up
+  RETIREMENT_IRA_CATCHUP_ACTUAL: 'retirement_ira_catch_up_actual',
+  RETIREMENT_IRA_CATCHUP_IDEAL: 'retirement_ira_catch_up_ideal',
+  RETIREMENT_BACKDOOR_ROTH_IRA_CATCHUP_ACTUAL: 'retirement_backdoor_roth_ira_catch_up_actual',
+  RETIREMENT_BACKDOOR_ROTH_IRA_CATCHUP_IDEAL: 'retirement_backdoor_roth_ira_catch_up_ideal',
+  
+  // SEP IRA
+  RETIREMENT_SEP_IRA_ACTUAL: 'retirement_sep_ira_actual',
+  RETIREMENT_SEP_IRA_IDEAL: 'retirement_sep_ira_ideal',
+  
+  // HSA (cross-domain)
+  RETIREMENT_HSA_ACTUAL: 'retirement_hsa_actual',
+  RETIREMENT_HSA_IDEAL: 'retirement_hsa_ideal',
+  HEALTH_HSA_ACTUAL: 'health_hsa_actual',
+  HEALTH_HSA_IDEAL: 'health_hsa_ideal',
+
   // Education CESA bucket
   EDUCATION_COMBINED_CESA_ACTUAL:    'education_combined_cesa_actual',
   EDUCATION_COMBINED_CESA_IDEAL:     'education_combined_cesa_ideal',
+  RETIREMENT_COMBINED_CESA_ACTUAL:   'retirement_combined_cesa_actual',
+  RETIREMENT_COMBINED_CESA_IDEAL:    'retirement_combined_cesa_ideal',
 
   // Family Bank
   FAMILY_BANK_IDEAL:                 'family_bank_ideal',
