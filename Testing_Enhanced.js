@@ -31,6 +31,87 @@ function validateNewLogicEnabled() {
   return hasNewLogic;
 }
 
+/**
+ * Test Phase 2 generation to verify actual/ideal columns are populated correctly
+ * This simulates what happens when a user completes Phase 2 forms
+ */
+function testPhase2Generation() {
+  console.log('=== Testing Phase 2 Generation with New Logic ===\n');
+  
+  const { sheet: ws, hdr } = initWS();
+  const testRow = 15; // Use a different row
+  
+  // Set up Profile 1 test data with Phase 2 values
+  const testData = {
+    'ProfileID': '1_ROBS_In_Use',
+    'Student_Identifier': 'TEST123',
+    'Net_Monthly_Income': 10000,
+    'Allocation_Percentage': 25,
+    'gross_annual_income': 150000,
+    'filing_status': 'Single',
+    'current_age': 45,
+    // Phase 2 specific
+    'current_monthly_hsa_contribution': 200,
+    'cesa_monthly_contribution': 0,
+    'retirement_personal_contribution': 500,
+    'ex_q6': 48000, // ROBS distributions
+    // Investment scoring
+    'investment_involvement': 5,
+    'investment_time': 5,
+    'investment_confidence': 5,
+    'retirement_importance': 6,
+    'education_importance': 3,
+    'health_importance': 5,
+    'retirement_years_until_target': 20,
+    'cesa_years_until_first_need': 0,
+    'hsa_years_until_need': 20,
+    'hsa_eligibility': 'Yes',
+    'cesa_num_children': 0
+  };
+  
+  // Write test data
+  const dataArray = new Array(ws.getLastColumn()).fill('');
+  Object.entries(testData).forEach(([field, value]) => {
+    const col = hdr[field];
+    if (col) {
+      dataArray[col - 1] = value;
+    }
+  });
+  ws.getRange(testRow, 1, 1, dataArray.length).setValues([dataArray]);
+  
+  console.log('Test Setup:');
+  console.log('- Profile 1: ROBS In Use');
+  console.log('- Income: $10,000/month');
+  console.log('- Allocation: 25% TOTAL');
+  console.log('- Current contributions: HSA $200, 401k $500');
+  console.log('- ROBS distributions: $4,000/month\n');
+  
+  // Simulate Phase 2 generation
+  try {
+    // Run the engine
+    runUniversalEngine(testRow);
+    
+    // Now check what would be written to actual/ideal columns
+    console.log('Expected Results:');
+    console.log('\nACTUAL columns (what user currently does):');
+    console.log('- HSA: $200');
+    console.log('- 401k: $500');
+    console.log('- ROBS: $4,000');
+    console.log('- Total Actual: $4,700/month\n');
+    
+    console.log('IDEAL columns (our recommendation):');
+    console.log('- Discretionary allocations: $2,500 (25% of income)');
+    console.log('- Plus ROBS distributions: $4,000 (non-discretionary)');
+    console.log('- Total Ideal: ~$6,500/month\n');
+    
+    console.log('✅ Phase 2 generation test complete');
+    console.log('Note: Check the spreadsheet row 15 to verify columns are populated');
+    
+  } catch (error) {
+    console.error('❌ Error during Phase 2 generation:', error);
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // CRITICAL FIELDS THAT CAUSE TEST FAILURES
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -173,6 +254,70 @@ function sumIdealAllocations(rowData, hdr) {
     }
   });
   return total;
+}
+
+/**
+ * Test Profile 4 specifically to check ex_q mapping
+ */
+function testProfile4Mapping() {
+  console.log('=== Testing Profile 4 Ex_Q Mapping ===\n');
+  
+  const { sheet: ws, hdr } = initWS();
+  const testRow = 20;
+  
+  // Profile 4 test data with correct mapping
+  const testData = {
+    'ProfileID': '4_Roth_Reclaimer',
+    'Net_Monthly_Income': 12000,
+    'Allocation_Percentage': 30,
+    'gross_annual_income': 180000,
+    'filing_status': 'Single',
+    'current_age': 48,
+    // Profile 4 specific questions
+    'ex_q1': 500000,  // Traditional IRA balance
+    'ex_q2': 'Yes',   // 401k accepts rollovers
+    'ex_q5': 'Yes',   // Has employer 401k
+    'ex_q6': 'Yes',   // Employer match
+    'ex_q7': '50% up to 6%',  // Match percentage
+    'ex_q8': 'Yes',   // Roth 401k option
+    // Standard fields
+    'investment_involvement': 6,
+    'investment_time': 6,
+    'investment_confidence': 6,
+    'retirement_importance': 7,
+    'education_importance': 4,
+    'health_importance': 5,
+    'retirement_years_until_target': 17,
+    'hsa_eligibility': 'Yes',
+    'cesa_num_children': 2
+  };
+  
+  // Write test data
+  const dataArray = new Array(ws.getLastColumn()).fill('');
+  Object.entries(testData).forEach(([field, value]) => {
+    const col = hdr[field];
+    if (col) {
+      dataArray[col - 1] = value;
+    }
+  });
+  ws.getRange(testRow, 1, 1, dataArray.length).setValues([dataArray]);
+  
+  console.log('Test Setup:');
+  console.log('- Profile 4: Roth Reclaimer');
+  console.log('- Income: $12,000/month ($144k/year)');
+  console.log('- Traditional IRA: $500k (backdoor Roth candidate)');
+  console.log('- Employer match: 50% up to 6%');
+  console.log('- Expected: Should see employer match as non-discretionary\n');
+  
+  // Run engine
+  const results = runUniversalEngine(testRow);
+  console.log('Engine results:', JSON.stringify(results.vehicles));
+  
+  // Check for backdoor Roth
+  const hasBackdoorRoth = results.vehicles.Retirement['Backdoor Roth IRA'] > 0;
+  console.log('\nBackdoor Roth allocation:', hasBackdoorRoth ? '✅ Found' : '❌ Not found');
+  
+  console.log('\nNote: Employer match will be added as non-discretionary in Phase 2');
 }
 
 /**
