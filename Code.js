@@ -3052,9 +3052,11 @@ function handlePhase2(e) {
   // 4) Run the allocation engine
   const results = runUniversalEngine(rowNum);
 
-  // 5) Read back "actual" inputs
+  // 5) Read back "actual" inputs - ENHANCED to capture all current contributions
   const rowArr     = ws.getRange(rowNum,1,1,ws.getLastColumn()).getValues()[0];
-  const actualDist = (Number(getValue(hdr,rowArr,HEADERS.P2_EX_Q6))||0)/12;
+  const profileId = getValue(hdr, rowArr, HEADERS.PROFILE_ID);
+  
+  // Universal current contributions
   const actualHsa  = Number(getValue(hdr,rowArr,HEADERS.P2_HSA_MONTHLY_CONTRIB))||0;
   const actualCesa = Number(getValue(hdr,rowArr,HEADERS.P2_CESA_MONTHLY_CONTRIB))||0;
   const actualRet  = Number(getValue(hdr,rowArr,HEADERS.P2_RETIREMENT_PERSONAL))||0;
@@ -3065,12 +3067,29 @@ function handlePhase2(e) {
     // skip any family_bank_actual keys
     if (!/family_bank/.test(key)) actualMap[key] = 0;
   });
-  actualMap['retirement_robs_solo_401k_profit_distribution_actual'] = actualDist;
+  
+  // Set universal actuals
   actualMap['retirement_hsa_actual']   = actualHsa;
   actualMap['health_hsa_actual']       = actualHsa;
   actualMap['retirement_combined_cesa_actual'] = actualCesa;
   actualMap['education_combined_cesa_actual']  = actualCesa;
   actualMap['retirement_traditional_401k_actual'] = actualRet;
+  
+  // Profile-specific actual contributions
+  if (profileId === '1_ROBS_In_Use') {
+    const actualDist = (Number(getValue(hdr,rowArr,HEADERS.P2_EX_Q6))||0)/12;
+    actualMap['retirement_robs_solo_401k_profit_distribution_actual'] = actualDist;
+  } else if (profileId === '3_Solo401k_Builder') {
+    const annualEmployee = Number(getValue(hdr,rowArr,HEADERS.P2_EX_Q4))||0;
+    const annualEmployer = Number(getValue(hdr,rowArr,HEADERS.P2_EX_Q5))||0;
+    actualMap['retirement_solo_401k_employee_actual'] = annualEmployee/12;
+    actualMap['retirement_solo_401k_employer_actual'] = annualEmployer/12;
+  } else if (profileId === '8_Biz_Owner_Group') {
+    // TODO: Add logic for group plan actuals
+    const annualContribution = Number(getValue(hdr,rowArr,HEADERS.P2_EX_Q6))||0;
+    actualMap['retirement_group_401k_employee_actual'] = annualContribution/12;
+  }
+  // TODO: Add employer match actuals for W-2 profiles
 
   // 7) Write every _actual cell, rounded & formatted
   Object.entries(actualMap).forEach(([hdrName, rawAmt]) => {
@@ -3082,9 +3101,33 @@ function handlePhase2(e) {
   });
 
   // 8) Write every _ideal allocation, rounded & formatted
+  // MODIFIED: Add non-discretionary seeds to ideal calculations
   const writtenIdeal = new Set();
   let sumIdeal = 0;
+  
+  // First, determine which seeds are non-discretionary based on profile
+  const nonDiscretionarySeeds = { Education: {}, Health: {}, Retirement: {} };
+  
+  // Profile-specific non-discretionary identification
+  const profileId = getValue(hdr, rowArr, HEADERS.PROFILE_ID);
+  if (profileId === '1_ROBS_In_Use' && actualDist > 0) {
+    // ROBS distributions are non-discretionary
+    nonDiscretionarySeeds.Retirement['ROBS Solo 401(k) – Profit Distribution'] = actualDist;
+  } else if (profileId === '3_Solo401k_Builder') {
+    // Employer portion is non-discretionary
+    const annualEmployer = Number(getValue(hdr,rowArr,HEADERS.P2_EX_Q5))||0;
+    if (annualEmployer > 0) {
+      nonDiscretionarySeeds.Retirement['Solo 401(k) – Employer'] = annualEmployer/12;
+    }
+  } else if (profileId === '8_Biz_Owner_Group') {
+    // Required employer contributions are non-discretionary
+    // TODO: Add logic to identify required vs voluntary contributions
+  }
+  // TODO: Add employer match logic for W-2 profiles
+  
+  // Write ideal allocations (discretionary + non-discretionary)
   ['Retirement','Education','Health'].forEach(domain => {
+    // First write discretionary allocations from engine
     for (const [veh, amtRaw] of Object.entries(results.vehicles[domain])) {
       // skip Family Bank here
       if (veh === 'Family Bank') continue;
@@ -3092,19 +3135,48 @@ function handlePhase2(e) {
       const hdrName = `${domain.toLowerCase()}_${key}_ideal`;
       const col = hdr[hdrName];
       if (!col) continue;
-      const amt  = Math.round(amtRaw || 0);
+      
+      // Add non-discretionary amount if applicable
+      const nonDiscAmt = nonDiscretionarySeeds[domain][veh] || 0;
+      const amt  = Math.round((amtRaw || 0) + nonDiscAmt);
+      
       ws.getRange(rowNum, col)
         .setValue(amt)
         .setNumberFormat('$#,##0');
       writtenIdeal.add(hdrName);
       sumIdeal += amt;
     }
+    
+    // Then add any non-discretionary seeds that weren't in the engine results
+    for (const [veh, amtRaw] of Object.entries(nonDiscretionarySeeds[domain])) {
+      if (!results.vehicles[domain][veh]) {
+        const key = veh.toLowerCase().replace(/[()%–]/g,'').replace(/\s+/g,'_');
+        const hdrName = `${domain.toLowerCase()}_${key}_ideal`;
+        const col = hdr[hdrName];
+        if (!col) continue;
+        const amt = Math.round(amtRaw || 0);
+        ws.getRange(rowNum, col)
+          .setValue(amt)
+          .setNumberFormat('$#,##0');
+        writtenIdeal.add(hdrName);
+        sumIdeal += amt;
+      }
+    }
   });
 
   // 9) Dump leftover into single family_bank_ideal
-  const totalPool = Number(getValue(hdr,rowArr,HEADERS.NET_MONTHLY_INCOME)) 
-                    * CONFIG.OPTIMIZED_SAVINGS_RATE;
-  const leftover  = Math.max(0, Math.round(totalPool - sumIdeal));
+  // MODIFIED: Calculate based on total desired percentage
+  const userPercent = Number(getValue(hdr,rowArr,HEADERS.ALLOCATION_PERCENTAGE)) || 0;
+  const targetRate = Math.max(userPercent / 100, CONFIG.OPTIMIZED_SAVINGS_RATE);
+  const totalPool = Number(getValue(hdr,rowArr,HEADERS.NET_MONTHLY_INCOME)) * targetRate;
+  
+  // Add non-discretionary seeds to get true total
+  const totalNonDiscretionary = sumValues(nonDiscretionarySeeds.Education) +
+                                sumValues(nonDiscretionarySeeds.Health) +
+                                sumValues(nonDiscretionarySeeds.Retirement);
+  const totalIdealPool = totalPool + totalNonDiscretionary;
+  
+  const leftover  = Math.max(0, Math.round(totalIdealPool - sumIdeal));
   const fbCol = hdr[HEADERS.FAMILY_BANK_IDEAL];
   if (fbCol) {
     ws.getRange(rowNum, fbCol)
@@ -3248,6 +3320,29 @@ function computeNetPool(netIncome, seeds, userPct, defaultRate) {
 }
 
 /**
+ * NEW: Computes discretionary allocation pool based on TOTAL desired percentage
+ * This treats userPct as the TOTAL savings rate, not additional
+ * 
+ * @param {number} netIncome       — take-home pay per month
+ * @param {Object} discretionarySeeds — only discretionary current contributions
+ * @param {number} userPct         — TOTAL % they want to save (0–100)
+ * @param {number} defaultRate     — our guideline rate (e.g. 0.20)
+ * @returns {number} discretionaryPool — dollars/month for discretionary allocations
+ */
+function computeNetPoolTotal(netIncome, discretionarySeeds, userPct, defaultRate) {
+  // 1) User's total desired savings rate
+  const targetRate = Math.max(userPct / 100, defaultRate);
+  
+  // 2) Calculate total discretionary pool
+  const discretionaryPool = netIncome * targetRate;
+  
+  // 3) We do NOT subtract existing discretionary contributions
+  // The ideal calculation will replace them entirely
+  
+  return discretionaryPool;
+}
+
+/**
  * Main processing engine - orchestrates the entire allocation process
  */
 function runUniversalEngine(rowNum) {
@@ -3281,11 +3376,25 @@ function runUniversalEngine(rowNum) {
   if (!helper) throw new Error(`No helper for profile '${profileId}'`);
   const { seeds, vehicleOrders } = helper(rowArr, hdr);
 
-  // 5) Net‐pool calculation
-  const netPool = computeNetPool(netIncome, seeds, userAddPct, CONFIG.OPTIMIZED_SAVINGS_RATE);
+  // 5) Net‐pool calculation - MODIFIED FOR NEW LOGIC
+  // Check if we're using the new total percentage logic
+  const useNewLogic = true; // Feature flag - set to true to enable new logic
+  
+  let netPool;
+  if (useNewLogic) {
+    // NEW LOGIC: Treat percentage as TOTAL, not additional
+    // For ideal calculations, we'll use empty discretionary seeds
+    const emptySeeds = { Education: {}, Health: {}, Retirement: {} };
+    netPool = computeNetPoolTotal(netIncome, emptySeeds, userAddPct, CONFIG.OPTIMIZED_SAVINGS_RATE);
+  } else {
+    // OLD LOGIC: Treat percentage as additional
+    netPool = computeNetPool(netIncome, seeds, userAddPct, CONFIG.OPTIMIZED_SAVINGS_RATE);
+  }
 
   // 6) Allocate and round
-  const raw = coreAllocate({ domains, pool: netPool, seeds, vehicleOrders });
+  // For the new logic, we allocate WITHOUT seeds (they'll be added separately for non-discretionary)
+  const allocSeeds = useNewLogic ? { Education: {}, Health: {}, Retirement: {} } : seeds;
+  const raw = coreAllocate({ domains, pool: netPool, seeds: allocSeeds, vehicleOrders });
   const vehicles = {};
   for (const domain of Object.keys(raw)) {
     vehicles[domain] = {};

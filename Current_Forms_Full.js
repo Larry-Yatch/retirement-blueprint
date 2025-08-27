@@ -8,7 +8,7 @@
 // Complete form export data extracted from Code.js (lines 289-4400)
 // Contains all 10 forms (1 Phase 1 + 9 Phase 2) with full question structures
 const CURRENT_FORMS = {
-  "lastExported": "2025-08-12T06:18:55.748Z",
+  "lastExported": "2025-08-27T07:04:00.658Z",
   "exportedBy": "updateEmbeddedFormData()",
   "formsData": {
     "PHASE_1": {
@@ -17,7 +17,7 @@ const CURRENT_FORMS = {
         "name": "Phase 1 - Profile Classification",
         "title": "",
         "description": "This form captures only the information required to classify you into one of the 9 retirement funding profiles. Please answer honestly and skip any ROBS-specific questions if they do not apply.",
-        "exportTimestamp": "2025-08-12T06:18:56.272Z"
+        "exportTimestamp": "2025-08-27T07:01:57.460Z"
       },
       "items": [
         {
@@ -262,7 +262,7 @@ const CURRENT_FORMS = {
         },
         {
           "index": 24,
-          "title": "What percentage of your monthly take-home pay would you like to invest each month, in addition to what you’re already contributing to existing accounts?\n\nEnter a whole number between 0 and 100. For example, if you’re already saving 10% of your take-home pay and you’d like to save another 12%, enter 12.",
+          "title": "What TOTAL percentage of your monthly take-home pay would you like to save for retirement, education, and health goals?\n\nEnter a whole number between 0 and 100. For example, if you want to save 25% of your income total monthly take home pay, enter 25.\n\nNote: We'll automatically add any non-discretionary items like ROBS distributions or employer matches on top of this percentage.",
           "type": "TEXT",
           "helpText": "",
           "required": true
@@ -282,7 +282,7 @@ const CURRENT_FORMS = {
         "name": "Phase 2 - ROBS-In-Use Strategist",
         "title": "Retirement Blueprint – Phase 2 – ROBS In Use Profile Deep Dive",
         "description": "This form captures detailed information to create your personalized Retirement Blueprint. Please answer all that apply.",
-        "exportTimestamp": "2025-08-12T06:19:03.307Z"
+        "exportTimestamp": "2025-08-27T07:02:04.044Z"
       },
       "items": [
         {
@@ -724,7 +724,7 @@ const CURRENT_FORMS = {
         "name": "Phase 2 - ROBS-Curious Builder",
         "title": "Retirement Blueprint – Phase 2 – ROBS-Curious Builder Profile Deep Dive",
         "description": "This form captures detailed information to create your personalized Retirement Blueprint. Please answer all that apply.",
-        "exportTimestamp": "2025-08-12T06:19:15.564Z"
+        "exportTimestamp": "2025-08-27T07:02:18.065Z"
       },
       "items": [
         {
@@ -1114,66 +1114,79 @@ const CURRENT_FORMS = {
         {
           "index": 44,
           "title": "What is the approximate balance you plan to rollover initially into your ROBS-funded C-corp?",
-          "type": "PARAGRAPH_TEXT",
+          "type": "TEXT",
           "helpText": "",
           "required": true
         },
         {
           "index": 45,
-          "title": "What is your expected annual business income available for retirement savings?",
-          "type": "PARAGRAPH_TEXT",
-          "helpText": "Enter total amount you can save from your business",
+          "title": "What is your expected annual business income available for retirement savings? (Enter total amount you can save from your business)",
+          "type": "TEXT",
+          "helpText": "",
           "required": true
         },
         {
           "index": 46,
-          "title": "Does your employer offer a 401(k) retirement plan?",
+          "title": "If you have a business, does your spouse work in your business (or plan to)?",
           "type": "MULTIPLE_CHOICE",
           "helpText": "",
           "required": true,
           "choices": [
             "Yes",
-            "No"
+            "No",
+            "1"
           ]
         },
         {
           "index": 47,
-          "title": "Does your employer match your 401(k) contributions?",
+          "title": " Do you have access to an employer-sponsored retirement plan (401k, 403b, etc.)?",
           "type": "MULTIPLE_CHOICE",
           "helpText": "",
           "required": true,
           "choices": [
             "Yes",
-            "No"
+            "No",
+            "2"
           ]
         },
         {
           "index": 48,
-          "title": "What percentage does your employer match?",
-          "type": "TEXT",
-          "helpText": "e.g., \"50% up to 6%\" or \"100% up to 3%\"",
-          "required": false
-        },
-        {
-          "index": 49,
-          "title": "Does your employer 401(k) plan have a Roth option?",
+          "title": "If yes, does your employer offer matching contributions?",
           "type": "MULTIPLE_CHOICE",
           "helpText": "",
           "required": true,
           "choices": [
             "Yes",
-            "No"
+            "No",
+            "3"
+          ]
+        },
+        {
+          "index": 49,
+          "title": "If yes, what percentage does your employer match?  (e.g., '50% of first 6%' or '100% of first 3%')",
+          "type": "MULTIPLE_CHOICE",
+          "helpText": "",
+          "required": true,
+          "choices": [
+            "100% of first 3%",
+            "50% of first 4%",
+            "50% of first 6%",
+            "100% of first 4%",
+            "100% of first 6%",
+            "Other/Not sure",
+            "None"
           ]
         },
         {
           "index": 50,
-          "title": "Does your spouse work in your business (or plan to)?",
+          "title": "  Does your plan offer a Roth 401(k) option?",
           "type": "MULTIPLE_CHOICE",
           "helpText": "",
           "required": true,
           "choices": [
             "Yes",
-            "No"
+            "No",
+            "4"
           ]
         }
       ]
@@ -1184,7 +1197,7 @@ const CURRENT_FORMS = {
         "name": "Phase 2 - Solo 401(k) Builder",
         "title": "Retirement Blueprint – Phase 2 – SOLO 401(K) Builder Profile Deep Dive",
         "description": "This form captures detailed information to create your personalized Retirement Blueprint. Please answer all that apply.",
-        "exportTimestamp": "2025-08-12T06:19:26.867Z"
+        "exportTimestamp": "2025-08-27T07:02:30.129Z"
       },
       "items": [
         {
@@ -1629,7 +1642,7 @@ const CURRENT_FORMS = {
         "name": "Phase 2 - Roth IRA Reclaimer",
         "title": "Retirement Blueprint – Phase 2 – Roth Reclaimer Profile Deep Dive",
         "description": "This form captures detailed information to create your personalized Retirement Blueprint. Please answer all that apply.",
-        "exportTimestamp": "2025-08-12T06:19:40.156Z"
+        "exportTimestamp": "2025-08-27T07:02:43.175Z"
       },
       "items": [
         {
@@ -1804,21 +1817,21 @@ const CURRENT_FORMS = {
           "title": "How many children or dependents are you saving for?",
           "type": "TEXT",
           "helpText": "Leave blank if not saving for Education\nEnter a whole number, e.g. 2",
-          "required": true
+          "required": false
         },
         {
           "index": 22,
           "title": "Total combined education savings goal",
           "type": "TEXT",
           "helpText": "Leave blank if not saving for Education\ne.g. $150,000 for all children",
-          "required": true
+          "required": false
         },
         {
           "index": 23,
           "title": "Years until the first child needs funds",
           "type": "TEXT",
           "helpText": "Leave blank if not saving for Education\nEnter years until your earliest education expense, e.g. 5",
-          "required": true
+          "required": false
         },
         {
           "index": 24,
@@ -2019,30 +2032,69 @@ const CURRENT_FORMS = {
         {
           "index": 44,
           "title": "What is the current balance in your Traditional IRA or other old retirement account?",
-          "type": "PARAGRAPH_TEXT",
+          "type": "TEXT",
           "helpText": "",
           "required": true
         },
         {
           "index": 45,
-          "title": "Have you ever made after-tax (non-deductible) contributions to an IRA?",
-          "type": "PARAGRAPH_TEXT",
+          "title": "Does your employer 401(k) plan accept incoming IRA rollovers?",
+          "type": "MULTIPLE_CHOICE",
           "helpText": "",
-          "required": true
+          "required": true,
+          "choices": [
+            "Yes",
+            "No"
+          ]
         },
         {
           "index": 46,
-          "title": "Do you understand, or have you used the \"Backdoor Roth\" IRA strategy?",
-          "type": "PARAGRAPH_TEXT",
+          "title": " Do you have access to an employer-sponsored retirement plan (401k, 403b, etc.)?",
+          "type": "MULTIPLE_CHOICE",
           "helpText": "",
-          "required": true
+          "required": true,
+          "choices": [
+            "Yes",
+            "No"
+          ]
         },
         {
           "index": 47,
-          "title": "Would you like to move some, or all, of your Traditional IRA money into a Roth IRA?  If so, how much?",
-          "type": "PARAGRAPH_TEXT",
+          "title": "If yes, does your employer offer matching contributions?",
+          "type": "MULTIPLE_CHOICE",
           "helpText": "",
-          "required": true
+          "required": true,
+          "choices": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "index": 48,
+          "title": "If yes, what percentage does your employer match?  (e.g., '50% of first 6%' or '100% of first 3%')",
+          "type": "MULTIPLE_CHOICE",
+          "helpText": "",
+          "required": true,
+          "choices": [
+            "100% of first 3%",
+            "50% of first 4%",
+            "50% of first 6%",
+            "100% of first 4%",
+            "100% of first 6%",
+            "Other/Not sure",
+            "None"
+          ]
+        },
+        {
+          "index": 49,
+          "title": "Does your plan offer a Roth 401(k) option?",
+          "type": "MULTIPLE_CHOICE",
+          "helpText": "",
+          "required": true,
+          "choices": [
+            "Yes",
+            "No"
+          ]
         }
       ]
     },
@@ -2052,7 +2104,7 @@ const CURRENT_FORMS = {
         "name": "Phase 2 - Bracket-Balanced Strategist",
         "title": "Retirement Blueprint – Phase 2 – Bracket Balanced Strategist Profile Deep Dive",
         "description": "This form captures detailed information to create your personalized Retirement Blueprint. Please answer all that apply.",
-        "exportTimestamp": "2025-08-12T06:19:57.093Z"
+        "exportTimestamp": "2025-08-27T07:02:57.950Z"
       },
       "items": [
         {
@@ -2441,38 +2493,51 @@ const CURRENT_FORMS = {
         },
         {
           "index": 44,
-          "title": "Are you currently contributing to any tax-deferred accounts (Traditional IRA/401(k))?",
-          "type": "PARAGRAPH_TEXT",
+          "title": "Do you have access to an employer-sponsored retirement plan (401k, 403b, etc.)?",
+          "type": "MULTIPLE_CHOICE",
           "helpText": "",
-          "required": true
+          "required": true,
+          "choices": [
+            "Yes",
+            "No"
+          ]
         },
         {
           "index": 45,
-          "title": "If yes, approximately how much do you contribute per month? (USD)",
-          "type": "PARAGRAPH_TEXT",
+          "title": "If yes, does your employer offer matching contributions?",
+          "type": "MULTIPLE_CHOICE",
           "helpText": "",
-          "required": true
+          "required": true,
+          "choices": [
+            "Yes",
+            "No"
+          ]
         },
         {
           "index": 46,
-          "title": "In the next 5 years, do you expect your income to Increase / Decrease / Stay about the same?",
-          "type": "PARAGRAPH_TEXT",
+          "title": "If yes, what percentage does your employer match?  (e.g., '50% of first 6%' or '100% of first 3%')",
+          "type": "MULTIPLE_CHOICE",
           "helpText": "",
-          "required": true
+          "required": true,
+          "choices": [
+            "100% of first 3%",
+            "50% of first 4%",
+            "50% of first 6%",
+            "100% of first 4%",
+            "100% of first 6%",
+            "Other/Not sure"
+          ]
         },
         {
           "index": 47,
-          "title": "Do you plan to convert any Traditional retirement money to a Roth IRA later?",
-          "type": "PARAGRAPH_TEXT",
+          "title": "Does your plan offer a Roth 401(k) option?",
+          "type": "MULTIPLE_CHOICE",
           "helpText": "",
-          "required": true
-        },
-        {
-          "index": 48,
-          "title": "Do you currently contribute anything to a Roth IRA?  If so, how much?",
-          "type": "PARAGRAPH_TEXT",
-          "helpText": "",
-          "required": true
+          "required": true,
+          "choices": [
+            "Yes",
+            "No"
+          ]
         }
       ]
     },
@@ -2482,7 +2547,7 @@ const CURRENT_FORMS = {
         "name": "Phase 2 - Catch-Up Visionary",
         "title": "Retirement Blueprint – Phase 2 – Catch Up Visionary Profile Deep Dive",
         "description": "This form captures detailed information to create your personalized Retirement Blueprint. Please answer all that apply.",
-        "exportTimestamp": "2025-08-12T06:20:09.145Z"
+        "exportTimestamp": "2025-08-27T07:03:10.995Z"
       },
       "items": [
         {
@@ -2871,31 +2936,52 @@ const CURRENT_FORMS = {
         },
         {
           "index": 44,
-          "title": "How many years until you plan to retire?",
-          "type": "PARAGRAPH_TEXT",
+          "title": "Do you have access to an employer-sponsored retirement plan (401k, 403b, etc.)?",
+          "type": "MULTIPLE_CHOICE",
           "helpText": "",
-          "required": true
+          "required": true,
+          "choices": [
+            "Yes",
+            "No"
+          ]
         },
         {
           "index": 45,
-          "title": "Which retirement accounts do you have, and what are their balances (approximate)?",
-          "type": "PARAGRAPH_TEXT",
+          "title": "If yes, does your employer offer matching contributions?",
+          "type": "MULTIPLE_CHOICE",
           "helpText": "",
-          "required": true
+          "required": true,
+          "choices": [
+            "Yes",
+            "No"
+          ]
         },
         {
           "index": 46,
-          "title": "Because you’re age 50+, are you open to making “catch-up” contributions? If yes, how much extra per month?",
-          "type": "PARAGRAPH_TEXT",
+          "title": "If yes, what percentage does your employer match?  (e.g., '50% of first 6%' or '100% of first 3%')",
+          "type": "MULTIPLE_CHOICE",
           "helpText": "",
-          "required": true
+          "required": true,
+          "choices": [
+            "100% of first 3%",
+            "50% of first 4%",
+            "50% of first 6%",
+            "100% of first 4%",
+            "100% of first 6%",
+            "Other/Not sure",
+            "None"
+          ]
         },
         {
           "index": 47,
-          "title": "What is your biggest financial concern right now?",
-          "type": "PARAGRAPH_TEXT",
+          "title": "Does your plan offer a Roth 401(k) option?",
+          "type": "MULTIPLE_CHOICE",
           "helpText": "",
-          "required": true
+          "required": true,
+          "choices": [
+            "Yes",
+            "No"
+          ]
         }
       ]
     },
@@ -2905,7 +2991,7 @@ const CURRENT_FORMS = {
         "name": "Phase 2 - Foundation Builder",
         "title": "Retirement Blueprint – Phase 2 – Foundation Builder Profile Deep Dive",
         "description": "This form captures detailed information to create your personalized Retirement Blueprint. Please answer all that apply.",
-        "exportTimestamp": "2025-08-12T06:20:21.144Z"
+        "exportTimestamp": "2025-08-27T07:03:24.365Z"
       },
       "items": [
         {
@@ -3294,31 +3380,52 @@ const CURRENT_FORMS = {
         },
         {
           "index": 44,
-          "title": "Which of these retirement accounts do you already have? (None / Roth IRA / Traditional IRA / Employer 401(k))",
-          "type": "PARAGRAPH_TEXT",
+          "title": "Do you have access to an employer-sponsored retirement plan (401k, 403b, etc.)?",
+          "type": "MULTIPLE_CHOICE",
           "helpText": "",
-          "required": true
+          "required": true,
+          "choices": [
+            "Yes",
+            "No"
+          ]
         },
         {
           "index": 45,
-          "title": "Which account would you like to start first? (Roth IRA / Solo 401(k) / HSA / 529/ESA)",
-          "type": "PARAGRAPH_TEXT",
+          "title": "If yes, does your employer offer matching contributions?",
+          "type": "MULTIPLE_CHOICE",
           "helpText": "",
-          "required": true
+          "required": true,
+          "choices": [
+            "Yes",
+            "No"
+          ]
         },
         {
           "index": 46,
-          "title": "About how much could you save each month? (USD)",
-          "type": "PARAGRAPH_TEXT",
+          "title": "If yes, what percentage does your employer match?  (e.g., '50% of first 6%' or '100% of first 3%')",
+          "type": "MULTIPLE_CHOICE",
           "helpText": "",
-          "required": true
+          "required": true,
+          "choices": [
+            "100% of first 3%",
+            "50% of first 4%",
+            "50% of first 6%",
+            "100% of first 4%",
+            "100% of first 6%",
+            "Other/Not sure",
+            "None"
+          ]
         },
         {
           "index": 47,
-          "title": "Would you like to include education savings (529/ESA) or health savings (HSA) now?",
-          "type": "PARAGRAPH_TEXT",
+          "title": "Does your plan offer a Roth 401(k) option?",
+          "type": "MULTIPLE_CHOICE",
           "helpText": "",
-          "required": true
+          "required": true,
+          "choices": [
+            "Yes",
+            "No"
+          ]
         }
       ]
     },
@@ -3328,7 +3435,7 @@ const CURRENT_FORMS = {
         "name": "Phase 2 - Business Owner with Employee Group",
         "title": "Issues Showing Love – Retirement Blueprint – Phase 2 – Business Owner with Employee Group Profile Deep Dive",
         "description": "This form captures detailed information to create your personalized Retirement Blueprint. Please answer all that apply.",
-        "exportTimestamp": "2025-08-12T06:20:32.067Z"
+        "exportTimestamp": "2025-08-27T07:03:37.569Z"
       },
       "items": [
         {
@@ -3717,29 +3824,57 @@ const CURRENT_FORMS = {
         },
         {
           "index": 44,
-          "title": "How many W-2 employees do you have (not including you or your spouse)?",
-          "type": "PARAGRAPH_TEXT",
+          "title": " How many W-2 employees do you have (not including you or your spouse)?\n\nThis helps determine plan requirements.",
+          "type": "TEXT",
           "helpText": "",
           "required": true
         },
         {
           "index": 45,
-          "title": "Are your businesses linked together for benefits (controlled group)?",
-          "type": "PARAGRAPH_TEXT",
+          "title": "  What is the average age of your employees?\n \nAge differences between you and employees can unlock powerful defined benefit strategies worth $100k+ in annual tax savings.",
+          "type": "TEXT",
           "helpText": "",
           "required": true
         },
         {
           "index": 46,
-          "title": "Which retirement plans do you offer or participate in? (401(k), Profit-Sharing, DB Pension, Other)",
-          "type": "PARAGRAPH_TEXT",
+          "title": "  What is the average annual salary of your employees?\n  \nThis helps calculate discrimination testing requirements and optimal contribution strategies.",
+          "type": "TEXT",
           "helpText": "",
           "required": true
         },
         {
           "index": 47,
-          "title": "Are you interested in adding advanced plans? (Profit-Sharing / Defined Benefit / No)",
-          "type": "PARAGRAPH_TEXT",
+          "title": "Do you currently have a retirement plan for your business?\n\nWe'll build on existing plans or recommend new ones",
+          "type": "MULTIPLE_CHOICE",
+          "helpText": "",
+          "required": true,
+          "choices": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "index": 48,
+          "title": "What type of retirement plan(s) do you currently have?\n\nDifferent plans have different rules and combination opportunities",
+          "type": "MULTIPLE_CHOICE",
+          "helpText": "",
+          "required": true,
+          "choices": [
+            "- None",
+            "- 401(k)",
+            "- Profit Sharing",
+            "- Defined Benefit",
+            "- Cash Balance",
+            "- SEP-IRA",
+            "- SIMPLE-IRA",
+            "- Other"
+          ]
+        },
+        {
+          "index": 49,
+          "title": "How much do you contribute annually to retirement plans (employer + employee contributions)?",
+          "type": "TEXT",
           "helpText": "",
           "required": true
         }
@@ -3751,7 +3886,7 @@ const CURRENT_FORMS = {
         "name": "Phase 2 - Late-Stage Growth Strategist",
         "title": "Retirement Blueprint – Phase 2 – Late Stage Growth StrategistProfile Deep Dive",
         "description": "This form captures detailed information to create your personalized Retirement Blueprint. Please answer all that apply.",
-        "exportTimestamp": "2025-08-12T06:20:44.455Z"
+        "exportTimestamp": "2025-08-27T07:03:49.237Z"
       },
       "items": [
         {
@@ -4140,31 +4275,51 @@ const CURRENT_FORMS = {
         },
         {
           "index": 44,
-          "title": "What is your total retirement savings balance today?",
-          "type": "PARAGRAPH_TEXT",
+          "title": "Do you have access to an employer-sponsored retirement plan (401k, 403b, etc.)?\n",
+          "type": "MULTIPLE_CHOICE",
           "helpText": "",
-          "required": true
+          "required": true,
+          "choices": [
+            "Yes",
+            "No"
+          ]
         },
         {
           "index": 45,
-          "title": "In how many years do you expect to start withdrawing from your funds?",
-          "type": "PARAGRAPH_TEXT",
+          "title": "If yes, does your employer offer matching contributions?",
+          "type": "MULTIPLE_CHOICE",
           "helpText": "",
-          "required": true
+          "required": true,
+          "choices": [
+            "Yes",
+            "No"
+          ]
         },
         {
           "index": 46,
-          "title": "Would you like to convert some retirement money to a Roth IRA before retirement?",
-          "type": "PARAGRAPH_TEXT",
+          "title": "If yes, what percentage does your employer match?  (e.g., '50% of first 6%' or '100% of first 3%')",
+          "type": "MULTIPLE_CHOICE",
           "helpText": "",
-          "required": true
+          "required": true,
+          "choices": [
+            "100% of first 3%",
+            "50% of first 4%",
+            "50% of first 6%",
+            "100% of first 4%",
+            "100% of first 6%",
+            "Other/Not sure"
+          ]
         },
         {
           "index": 47,
-          "title": "Are you interested in investing part of your retirement in real estate or private funds? If yes, what %?",
-          "type": "PARAGRAPH_TEXT",
+          "title": "Does your plan offer a Roth 401(k) option?",
+          "type": "MULTIPLE_CHOICE",
           "helpText": "",
-          "required": true
+          "required": true,
+          "choices": [
+            "Yes",
+            "No"
+          ]
         }
       ]
     }

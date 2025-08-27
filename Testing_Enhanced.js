@@ -47,6 +47,113 @@ const CRITICAL_FIELDS = {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// TEST NEW ACTUAL VS IDEAL LOGIC
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Test the new actual vs ideal calculation logic
+ * This tests that allocation % is treated as TOTAL, not additional
+ */
+function testNewActualIdealLogic() {
+  console.log('=== Testing New Actual vs Ideal Logic ===');
+  
+  const { sheet: ws, hdr } = initWS();
+  
+  // Test Profile 1 (ROBS) with non-discretionary distributions
+  const testData = {
+    'Profile_ID': '1_ROBS_In_Use',
+    'Net_Monthly_Income': 10000,
+    'Allocation_Percentage': 25, // User wants 25% TOTAL
+    'ex_q6': 48000, // $4000/month ROBS distributions (non-discretionary)
+    'current_monthly_hsa_contribution': 200,
+    'cesa_monthly_contribution': 0,
+    'retirement_personal_contribution': 500, // Current 401k contributions
+    // Add all required fields
+    'gross_annual_income': 150000,
+    'filing_status': 'Single',
+    'current_age': 45,
+    'hsa_eligibility': 'Yes',
+    'cesa_num_children': 0,
+    'investment_involvement': 5,
+    'investment_time': 5,
+    'investment_confidence': 5,
+    'retirement_importance': 6,
+    'education_importance': 3,
+    'health_importance': 5,
+    'retirement_years_until_target': 20,
+    'cesa_years_until_first_need': 0,
+    'hsa_years_until_need': 20
+  };
+  
+  // Create test row
+  const testRow = 3; // Use a test row
+  const dataArray = new Array(ws.getLastColumn()).fill('');
+  
+  // Fill in test data
+  Object.entries(testData).forEach(([field, value]) => {
+    const col = hdr[field];
+    if (col) {
+      dataArray[col - 1] = value;
+    }
+  });
+  
+  // Write test data
+  ws.getRange(testRow, 1, 1, dataArray.length).setValues([dataArray]);
+  
+  // Run the engine
+  const results = runUniversalEngine(testRow);
+  
+  // Read back the results
+  const rowData = ws.getRange(testRow, 1, 1, ws.getLastColumn()).getValues()[0];
+  
+  console.log('\n--- Expected vs Actual Results ---');
+  console.log('Net Monthly Income: $10,000');
+  console.log('User wants 25% TOTAL savings rate');
+  console.log('Expected discretionary pool: $10,000 × 25% = $2,500');
+  console.log('Plus non-discretionary ROBS: $4,000/month');
+  console.log('Expected ideal total: $6,500/month');
+  
+  // Check actual columns
+  const actualHsa = getValue(hdr, rowData, 'health_hsa_actual');
+  const actualRet = getValue(hdr, rowData, 'retirement_traditional_401k_actual');
+  const actualRobs = getValue(hdr, rowData, 'retirement_robs_solo_401k_profit_distribution_actual');
+  
+  console.log('\nACTUAL (Current Contributions):');
+  console.log(`- HSA: $${actualHsa}`);
+  console.log(`- 401k: $${actualRet}`);
+  console.log(`- ROBS: $${actualRobs}`);
+  console.log(`- Total Actual: $${Number(actualHsa) + Number(actualRet) + Number(actualRobs)}`);
+  
+  // Check ideal columns
+  const idealTotal = sumIdealAllocations(rowData, hdr);
+  console.log('\nIDEAL (Recommended):');
+  console.log(`- Total Ideal: $${idealTotal}`);
+  
+  // Verify the logic
+  if (idealTotal >= 6500) {
+    console.log('\n✅ SUCCESS: Ideal includes both discretionary ($2,500) and non-discretionary ($4,000)');
+  } else {
+    console.log('\n❌ FAILURE: Ideal should be at least $6,500');
+  }
+  
+  return results;
+}
+
+/**
+ * Helper to sum all ideal allocations
+ */
+function sumIdealAllocations(rowData, hdr) {
+  let total = 0;
+  Object.entries(hdr).forEach(([name, col]) => {
+    if (name.endsWith('_ideal')) {
+      const value = Number(rowData[col - 1]) || 0;
+      total += value;
+    }
+  });
+  return total;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // COMPLETE TEST DATA TEMPLATE WITH ALL FIELDS
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -573,6 +680,255 @@ function fixMissingHeaders() {
   });
   
   console.log('\n✅ Headers fixed! Run validateHeadersEnhanced() again to confirm.');
+}
+
+/**
+ * Test Profile 1: ROBS In Use
+ */
+function testProfile1ROBS() {
+  console.log('\n=== Testing Profile 1: ROBS In Use ===\n');
+  
+  // Create scenario structure for Profile 1
+  const scenario = {
+    phase1: {
+      ProfileID: '1_ROBS_In_Use',
+      Current_Age: 45,
+      Work_Situation: 'Self-employed',
+      gross_annual_income: 150000,
+      Net_Monthly_Income: 9000,
+      Allocation_Percentage: 30,
+      filing_status: 'Single',
+      Tax_Minimization: 'Later',
+      hsa_eligibility: 'Yes',
+      cesa_num_children: 0,
+      Using_ROBS: 'Yes',
+      investment_involvement: 5,
+      investment_time: 5,
+      investment_confidence: 5,
+      retirement_importance: 7,
+      education_importance: 1,
+      health_importance: 5,
+      retirement_years_until_target: 20,
+      cesa_years_until_first_need: 99,
+      hsa_years_until_need: 20
+    },
+    phase2: {
+      ex_q1: 'Roth 401(k) funded by C-Corp distributions',
+      ex_q2: 'Monthly profit distributions to Solo 401(k)',
+      ex_q3: 'Both',
+      ex_q4: 'Monthly',
+      ex_q5: 'Yes, $3000/year',
+      ex_q6: '$50000'  // Annual profit distribution amount
+    }
+  };
+  
+  // Run the test
+  return runCompleteScenarioTest('customROBS', { customROBS: scenario });
+}
+
+/**
+ * Test Profile 3: Solo 401k Builder
+ */
+function testProfile3Solo401k() {
+  console.log('\n=== Testing Profile 3: Solo 401k Builder ===\n');
+  
+  const scenario = {
+    phase1: {
+      ProfileID: '3_Solo401k_Builder',
+      Current_Age: 40,
+      Work_Situation: 'Self-employed',
+      gross_annual_income: 120000,
+      Net_Monthly_Income: 8000,
+      Allocation_Percentage: 25,
+      filing_status: 'Married Filing Jointly',
+      Tax_Minimization: 'Both',
+      hsa_eligibility: 'Yes',
+      cesa_num_children: 1,
+      Owns_Biz: 'Yes',
+      investment_involvement: 4,
+      investment_time: 4,
+      investment_confidence: 4,
+      retirement_importance: 6,
+      education_importance: 3,
+      health_importance: 5,
+      retirement_years_until_target: 25,
+      cesa_years_until_first_need: 15,
+      hsa_years_until_need: 25
+    },
+    phase2: {
+      ex_q1: 'LLC',
+      ex_q2: 'No',  // No employees
+      ex_q3: 'Yes', // Has Solo 401k plan
+      ex_q4: '23500', // Employee contribution
+      ex_q5: '25000', // Employer contribution
+      ex_q6: '48500'  // Total annual contribution
+    }
+  };
+  
+  return runCompleteScenarioTest('customSolo401k', { customSolo401k: scenario });
+}
+
+/**
+ * Test Profile 5: Bracket Strategist
+ */
+function testProfile5Bracket() {
+  console.log('\n=== Testing Profile 5: Bracket Strategist ===\n');
+  
+  const scenario = {
+    phase1: {
+      ProfileID: '5_Bracket_Strategist',
+      Current_Age: 35,
+      Work_Situation: 'W-2 employee',
+      gross_annual_income: 95000,
+      Net_Monthly_Income: 6500,
+      Allocation_Percentage: 20,
+      filing_status: 'Single',
+      Tax_Minimization: 'Now',  // Focus on current tax reduction
+      hsa_eligibility: 'Yes',
+      cesa_num_children: 0,
+      investment_involvement: 5,
+      investment_time: 5,
+      investment_confidence: 5,
+      retirement_importance: 6,
+      education_importance: 1,
+      health_importance: 5,
+      retirement_years_until_target: 30,
+      cesa_years_until_first_need: 99,
+      hsa_years_until_need: 30
+    },
+    phase2: {
+      ex_q1: 'Yes', // Has employer 401k
+      ex_q2: 'Yes', // Has match
+      ex_q3: '100% up to 4%',
+      ex_q4: 'Yes'  // Has Roth option
+    }
+  };
+  
+  return runCompleteScenarioTest('customBracket', { customBracket: scenario });
+}
+
+/**
+ * Test Profile 6: Catch-Up Visionary
+ */
+function testProfile6CatchUp() {
+  console.log('\n=== Testing Profile 6: Catch-Up Visionary ===\n');
+  
+  const scenario = {
+    phase1: {
+      ProfileID: '6_Catch_Up',
+      Current_Age: 55,
+      Work_Situation: 'W-2 employee',
+      gross_annual_income: 150000,
+      Net_Monthly_Income: 9500,
+      Allocation_Percentage: 30,
+      filing_status: 'Married Filing Jointly',
+      Tax_Minimization: 'Both',
+      hsa_eligibility: 'Yes',
+      cesa_num_children: 0,
+      Retirement_Catchup: 'Yes',
+      investment_involvement: 5,
+      investment_time: 5,
+      investment_confidence: 5,
+      retirement_importance: 7,
+      education_importance: 1,
+      health_importance: 6,
+      retirement_years_until_target: 10,
+      cesa_years_until_first_need: 99,
+      hsa_years_until_need: 10
+    },
+    phase2: {
+      ex_q1: 'Yes', // Has employer 401k
+      ex_q2: 'Yes', // Has match
+      ex_q3: '50% up to 6%',
+      ex_q4: 'Yes'  // Has Roth option
+    }
+  };
+  
+  return runCompleteScenarioTest('customCatchUp', { customCatchUp: scenario });
+}
+
+/**
+ * Test Profile 8: Business Owner Group
+ */
+function testProfile8BizOwner() {
+  console.log('\n=== Testing Profile 8: Business Owner Group ===\n');
+  
+  const scenario = {
+    phase1: {
+      ProfileID: '8_Biz_Owner_Group',
+      Current_Age: 50,
+      Work_Situation: 'Self-employed',
+      gross_annual_income: 500000,
+      Net_Monthly_Income: 30000,
+      Allocation_Percentage: 25,
+      filing_status: 'Married Filing Jointly',
+      Tax_Minimization: 'Now',
+      hsa_eligibility: 'Yes',
+      cesa_num_children: 2,
+      Owns_Biz: 'Yes',
+      W2_Employees: 'Yes',
+      investment_involvement: 6,
+      investment_time: 5,
+      investment_confidence: 6,
+      retirement_importance: 7,
+      education_importance: 4,
+      health_importance: 5,
+      retirement_years_until_target: 15,
+      cesa_years_until_first_need: 8,
+      hsa_years_until_need: 15
+    },
+    phase2: {
+      ex_q1: '10',    // Number of employees
+      ex_q2: '30',    // Average employee age
+      ex_q3: '60000', // Average employee salary
+      ex_q4: 'Yes',   // Has retirement plan
+      ex_q5: '401(k) with profit sharing',
+      ex_q6: '100000' // Current annual contribution
+    }
+  };
+  
+  return runCompleteScenarioTest('customBizOwner', { customBizOwner: scenario });
+}
+
+/**
+ * Test Profile 9: Late Stage Growth
+ */
+function testProfile9LateStage() {
+  console.log('\n=== Testing Profile 9: Late Stage Growth ===\n');
+  
+  const scenario = {
+    phase1: {
+      ProfileID: '9_Late_Stage_Growth',
+      Current_Age: 60,
+      Work_Situation: 'W-2 employee',
+      gross_annual_income: 200000,
+      Net_Monthly_Income: 12000,
+      Allocation_Percentage: 35,
+      filing_status: 'Married Filing Jointly',
+      Tax_Minimization: 'Both',
+      hsa_eligibility: 'Yes',
+      cesa_num_children: 0,
+      Retirement_Catchup: 'Yes',
+      Retirement_Timeframe: 'Less than 5 years',
+      investment_involvement: 6,
+      investment_time: 5,
+      investment_confidence: 6,
+      retirement_importance: 7,
+      education_importance: 1,
+      health_importance: 6,
+      retirement_years_until_target: 5,
+      cesa_years_until_first_need: 99,
+      hsa_years_until_need: 5
+    },
+    phase2: {
+      ex_q1: 'Yes', // Has employer 401k
+      ex_q2: 'Yes', // Has match
+      ex_q3: '50% up to 6%',
+      ex_q4: 'Yes'  // Has Roth option
+    }
+  };
+  
+  return runCompleteScenarioTest('customLateStage', { customLateStage: scenario });
 }
 
 /**
