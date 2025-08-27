@@ -326,6 +326,14 @@ function testProfile4Mapping() {
 function testPhase2ActualIdealWriting() {
   console.log('=== Testing Phase 2 Actual/Ideal Column Writing ===\n');
   
+  // First validate headers
+  console.log('Checking headers...');
+  const headerCheck = validateHeadersEnhanced();
+  if (!headerCheck) {
+    console.log('Running fixMissingHeaders()...');
+    fixMissingHeaders();
+  }
+  
   const { sheet: ws, hdr } = initWS();
   const testRow = 25; // Use a different test row
   
@@ -376,10 +384,58 @@ function testPhase2ActualIdealWriting() {
   console.log('- Current: HSA $200, 401k $500');
   console.log('- Employer match: 100% up to 3% = $188/month\n');
   
-  // Run engine (which includes Phase 2 generation)
-  runUniversalEngine(testRow);
+  // Run engine first
+  const results = runUniversalEngine(testRow);
+  console.log('Engine completed. Vehicles allocated:', JSON.stringify(results.vehicles));
   
-  // Read the results
+  // Now manually run the Phase 2 actual/ideal generation logic
+  console.log('\nRunning Phase 2 generation logic...');
+  
+  // Read back the row data
+  const rowArr = ws.getRange(testRow, 1, 1, ws.getLastColumn()).getValues()[0];
+  const profileId = getValue(hdr, rowArr, 'ProfileID');
+  
+  // Get actual contributions
+  const actualHsa = Number(getValue(hdr, rowArr, 'current_monthly_hsa_contribution')) || 0;
+  const actualCesa = Number(getValue(hdr, rowArr, 'cesa_monthly_contribution')) || 0;
+  const actualRet = Number(getValue(hdr, rowArr, 'retirement_personal_contribution')) || 0;
+  
+  console.log('Actual contributions found:');
+  console.log(`- HSA: $${actualHsa}`);
+  console.log(`- CESA: $${actualCesa}`);
+  console.log(`- Retirement: $${actualRet}`);
+  
+  // Build actualMap
+  const actualMap = {};
+  actualMap['health_hsa_actual'] = actualHsa;
+  actualMap['retirement_traditional_401k_actual'] = actualRet;
+  
+  // Write actuals
+  Object.entries(actualMap).forEach(([hdrName, rawAmt]) => {
+    const col = hdr[hdrName];
+    if (col) {
+      const cell = ws.getRange(testRow, col);
+      cell.setValue(Math.round(rawAmt));
+      cell.setNumberFormat('$#,##0');
+    }
+  });
+  
+  // Write ideals from engine results
+  ['Retirement', 'Education', 'Health'].forEach(domain => {
+    for (const [veh, amtRaw] of Object.entries(results.vehicles[domain])) {
+      const key = veh.toLowerCase().replace(/[()%–]/g,'').replace(/\s+/g,'_');
+      const hdrName = `${domain.toLowerCase()}_${key}_ideal`;
+      const col = hdr[hdrName];
+      if (col) {
+        const amt = Math.round(amtRaw || 0);
+        ws.getRange(testRow, col)
+          .setValue(amt)
+          .setNumberFormat('$#,##0');
+      }
+    }
+  });
+  
+  // Read the results again
   const rowData = ws.getRange(testRow, 1, 1, ws.getLastColumn()).getValues()[0];
   
   // Check actual columns
