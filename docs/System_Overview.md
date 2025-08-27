@@ -29,13 +29,22 @@ The Retirement Blueprint is a sophisticated financial planning system that helps
 
 ## Key System Features
 
-### 1. Minimum 20% Savings Rate
+### 1. Actual vs Ideal Output System (NEW)
+The system now shows two sets of outputs:
+- **Actual**: What users currently contribute (from Phase 2 forms)
+- **Ideal**: Our recommended allocations based on their total savings goal
+
+**Critical Change**: Allocation percentage now represents the **TOTAL** savings rate users want, not additional savings. Non-discretionary items (employer matches, ROBS distributions) are added ON TOP of this percentage.
+
+For full details, see [Actual vs Ideal System Documentation](./Actual_vs_Ideal_System.md).
+
+### 2. Minimum 20% Savings Rate
 The system enforces a minimum 20% savings rate (`CONFIG.OPTIMIZED_SAVINGS_RATE`) regardless of user input. This ensures adequate retirement preparation:
 - If user requests 15%, system allocates 20%
 - If user requests 30%, system allocates 30%
 - This is a feature, not a bug - designed for financial security
 
-### 2. Domain-Based Allocation
+### 3. Domain-Based Allocation
 Funds are distributed across three domains:
 - **Education**: CESA accounts for children
 - **Health**: HSA accounts with triple tax advantage
@@ -46,7 +55,7 @@ Domain importance is calculated using:
 - Domain importance ratings
 - Years until need
 
-### 3. Vehicle Prioritization
+### 4. Vehicle Prioritization
 Each profile has a specific vehicle order:
 1. Employer match (free money) - always first
 2. HSA (triple tax advantage)
@@ -98,15 +107,17 @@ Just because a vehicle is generated doesn't mean it gets allocated:
 ## Infrastructure Improvements
 
 ### Completed Enhancements
-1. **Universal Functions** - All profiles now use standard calculations
-2. **Employer 401(k) Support** - Extended to all applicable profiles
-3. **Form Mapping System** - Handles dynamic question positions
-4. **Header Management** - Centralized constants and validation
-5. **Comprehensive Testing** - Complete test suites with all fields
-6. **Employment-Based Logic** - Profiles 4, 5, 6, 9 now support W-2/Self-employed/Both scenarios
-7. **HSA Prioritization** - Moved up in vehicle order for tax efficiency across profiles
-8. **Advanced Vehicles** - Cash Balance Plan and Mega Backdoor Roth for high-net-worth profiles
-9. **Retirement Planning** - Roth Conversions and QCD Planning for late-stage profiles
+1. **Actual vs Ideal System** - Two-output system showing current vs recommended contributions
+2. **Total Percentage Calculation** - Allocation % now means total savings rate, not additional
+3. **Universal Functions** - All profiles now use standard calculations
+4. **Employer 401(k) Support** - Extended to all applicable profiles
+5. **Form Mapping System** - Handles dynamic question positions
+6. **Header Management** - Centralized constants and validation
+7. **Comprehensive Testing** - Complete test suites with all fields
+8. **Employment-Based Logic** - Profiles 4, 5, 6, 9 now support W-2/Self-employed/Both scenarios
+9. **HSA Prioritization** - Moved up in vehicle order for tax efficiency across profiles
+10. **Advanced Vehicles** - Cash Balance Plan and Mega Backdoor Roth for high-net-worth profiles
+11. **Retirement Planning** - Roth Conversions and QCD Planning for late-stage profiles
 
 ### Testing Infrastructure
 - `Testing.js` - Consolidated testing framework

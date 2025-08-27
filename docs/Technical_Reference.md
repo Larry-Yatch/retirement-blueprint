@@ -81,6 +81,52 @@ function safeGetValue(hdr, rowArr, headerKey) {
 3. **Remember row 2** - Working Sheet headers are in row 2
 4. **Provide defaults** - getValue() can return undefined
 
+## Actual vs Ideal System Functions
+
+### Core Allocation Functions
+
+#### computeNetPoolTotal()
+```javascript
+function computeNetPoolTotal(netIncome, discretionarySeeds, userPct, defaultRate) {
+  // NEW: Treats allocation percentage as TOTAL desired savings rate
+  const targetRate = Math.max(userPct / 100, defaultRate);
+  const discretionaryPool = netIncome * targetRate;
+  return discretionaryPool;
+}
+```
+- Replaces `computeNetPool` when feature flag is enabled
+- Returns discretionary allocation amount based on total percentage
+- Non-discretionary items added separately
+
+#### calculateEmployerMatch()
+```javascript
+function calculateEmployerMatch(grossIncome, matchPercentage) {
+  // Parses match strings like "100% up to 3%" or "50% up to 6%"
+  const matchUpToMatch = matchPercentage.match(/up to (\d+)%/);
+  if (matchUpToMatch) {
+    const matchUpToPct = parseInt(matchUpToMatch[1]) / 100;
+    const matchCap = Math.round((grossIncome * matchUpToPct) / 12);
+    
+    const matchRateMatch = matchPercentage.match(/^(\d+)%/);
+    if (matchRateMatch) {
+      const matchRate = parseInt(matchRateMatch[1]) / 100;
+      return Math.round(matchCap * matchRate);
+    }
+  }
+  return 0;
+}
+```
+- Calculates monthly employer match amount
+- Handles various match formats
+- Used for non-discretionary calculations
+
+### Feature Flag
+```javascript
+const useNewLogic = true; // In runUniversalEngine around line 3309
+```
+- Controls whether to use total percentage calculation
+- Set to false to revert to old additional percentage behavior
+
 ## Form Mapping System
 
 ### Overview
