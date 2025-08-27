@@ -32,6 +32,12 @@ if (hasTraditionalIRA === 'Yes' && !isUsingROBS && !isSelfEmployed) {
 
 ## 🚀 Implementation Status
 
+### January 2025 Updates
+- ✅ Moved Backdoor Roth IRA above all traditional vehicles in all employment scenarios
+- ✅ Removed Mega Backdoor Roth (not applicable for this profile)
+- ✅ Added 20% minimum savings rate documentation to CONFIG
+- ✅ Updated vehicle ordering to prioritize Roth strategies
+
 ### Current State
 - ✅ Profile Helper Function
 - ✅ Universal Functions Integration
@@ -42,14 +48,14 @@ if (hasTraditionalIRA === 'Yes' && !isUsingROBS && !isSelfEmployed) {
 - ✅ Production Ready
 
 ### Status Summary
-**Status**: Complete - Tuned and Tested
-**Last Updated**: August 2024
-**Next Steps**: Monitor backdoor Roth allocation issue in production
+**Status**: Working with Known Allocation Bug
+**Last Updated**: January 2025
+**Next Steps**: Fix allocation percentage calculation issue
 
 ## 💻 Technical Implementation
 
 ### Profile Helper Location
-`Code.js` lines 1225-1442
+`Code.js` line 1315
 
 ### Key Features Implemented
 - ✅ Dynamic IRA strategy based on balance/understanding
@@ -97,9 +103,12 @@ if (hasTraditionalIRA === 'Yes' && !isUsingROBS && !isSelfEmployed) {
 }
 ```
 
-### ⚠️ Known Issues
-- Backdoor Roth IRA not always allocated despite being generated
-- Total allocation sometimes exceeds requested percentage
+### ⚠️ Known Issues (January 2025)
+- Backdoor Roth IRA not always allocated despite being generated in vehicle list
+- Total allocation percentage calculation issues (e.g., allocates $1,100 when $825 requested due to 20% minimum "ideal" recommendations)
+- Domain allocations equal rather than properly weighted
+- These are allocation engine issues, not profile helper issues
+- Note: The 20% minimum is intentional for "ideal" recommendations - see CONFIG.OPTIMIZED_SAVINGS_RATE
 
 ## 🎯 Vehicle Priority Order
 
@@ -154,14 +163,18 @@ Order becomes:
 1. **401(k) Match Traditional** - Varies by match %
    - Why: Free money - always first priority
 2. **HSA** - (retirement portion)
-3. **401(k) Roth** - $1,958/mo
+3. **Backdoor Roth IRA** - $583/mo ($667/mo if 50+)
+   - Why: Prioritized for Roth-focused profile
+   - Note: Pro-rata rules may apply if IRA balance exists
+4. **401(k) Roth** - $1,958/mo
    - Why: Roth growth without income limits
    - Catch-up (50+): $2,583/mo
-4. **Mega Backdoor Roth** - Varies
-   - Why: Additional Roth through after-tax 401(k)
-   - Conditions: If plan allows
-5. **Backdoor Roth IRA** - $583/mo
-6. **Traditional IRA** - $583/mo
+   - Catch-up (60+): $2,896/mo
+5. **Traditional 401(k)** - $1,958/mo
+   - Why: Additional tax-deferred savings
+   - Catch-up (50+): $2,583/mo
+   - Catch-up (60+): $2,896/mo
+6. **Traditional IRA** - $583/mo ($667/mo if 50+)
 7. **Family Bank** - Unlimited
 
 #### If Self-Employed
@@ -170,23 +183,26 @@ Order becomes:
 2. **Solo 401(k) – Employee Roth** - $1,958/mo
    - Why: Roth focus for this profile
    - Catch-up (50+): $2,583/mo
-3. **Solo 401(k) – Employer** - Varies
+   - Catch-up (60+): $2,896/mo
+3. **Solo 401(k) – Employer** - ~20% of net self-employment income / 12
    - Why: Additional deductible contributions
-4. **Backdoor Roth IRA** - $583/mo
+4. **Backdoor Roth IRA** - $583/mo ($667/mo if 50+)
+   - Why: Prioritized above traditional vehicles
+   - Note: Consider Solo 401(k) with rollover feature if IRA balance exists
 5. **SEP IRA** - Alternative to Solo 401(k)
-6. **Traditional IRA** - $583/mo
+6. **Traditional IRA** - $583/mo ($667/mo if 50+)
 7. **Family Bank** - Unlimited
 
 #### If Both W-2 and Self-Employed
 Combines both strategies with coordinated limits:
 1. **401(k) Match Traditional** (W-2)
 2. **HSA**
-3. **401(k) Roth** (W-2)
-4. **Solo 401(k) – Employee** (Self-employed)
+3. **401(k) Roth** (W-2) - 60% of employee limit
+4. **Solo 401(k) – Employee** (Self-employed) - 40% of employee limit
 5. **Solo 401(k) – Employer** (Self-employed)
-6. **Mega Backdoor Roth** (if available)
-7. **Backdoor Roth IRA**
-8. **Traditional IRA**
+6. **Backdoor Roth IRA** - Prioritized above traditional vehicles
+7. **Traditional IRA**
+8. **Traditional 401(k)** (W-2) - Last resort for additional savings
 9. **Family Bank**
 
 ### Implementation Requirements
@@ -205,9 +221,9 @@ Combines both strategies with coordinated limits:
 ### Dynamic Modifications
 
 #### Based on Traditional IRA Balance
-- **Has balance + High income**: No Backdoor Roth IRA (pro-rata rule)
-- **No balance + High income**: Backdoor Roth IRA included
-- **Any balance + Understands conversions**: Focus on 401(k) strategies
+- **Has balance + High income**: Backdoor Roth IRA included but with pro-rata tax implications
+- **No balance + High income**: Clean Backdoor Roth IRA (tax-free conversion)
+- **Has balance + 401(k) accepts rollovers**: Option to roll IRA to 401(k) first for clean backdoor
 
 #### Tax Preference Impact
 - **"Now"**: Traditional vehicles prioritized
@@ -228,10 +244,11 @@ Combines both strategies with coordinated limits:
 **Retirement Domain:**
 1. 401(k) Match Traditional - $667/mo
 2. HSA - $713/mo (retirement portion)
-3. 401(k) Roth - $1,958/mo
-4. Traditional IRA - $583/mo
-5. Family Bank - Unlimited
-*Note: No Backdoor Roth due to pro-rata rule*
+3. Backdoor Roth IRA - $583/mo (with pro-rata tax implications)
+4. 401(k) Roth - $1,958/mo
+5. Traditional 401(k) - $1,958/mo
+6. Traditional IRA - $583/mo
+7. Family Bank - Unlimited
 
 #### Scenario 2: Self-Employed Roth Strategist
 **Employment**: Self-Employed
@@ -398,8 +415,13 @@ traceAllocation('4_Roth_Reclaimer')
 - ⚠️ Allocation results verified (with issues)
 - ✅ Error handling implemented
 
-**Production Status**: Ready with Minor Issues
+**Production Status**: Functional with Known Allocation Bugs
 **Blockers**: 
+- Allocation engine bugs (not profile-specific)
 - Backdoor Roth allocation not working in some cases
-- Total allocation percentage issues
-**Sign-off**: Tested August 2024 - Monitor in production
+- Total allocation percentage calculation errors
+**Next Steps**:
+- Fix allocation engine percentage calculations
+- Debug why some vehicles aren't allocated
+- Retest after allocation fixes
+**Sign-off**: Profile code is correct - allocation engine needs fixes

@@ -8,6 +8,13 @@
 const CONFIG = {
   ADMIN_EMAIL: 'Sarah.L@TruPathMastery.com',
   SPREADSHEET_ID: '104pHxIgsGAcOrktL75Hi7WlEd8j0BoeadntLR9PrGYo',
+  /**
+   * Minimum savings rate for "ideal" allocation recommendations.
+   * This ensures all users see an ideal scenario of at least 20% savings rate,
+   * even if they request less. The "actual" allocation respects their request,
+   * while "ideal" enforces this minimum.
+   * Adjust this value to tune recommendations for real user testing.
+   */
   OPTIMIZED_SAVINGS_RATE: 0.20,
   ANNUAL_CESA_LIMIT: 2000
 };
@@ -1402,17 +1409,7 @@ const profileHelpers = {
         baseRetirementOrder.push({ name: 'HSA', capMonthly: hsaCap });
       }
       
-      // 3. 401(k) Roth (Roth focus for this profile)
-      if (hasEmployer401k && hasRoth401k) {
-        baseRetirementOrder.push({ name: '401(k) Roth', capMonthly: employee401kCap });
-      }
-      
-      // 4. Traditional 401(k) for additional tax-deferred savings
-      if (hasEmployer401k) {
-        baseRetirementOrder.push({ name: 'Traditional 401(k)', capMonthly: employee401kCap });
-      }
-      
-      // 5. Backdoor Roth IRA (with pro-rata considerations)
+      // 3. Backdoor Roth IRA (prioritized for Roth-focused profile)
       if (!canDoDirectRoth) {
         // Need backdoor due to income limits
         if (tradIRABalance > 0) {
@@ -1442,6 +1439,16 @@ const profileHelpers = {
         baseRetirementOrder.push({ name: 'Roth IRA', capMonthly: iraCap });
       }
       
+      // 4. 401(k) Roth (if available)
+      if (hasEmployer401k && hasRoth401k) {
+        baseRetirementOrder.push({ name: '401(k) Roth', capMonthly: employee401kCap });
+      }
+      
+      // 5. Traditional 401(k) for additional tax-deferred savings
+      if (hasEmployer401k) {
+        baseRetirementOrder.push({ name: 'Traditional 401(k)', capMonthly: employee401kCap });
+      }
+      
       // 6. Traditional IRA as fallback
       baseRetirementOrder.push({ name: 'Traditional IRA', capMonthly: iraCap });
       
@@ -1452,14 +1459,14 @@ const profileHelpers = {
         baseRetirementOrder.push({ name: 'HSA', capMonthly: hsaCap });
       }
       
-      // 2. Solo 401(k) – Employee Roth (Roth focus)
+      // 2. Solo 401(k) – Employee Roth (Roth-focused profile)
       baseRetirementOrder.push({ name: 'Solo 401(k) – Employee Roth', capMonthly: employee401kCap });
       
       // 3. Solo 401(k) – Employer
       const employerCap = Math.round(grossIncome * 0.20 / 12); // Simplified 20% calculation
       baseRetirementOrder.push({ name: 'Solo 401(k) – Employer', capMonthly: employerCap });
       
-      // 4. Backdoor Roth IRA (with pro-rata considerations)
+      // 4. Backdoor Roth IRA (prioritized above traditional vehicles)
       if (!canDoDirectRoth) {
         // Need backdoor due to income limits
         if (tradIRABalance > 0) {
@@ -1518,13 +1525,7 @@ const profileHelpers = {
       const employerCap = Math.round(grossIncome * 0.20 / 12);
       baseRetirementOrder.push({ name: 'Solo 401(k) – Employer', capMonthly: employerCap });
       
-      // 6. Traditional 401(k) for additional savings
-      if (hasEmployer401k) {
-        const w2TraditionalPortion = Math.round(employee401kCap * 0.6); // 60% to W-2
-        baseRetirementOrder.push({ name: 'Traditional 401(k)', capMonthly: w2TraditionalPortion });
-      }
-      
-      // 7. Backdoor Roth IRA (with pro-rata considerations)
+      // 6. Backdoor Roth IRA (prioritized above traditional vehicles)
       if (!canDoDirectRoth) {
         // Need backdoor due to income limits
         if (tradIRABalance > 0) {
@@ -1552,8 +1553,14 @@ const profileHelpers = {
         baseRetirementOrder.push({ name: 'Roth IRA', capMonthly: iraCap });
       }
       
-      // 8. Traditional IRA
+      // 7. Traditional IRA
       baseRetirementOrder.push({ name: 'Traditional IRA', capMonthly: iraCap });
+      
+      // 8. Traditional 401(k) for additional savings (last resort)
+      if (hasEmployer401k) {
+        const w2TraditionalPortion = Math.round(employee401kCap * 0.6); // 60% to W-2
+        baseRetirementOrder.push({ name: 'Traditional 401(k)', capMonthly: w2TraditionalPortion });
+      }
     }
     
     // Add rollover action item if beneficial for backdoor strategy
