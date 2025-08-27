@@ -9,6 +9,28 @@
  * 4. Clear error messages for missing data
  */
 
+/**
+ * Quick validation test to ensure the new logic is enabled
+ */
+function validateNewLogicEnabled() {
+  console.log('=== Validating New Logic is Enabled ===');
+  
+  // Check the feature flag in runUniversalEngine
+  const engineCode = runUniversalEngine.toString();
+  const hasNewLogic = engineCode.includes('useNewLogic = true');
+  
+  if (hasNewLogic) {
+    console.log('✅ Feature flag is set to TRUE - new logic is ENABLED');
+    console.log('   - Allocation % will be treated as TOTAL savings rate');
+    console.log('   - Non-discretionary items will be added on top');
+  } else {
+    console.log('❌ Feature flag is set to FALSE - using old logic');
+    console.log('   - Allocation % will be treated as ADDITIONAL to current');
+  }
+  
+  return hasNewLogic;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // CRITICAL FIELDS THAT CAUSE TEST FAILURES
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -146,6 +168,165 @@ function sumIdealAllocations(rowData, hdr) {
   let total = 0;
   Object.entries(hdr).forEach(([name, col]) => {
     if (name.endsWith('_ideal')) {
+      const value = Number(rowData[col - 1]) || 0;
+      total += value;
+    }
+  });
+  return total;
+}
+
+/**
+ * Comprehensive test suite for new actual vs ideal system
+ */
+function testActualIdealAllProfiles() {
+  console.log('═════════════════════════════════════════════════════════');
+  console.log('TESTING NEW ACTUAL VS IDEAL SYSTEM - ALL PROFILES');
+  console.log('═════════════════════════════════════════════════════════');
+  
+  const testScenarios = [
+    {
+      name: 'Profile 1: ROBS with Non-Discretionary Distributions',
+      profile: '1_ROBS_In_Use',
+      testData: {
+        'Net_Monthly_Income': 10000,
+        'Allocation_Percentage': 25,
+        'ex_q6': 48000, // $4000/month ROBS
+        'current_monthly_hsa_contribution': 200,
+        'retirement_personal_contribution': 500
+      },
+      expected: {
+        discretionaryPool: 2500,
+        nonDiscretionary: 4000,
+        idealTotal: 6500
+      }
+    },
+    {
+      name: 'Profile 3: Solo 401k with Employer Match',
+      profile: '3_Solo401k_Builder',
+      testData: {
+        'Net_Monthly_Income': 8000,
+        'Allocation_Percentage': 30,
+        'ex_q4': 24000, // Employee contribution
+        'ex_q5': 12000, // Employer contribution (non-discretionary)
+        'current_monthly_hsa_contribution': 300,
+        'retirement_personal_contribution': 2000
+      },
+      expected: {
+        discretionaryPool: 2400,
+        nonDiscretionary: 1000,
+        idealTotal: 3400
+      }
+    },
+    {
+      name: 'Profile 7: Foundation Builder (No Non-Discretionary)',
+      profile: '7_Foundation_Builder',
+      testData: {
+        'Net_Monthly_Income': 5000,
+        'Allocation_Percentage': 20,
+        'current_monthly_hsa_contribution': 100,
+        'retirement_personal_contribution': 400
+      },
+      expected: {
+        discretionaryPool: 1000,
+        nonDiscretionary: 0,
+        idealTotal: 1000
+      }
+    }
+  ];
+  
+  let passCount = 0;
+  let failCount = 0;
+  
+  testScenarios.forEach((scenario, index) => {
+    console.log(`\n--- Test ${index + 1}: ${scenario.name} ---`);
+    const result = runSingleActualIdealTest(scenario);
+    if (result.passed) {
+      passCount++;
+    } else {
+      failCount++;
+    }
+  });
+  
+  console.log('\n═════════════════════════════════════════════════════════');
+  console.log(`SUMMARY: ${passCount} passed, ${failCount} failed`);
+  console.log('═════════════════════════════════════════════════════════');
+}
+
+/**
+ * Run a single test scenario
+ */
+function runSingleActualIdealTest(scenario) {
+  const { sheet: ws, hdr } = initWS();
+  const testRow = 10; // Use row 10 for testing
+  
+  // Build complete test data
+  const fullTestData = Object.assign({
+    'Profile_ID': scenario.profile,
+    'gross_annual_income': 120000,
+    'filing_status': 'Single',
+    'current_age': 40,
+    'hsa_eligibility': 'Yes',
+    'cesa_num_children': 0,
+    'investment_involvement': 5,
+    'investment_time': 5,
+    'investment_confidence': 5,
+    'retirement_importance': 6,
+    'education_importance': 3,
+    'health_importance': 5,
+    'retirement_years_until_target': 25,
+    'cesa_years_until_first_need': 0,
+    'hsa_years_until_need': 25
+  }, scenario.testData);
+  
+  // Write test data
+  const dataArray = new Array(ws.getLastColumn()).fill('');
+  Object.entries(fullTestData).forEach(([field, value]) => {
+    const col = hdr[field];
+    if (col) {
+      dataArray[col - 1] = value;
+    }
+  });
+  ws.getRange(testRow, 1, 1, dataArray.length).setValues([dataArray]);
+  
+  // Run the engine
+  const results = runUniversalEngine(testRow);
+  
+  // Read back results
+  const rowData = ws.getRange(testRow, 1, 1, ws.getLastColumn()).getValues()[0];
+  
+  // Calculate totals
+  const actualTotal = sumActualAllocations(rowData, hdr);
+  const idealTotal = sumIdealAllocations(rowData, hdr);
+  
+  // Display results
+  console.log(`Income: $${fullTestData.Net_Monthly_Income}/month`);
+  console.log(`Allocation %: ${fullTestData.Allocation_Percentage}%`);
+  console.log(`Expected discretionary: $${scenario.expected.discretionaryPool}`);
+  console.log(`Expected non-discretionary: $${scenario.expected.nonDiscretionary}`);
+  console.log(`Expected ideal total: $${scenario.expected.idealTotal}`);
+  console.log(`\nActual total: $${actualTotal}`);
+  console.log(`Ideal total: $${idealTotal}`);
+  
+  // Check if test passed
+  const tolerance = 100; // Allow $100 tolerance for rounding
+  const passed = Math.abs(idealTotal - scenario.expected.idealTotal) <= tolerance;
+  
+  if (passed) {
+    console.log('✅ PASSED');
+  } else {
+    console.log(`❌ FAILED - Expected $${scenario.expected.idealTotal}, got $${idealTotal}`);
+  }
+  
+  return { passed, actualTotal, idealTotal };
+}
+
+/**
+ * Helper to sum all actual allocations
+ */
+function sumActualAllocations(rowData, hdr) {
+  let total = 0;
+  Object.entries(hdr).forEach(([name, col]) => {
+    if (name.endsWith('_actual') && !name.includes('family_bank')) {
       const value = Number(rowData[col - 1]) || 0;
       total += value;
     }
