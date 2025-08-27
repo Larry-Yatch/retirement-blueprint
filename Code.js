@@ -3075,6 +3075,10 @@ function handlePhase2(e) {
   actualMap['education_combined_cesa_actual']  = actualCesa;
   actualMap['retirement_traditional_401k_actual'] = actualRet;
   
+  // Define profiles with employer match
+  const matchProfiles = ['2_ROBS_Curious', '4_Roth_Reclaimer', '5_Bracket_Strategist', 
+                         '6_Catch_Up', '7_Foundation_Builder', '9_Late_Stage_Growth'];
+  
   // Profile-specific actual contributions
   let actualDist = 0;
   if (profileId === '1_ROBS_In_Use') {
@@ -3086,11 +3090,36 @@ function handlePhase2(e) {
     actualMap['retirement_solo_401k_employee_actual'] = annualEmployee/12;
     actualMap['retirement_solo_401k_employer_actual'] = annualEmployer/12;
   } else if (profileId === '8_Biz_Owner_Group') {
-    // TODO: Add logic for group plan actuals
+    // Group plan actuals
     const annualContribution = Number(getValue(hdr,rowArr,HEADERS.P2_EX_Q6))||0;
     actualMap['retirement_group_401k_employee_actual'] = annualContribution/12;
   }
-  // TODO: Add employer match actuals for W-2 profiles
+  
+  // Add employer match actuals for W-2 profiles
+  if (matchProfiles.includes(profileId)) {
+    // Same logic as ideal to determine if they have match
+    let hasMatch = false;
+    let matchPercentage = '';
+    
+    if (profileId === '2_ROBS_Curious') {
+      hasMatch = getValue(hdr,rowArr,HEADERS.P2_EX_Q2) === 'Yes';
+      matchPercentage = getValue(hdr,rowArr,HEADERS.P2_EX_Q3) || '';
+    } else if (['4_Roth_Reclaimer'].includes(profileId)) {
+      hasMatch = getValue(hdr,rowArr,HEADERS.P2_EX_Q6) === 'Yes';
+      matchPercentage = getValue(hdr,rowArr,HEADERS.P2_EX_Q7) || '';
+    } else if (['5_Bracket_Strategist', '6_Catch_Up', '7_Foundation_Builder', '9_Late_Stage_Growth'].includes(profileId)) {
+      hasMatch = getValue(hdr,rowArr,HEADERS.P2_EX_Q2) === 'Yes';
+      matchPercentage = getValue(hdr,rowArr,HEADERS.P2_EX_Q3) || '';
+    }
+    
+    if (hasMatch && matchPercentage) {
+      const grossIncome = Number(getValue(hdr,rowArr,HEADERS.GROSS_ANNUAL_INCOME)) || 0;
+      const matchAmount = calculateEmployerMatch(grossIncome, matchPercentage);
+      if (matchAmount > 0) {
+        actualMap['retirement_401k_match_traditional_actual'] = matchAmount;
+      }
+    }
+  }
 
   // 7) Write every _actual cell, rounded & formatted
   Object.entries(actualMap).forEach(([hdrName, rawAmt]) => {
@@ -3111,20 +3140,62 @@ function handlePhase2(e) {
   
   // Profile-specific non-discretionary identification
   // profileId already declared above, reuse it
+  
+  // Profile 1: ROBS In Use - Profit distributions
   if (profileId === '1_ROBS_In_Use' && actualDist > 0) {
-    // ROBS distributions are non-discretionary
     nonDiscretionarySeeds.Retirement['ROBS Solo 401(k) – Profit Distribution'] = actualDist;
-  } else if (profileId === '3_Solo401k_Builder') {
-    // Employer portion is non-discretionary
+  } 
+  
+  // Profile 3: Solo 401k Builder - Employer contributions
+  else if (profileId === '3_Solo401k_Builder') {
     const annualEmployer = Number(getValue(hdr,rowArr,HEADERS.P2_EX_Q5))||0;
     if (annualEmployer > 0) {
       nonDiscretionarySeeds.Retirement['Solo 401(k) – Employer'] = annualEmployer/12;
     }
-  } else if (profileId === '8_Biz_Owner_Group') {
-    // Required employer contributions are non-discretionary
-    // TODO: Add logic to identify required vs voluntary contributions
+  } 
+  
+  // Profile 8: Business Owner Group - Required contributions
+  else if (profileId === '8_Biz_Owner_Group') {
+    // Check for safe harbor or other required contributions
+    const planType = getValue(hdr,rowArr,HEADERS.P2_EX_Q3) || '';
+    if (planType.includes('Defined Benefit')) {
+      const annualDB = Number(getValue(hdr,rowArr,HEADERS.P2_EX_Q6))||0;
+      if (annualDB > 0) {
+        nonDiscretionarySeeds.Retirement['Defined Benefit Plan'] = annualDB/12;
+      }
+    }
+    // Safe harbor contributions would also be non-discretionary
   }
-  // TODO: Add employer match logic for W-2 profiles
+  
+  // Profiles with employer match: 2, 4, 5, 6, 7, 9
+  const matchProfiles = ['2_ROBS_Curious', '4_Roth_Reclaimer', '5_Bracket_Strategist', 
+                         '6_Catch_Up', '7_Foundation_Builder', '9_Late_Stage_Growth'];
+  
+  if (matchProfiles.includes(profileId)) {
+    // Get employer match info based on profile question mapping
+    let hasMatch = false;
+    let matchPercentage = '';
+    
+    if (profileId === '2_ROBS_Curious') {
+      hasMatch = getValue(hdr,rowArr,HEADERS.P2_EX_Q2) === 'Yes';
+      matchPercentage = getValue(hdr,rowArr,HEADERS.P2_EX_Q3) || '';
+    } else if (['4_Roth_Reclaimer'].includes(profileId)) {
+      hasMatch = getValue(hdr,rowArr,HEADERS.P2_EX_Q6) === 'Yes';
+      matchPercentage = getValue(hdr,rowArr,HEADERS.P2_EX_Q7) || '';
+    } else if (['5_Bracket_Strategist', '6_Catch_Up', '7_Foundation_Builder', '9_Late_Stage_Growth'].includes(profileId)) {
+      hasMatch = getValue(hdr,rowArr,HEADERS.P2_EX_Q2) === 'Yes';
+      matchPercentage = getValue(hdr,rowArr,HEADERS.P2_EX_Q3) || '';
+    }
+    
+    if (hasMatch && matchPercentage) {
+      // Calculate employer match amount
+      const grossIncome = Number(getValue(hdr,rowArr,HEADERS.GROSS_ANNUAL_INCOME)) || 0;
+      const matchAmount = calculateEmployerMatch(grossIncome, matchPercentage);
+      if (matchAmount > 0) {
+        nonDiscretionarySeeds.Retirement[`401(k) Match Traditional (${matchPercentage})`] = matchAmount;
+      }
+    }
+  }
   
   // Write ideal allocations (discretionary + non-discretionary)
   ['Retirement','Education','Health'].forEach(domain => {
@@ -3341,6 +3412,31 @@ function computeNetPoolTotal(netIncome, discretionarySeeds, userPct, defaultRate
   // The ideal calculation will replace them entirely
   
   return discretionaryPool;
+}
+
+/**
+ * Calculate employer match amount based on gross income and match percentage
+ * @param {number} grossIncome - Annual gross income
+ * @param {string} matchPercentage - Match percentage string e.g. "50% up to 6%"
+ * @returns {number} Monthly match amount
+ */
+function calculateEmployerMatch(grossIncome, matchPercentage) {
+  let matchCap = 0;
+  
+  if (matchPercentage && grossIncome > 0) {
+    // Extract the employee contribution percentage that gets matched
+    const matchUpToMatch = matchPercentage.match(/up to (\d+)%/);
+    if (matchUpToMatch) {
+      const matchUpToPct = parseInt(matchUpToMatch[1]) / 100;
+      // Calculate monthly cap as the amount needed to maximize match
+      matchCap = Math.round((grossIncome * matchUpToPct) / 12);
+    } else {
+      // Fallback if format doesn't match
+      matchCap = 500; // Default estimate
+    }
+  }
+  
+  return matchCap;
 }
 
 /**
