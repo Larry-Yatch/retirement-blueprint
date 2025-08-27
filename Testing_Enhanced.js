@@ -333,6 +333,7 @@ function testPhase2ActualIdealWriting() {
   const testData = {
     'ProfileID': '7_Foundation_Builder',
     'Student_Identifier': 'TEST-P2-001',
+    'student_identifier': 'TEST-P2-001', // Try both cases
     'Net_Monthly_Income': 5000,
     'Allocation_Percentage': 20,
     'gross_annual_income': 75000,
@@ -345,13 +346,20 @@ function testPhase2ActualIdealWriting() {
     'ex_q1': 'Yes', // Has 401k
     'ex_q2': 'Yes', // Has match
     'ex_q3': '100% up to 3%', // Match percentage
+    'ex_q4': 'Yes', // Has Roth option
     // Required fields
     'investment_involvement': 4,
     'investment_time': 4,
     'investment_confidence': 4,
     'retirement_importance': 6,
+    'education_importance': 3,
+    'health_importance': 5,
+    'retirement_years_until_target': 35,
+    'cesa_years_until_first_need': 0,
+    'hsa_years_until_need': 35,
     'hsa_eligibility': 'Yes',
-    'cesa_num_children': 0
+    'cesa_num_children': 0,
+    'Work_Situation': 'W-2 employee'
   };
   
   // Write test data
@@ -384,22 +392,21 @@ function testPhase2ActualIdealWriting() {
   
   // Check ideal columns - look for all possible retirement vehicles
   const idealHsa = getValue(hdr, rowData, 'health_hsa_ideal') || 0;
-  const ideal401k = getValue(hdr, rowData, 'retirement_401k_traditional_ideal') || 0;
-  const idealMatch = getValue(hdr, rowData, 'retirement_401k_match_traditional_ideal') || 0;
-  const idealRoth401k = getValue(hdr, rowData, 'retirement_401k_roth_ideal') || 0;
+  const ideal401k = getValue(hdr, rowData, 'retirement_traditional_401k_ideal') || 0;
   const idealRothIRA = getValue(hdr, rowData, 'retirement_roth_ira_ideal') || 0;
   
-  console.log('IDEAL columns written:');
+  console.log('IDEAL columns found:');
   console.log(`- HSA: $${idealHsa}`);
   console.log(`- 401k Traditional: $${ideal401k}`);
-  console.log(`- 401k Match: $${idealMatch}`);
-  console.log(`- 401k Roth: $${idealRoth401k}`);
   console.log(`- Roth IRA: $${idealRothIRA}`);
-  console.log(`- Total: $${Number(idealHsa) + Number(ideal401k) + Number(idealMatch) + Number(idealRoth401k) + Number(idealRothIRA)}`);
   
   // Also sum using the helper function
   const totalIdeal = sumIdealAllocations(rowData, hdr);
   console.log(`\nTotal Ideal (using sumIdealAllocations): $${totalIdeal}`);
+  
+  // Debug: Show what the engine returned
+  const engineResults = getValue(hdr, rowData, 'Engine_Results') || '';
+  console.log('\nEngine Results (raw):', engineResults);
   
   return testRow;
 }
