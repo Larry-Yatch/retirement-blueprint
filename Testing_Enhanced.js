@@ -321,6 +321,84 @@ function testProfile4Mapping() {
 }
 
 /**
+ * Direct test of Phase 2 actual/ideal writing
+ */
+function testPhase2ActualIdealWriting() {
+  console.log('=== Testing Phase 2 Actual/Ideal Column Writing ===\n');
+  
+  const { sheet: ws, hdr } = initWS();
+  const testRow = 25; // Use a different test row
+  
+  // Simple test data for Profile 7
+  const testData = {
+    'ProfileID': '7_Foundation_Builder',
+    'Student_Identifier': 'TEST-P2-001',
+    'Net_Monthly_Income': 5000,
+    'Allocation_Percentage': 20,
+    'gross_annual_income': 75000,
+    'filing_status': 'Single',
+    'current_age': 30,
+    // Phase 2 actuals
+    'current_monthly_hsa_contribution': 200,
+    'retirement_personal_contribution': 500,
+    // Employer info
+    'ex_q1': 'Yes', // Has 401k
+    'ex_q2': 'Yes', // Has match
+    'ex_q3': '100% up to 3%', // Match percentage
+    // Required fields
+    'investment_involvement': 4,
+    'investment_time': 4,
+    'investment_confidence': 4,
+    'retirement_importance': 6,
+    'hsa_eligibility': 'Yes',
+    'cesa_num_children': 0
+  };
+  
+  // Write test data
+  const dataArray = new Array(ws.getLastColumn()).fill('');
+  Object.entries(testData).forEach(([field, value]) => {
+    const col = hdr[field];
+    if (col) dataArray[col - 1] = value;
+  });
+  ws.getRange(testRow, 1, 1, dataArray.length).setValues([dataArray]);
+  
+  console.log('Test Setup:');
+  console.log('- Profile 7: Foundation Builder');
+  console.log('- Income: $5,000/month');
+  console.log('- Current: HSA $200, 401k $500');
+  console.log('- Employer match: 100% up to 3% = $188/month\n');
+  
+  // Run engine and Phase 2 generation
+  runUniversalEngine(testRow);
+  
+  // Force Phase 2 generation manually
+  generatePhase2ForRow(testRow);
+  
+  // Read the results
+  const rowData = ws.getRange(testRow, 1, 1, ws.getLastColumn()).getValues()[0];
+  
+  // Check actual columns
+  const actualHsa = getValue(hdr, rowData, 'health_hsa_actual') || 0;
+  const actual401k = getValue(hdr, rowData, 'retirement_traditional_401k_actual') || 0;
+  console.log('ACTUAL columns written:');
+  console.log(`- HSA: $${actualHsa}`);
+  console.log(`- 401k: $${actual401k}`);
+  console.log(`- Total: $${Number(actualHsa) + Number(actual401k)}\n`);
+  
+  // Check ideal columns
+  const idealHsa = getValue(hdr, rowData, 'health_hsa_ideal') || 0;
+  const ideal401k = getValue(hdr, rowData, 'retirement_traditional_401k_ideal') || 0;
+  const idealMatch = getValue(hdr, rowData, 'retirement_401k_match_traditional_ideal') || 0;
+  console.log('IDEAL columns written:');
+  console.log(`- HSA: $${idealHsa}`);
+  console.log(`- 401k: $${ideal401k}`);
+  console.log(`- Match: $${idealMatch}`);
+  console.log(`- Total: $${Number(idealHsa) + Number(ideal401k) + Number(idealMatch)}`);
+  
+  return testRow;
+}
+
+/**
  * Comprehensive test suite for new actual vs ideal system
  */
 function testActualIdealAllProfiles() {
