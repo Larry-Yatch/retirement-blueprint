@@ -3622,9 +3622,10 @@ function consolidateByDomain(hdr, rowArr, type) {
   // Get all headers that end with _actual or _ideal
   const suffix = `_${type}`;
   
-  Object.entries(HEADERS).forEach(([key, headerName]) => {
+  Object.entries(hdr).forEach(([headerName, colIndex]) => {
     if (headerName.endsWith(suffix)) {
-      const value = Number(getValue(hdr, rowArr, headerName)) || 0;
+      // Use direct array access since we have the column index
+      const value = Number(rowArr[colIndex - 1]) || 0;
       
       // Determine domain from header name
       if (headerName.startsWith('retirement_')) {
@@ -3705,7 +3706,20 @@ function testPhase3() {
     const { sheet: ws, hdr } = initWS();
     
     // Find a row with Phase 2 data (has ideal values)
-    const testRow = 3; // Start with row 3
+    let testRow = 3; // Start with row 3
+    
+    // Try to find a row with Phase 2 data
+    for (let row = 3; row <= 30; row++) {
+      const testArr = ws.getRange(row, 1, 1, ws.getLastColumn()).getValues()[0];
+      const hasData = getValue(hdr, testArr, 'family_bank_ideal') || 
+                     getValue(hdr, testArr, 'health_hsa_ideal');
+      if (hasData) {
+        testRow = row;
+        Logger.log(`Found test data in row ${row}`);
+        break;
+      }
+    }
+    
     const rowArr = ws.getRange(testRow, 1, 1, ws.getLastColumn()).getValues()[0];
     
     // Check if row has Phase 2 data by looking for any ideal column
@@ -3743,6 +3757,73 @@ function testPhase3() {
 }
 
 /**
+ * Comprehensive test for Phase 3 edge cases
+ */
+function testPhase3EdgeCases() {
+  Logger.log('\n=== Testing Phase 3 Edge Cases ===');
+  
+  const { sheet: ws, hdr } = initWS();
+  
+  // Test 1: Zero contributions
+  Logger.log('\n1️⃣ Test: Zero contributions');
+  const zeroFV = futureValue(0, 0.12, 20);
+  Logger.log(`Zero contribution FV: $${zeroFV} (should be $0)`);
+  
+  // Test 2: High investment score (7,7,7)
+  Logger.log('\n2️⃣ Test: Maximum investment score');
+  const maxRate = FV_CONFIG.BASE_RATE + FV_CONFIG.MAX_ADDITIONAL_RATE;
+  Logger.log(`Max rate: ${(maxRate * 100).toFixed(2)}% (should be 20%)`);
+  
+  // Test 3: 99 year timeline (no children)
+  Logger.log('\n3️⃣ Test: 99 year timeline');
+  const noChildrenFV = futureValue(500, 0.12, 99);
+  Logger.log(`99 year FV: $${noChildrenFV} (should be $0)`);
+  
+  // Test 4: Negative values
+  Logger.log('\n4️⃣ Test: Negative contribution');
+  const negativeFV = futureValue(-500, 0.12, 20);
+  Logger.log(`Negative contribution FV: $${negativeFV} (should be $0)`);
+  
+  // Test 5: Very high contribution
+  Logger.log('\n5️⃣ Test: High contribution ($10,000/month for 30 years at 15%)');
+  const highFV = futureValue(10000, 0.15, 30);
+  Logger.log(`High contribution FV: $${highFV.toLocaleString()}`);
+  
+  // Test 6: Domain consolidation with missing headers
+  Logger.log('\n6️⃣ Test: Domain consolidation');
+  const testRow = 3;
+  const rowArr = ws.getRange(testRow, 1, 1, ws.getLastColumn()).getValues()[0];
+  const actualTotals = consolidateByDomain(hdr, rowArr, 'actual');
+  Logger.log(`Consolidation totals: Retirement=$${actualTotals.retirement}, Education=$${actualTotals.education}, Health=$${actualTotals.health}`);
+  
+  Logger.log('\n✅ Edge case testing complete');
+}
+
+/**
+ * Test Phase 3 with specific scenarios
+ */
+function testPhase3Scenarios() {
+  Logger.log('\n=== Testing Phase 3 Scenarios ===');
+  
+  // Scenario 1: Young professional (25 years to retirement)
+  Logger.log('\n📊 Scenario 1: Young Professional');
+  const youngFV = futureValue(1000, 0.12, 25);
+  Logger.log(`$1,000/month for 25 years at 12%: $${youngFV.toLocaleString()}`);
+  
+  // Scenario 2: Late starter (10 years to retirement)
+  Logger.log('\n📊 Scenario 2: Late Starter');
+  const lateFV = futureValue(3000, 0.10, 10);
+  Logger.log(`$3,000/month for 10 years at 10%: $${lateFV.toLocaleString()}`);
+  
+  // Scenario 3: Education planning (15 years)
+  Logger.log('\n📊 Scenario 3: Education Planning');
+  const eduFV = futureValue(500, 0.08, 15);
+  Logger.log(`$500/month for 15 years at 8%: $${eduFV.toLocaleString()}`);
+  
+  Logger.log('\n✅ Scenario testing complete');
+}
+
+/**
  * Run Phase 3: Future Value Calculations
  * Can be called automatically from Phase 2 or manually for specific rows
  * @param {number} rowNum - Row number in the Working Sheet
@@ -3758,6 +3839,17 @@ function runPhase3(rowNum) {
     
     // Run future value calculations
     calculateAndWriteFutureValues(hdr, rowArr, rowNum, profileId);
+    
+    // Generate retirement blueprint document
+    try {
+      if (typeof generateRetirementBlueprint === 'function') {
+        generateRetirementBlueprint(rowNum);
+        Logger.log(`📄 Generated retirement blueprint document for row ${rowNum}`);
+      }
+    } catch (docError) {
+      Logger.log(`⚠️ Document generation error for row ${rowNum}: ${docError.message}`);
+      // Don't throw - document generation failure shouldn't stop Phase 3
+    }
     
     Logger.log(`✅ Phase 3 complete for row ${rowNum}`);
   } catch (error) {

@@ -81,6 +81,11 @@ The system now implements a two-output system showing **actual** (current) vs **
     - File structure reference
     - Function locations
 
+14. **[Document_Generation_Setup_Guide.md](./Document_Generation_Setup_Guide.md)** 🆕
+    - Automatic document generation system
+    - Template configuration
+    - Email integration
+
 ## 🚀 Where to Start
 
 **New to the project?**
@@ -113,6 +118,10 @@ The system now implements a two-output system showing **actual** (current) vs **
 - Added domain-based consolidation for future projections
 - Integrated automatic Phase 3 execution after Phase 2
 - Created comprehensive test suite for future value calculations
+- **NEW: Document Generation System** - Automatic narrative reports with email delivery
+  - Generates personalized PDF reports after Phase 3
+  - Includes actual vs ideal analysis and future projections
+  - See [Document Generation Setup Guide](./Document_Generation_Setup_Guide.md)
 
 ## 📁 Archive
 

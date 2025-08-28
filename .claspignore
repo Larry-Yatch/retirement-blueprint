@@ -10,6 +10,7 @@
 !Current_Forms_Full.js
 !Fix_Missing_Headers.js
 !Test_Actual_Ideal_Outputs.js
+!Document_Generation.js
 
 # Make sure to exclude node_modules
 node_modules/**

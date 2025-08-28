@@ -126,35 +126,37 @@ The profile now reads all ROBS-specific information:
 ### Retirement Domain
 
 #### Base Order
-1. **ROBS Solo 401(k) – Profit Distribution** - UNLIMITED
-   - Why: C-corp profit distributions have no statutory limit
-   - Conditions: Primary retirement vehicle
-   - Note: Highest priority for maximizing retirement savings
-
-2. **ROBS Solo 401(k) – Roth** - $1,958/mo
+1. **ROBS Solo 401(k) – Roth** - $1,958/mo
    - Why: Tax-free growth option
    - Conditions: If tax preference includes Roth
    - Catch-up (50+): $2,583/mo
    - Catch-up (60+): $2,896/mo
 
-3. **HSA** - (retirement portion)
+2. **HSA** - (retirement portion)
    - Why: Triple tax advantage - deduction, growth, and withdrawal
    - Conditions: If HSA eligible
    - Note: Moved up due to superior tax treatment
 
-4. **ROBS Solo 401(k) – Traditional** - $1,958/mo
+3. **ROBS Solo 401(k) – Traditional** - $1,958/mo
    - Why: Current tax deduction
    - Conditions: If tax preference includes Traditional
    - Catch-up (50+): $2,583/mo
    - Catch-up (60+): $2,896/mo
 
-5. **Roth IRA** - $583/mo ($667/mo if 50+)
+4. **Roth IRA** - $583/mo ($667/mo if 50+)
    - Why: Additional tax-free growth outside ROBS
    - Conditions: Subject to income phase-out
 
-6. **Family Bank** - Unlimited
+5. **Family Bank** - Unlimited
    - Why: Final overflow
    - Conditions: Always included
+
+#### Non-Discretionary Contributions
+**ROBS Solo 401(k) – Profit Distribution** - UNLIMITED
+- **Not in cascade**: This is a non-discretionary contribution from C-corp profits
+- **Equal in actual/ideal**: Since it's funded by business profits, not personal savings
+- **Seeded amount**: Based on annual profit distribution (ex_q6) divided by 12
+- **Note**: Does not participate in the waterfall allocation; amount is fixed
 
 ### Dynamic Modifications
 
@@ -178,13 +180,15 @@ The profile now reads all ROBS-specific information:
 1. HSA - $713/mo (family)
 2. Health Bank - Unlimited
 
-**Retirement Domain:**
-1. ROBS Solo 401(k) Profit - UNLIMITED
-2. ROBS Solo 401(k) Roth - $1,958/mo
-3. HSA - $713/mo (retirement portion)
-4. ROBS Solo 401(k) Traditional - $1,958/mo
-5. Roth IRA - $583/mo
-6. Family Bank - Unlimited
+**Retirement Domain (Cascade Order):**
+1. ROBS Solo 401(k) Roth - $1,958/mo
+2. HSA - $713/mo (retirement portion)
+3. ROBS Solo 401(k) Traditional - $1,958/mo
+4. Roth IRA - $583/mo
+5. Family Bank - Unlimited
+
+**Non-Discretionary (Fixed Amount):**
+- ROBS Solo 401(k) Profit - Seeded from business profits (not in cascade)
 
 ## 🧪 Test Scenarios & Results
 
@@ -200,15 +204,15 @@ The profile now reads all ROBS-specific information:
 - Tax Preference: Both
 
 **Expected Results**:
-- ROBS Solo 401(k) Profit as primary vehicle
-- Both Roth and Traditional 401(k) options
+- ROBS Solo 401(k) Profit seeded but not in cascade
+- Both Roth and Traditional 401(k) options in cascade
 - Roth IRA included
 
 **Actual Results**: ✅ PASSED
-- ROBS Solo 401(k) Profit correctly shows unlimited capacity
-- Both Roth and Traditional 401(k) vehicles included
+- ROBS Solo 401(k) Profit correctly seeded as non-discretionary
+- Both Roth and Traditional 401(k) vehicles included in cascade
 - Roth IRA properly included and phased out at high incomes
-- Profit distribution correctly seeded from ex_q6
+- Profit distribution shows same value in actual and ideal
 
 ### Test Scenario 2: High Profit with Catch-up
 **Purpose**: Test unlimited contribution with age 50+ catch-up
@@ -274,7 +278,16 @@ testProfile1All()          // ✅ PASSED
 - [ ] Verify catch-up calculations
 - [ ] Document C-corp requirements
 
-## 🔧 December 2024 Implementation Updates
+## 🔧 Implementation Updates
+
+### January 2025 Updates
+1. **ROBS Profit Distribution Handling**:
+   - Removed from cascade vehicle order in retirement domain
+   - Now treated as a non-discretionary contribution
+   - Actual and ideal allocations always equal the seeded amount
+   - Prevents discretionary savings from being allocated to profit distribution
+
+### December 2024 Implementation Updates
 
 ### Key Changes Made
 1. **Profit Distribution Logic**: 
