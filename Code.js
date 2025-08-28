@@ -3901,8 +3901,8 @@ function runPhase3(rowNum) {
     
     // Generate retirement blueprint document
     try {
-      if (typeof generateRetirementBlueprint === 'function') {
-        generateRetirementBlueprint(rowNum);
+      if (typeof generateRetirementBlueprintSafe === 'function') {
+        generateRetirementBlueprintSafe(rowNum);
         Logger.log(`📄 Generated retirement blueprint document for row ${rowNum}`);
       }
     } catch (docError) {

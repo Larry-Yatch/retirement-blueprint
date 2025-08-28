@@ -192,7 +192,13 @@ function generateRetirementBlueprintSafe(rowNum) {
     
     // Generate PDF and email if requested
     if (email) {
-      sendRetirementBlueprintEmail(doc.getId(), email, fullName, headers, rowData, hdr, profileId);
+      try {
+        sendRetirementBlueprintEmailWithAddendums(doc.getId(), email, fullName, headers, rowData, hdr, profileId);
+      } catch (emailError) {
+        Logger.log(`Failed to send email with addendums: ${emailError}`);
+        // Fallback to simple email
+        sendSimpleEmail(doc.getId(), email, fullName);
+      }
     }
     
     return docUrl;
@@ -207,7 +213,7 @@ function generateRetirementBlueprintSafe(rowNum) {
  * Send retirement blueprint email with PDF attachments
  * Includes: main blueprint PDF, universal addendum, and profile-specific addendum
  */
-function sendRetirementBlueprintEmail(docId, email, fullName, headers, rowData, hdr, profileId) {
+function sendRetirementBlueprintEmailWithAddendums(docId, email, fullName, headers, rowData, hdr, profileId) {
   try {
     Logger.log(`Preparing email for ${email}`);
     
@@ -306,6 +312,35 @@ P.S. This analysis was generated on ${replacements.report_date || new Date().toL
   } catch (error) {
     Logger.log(`Error sending email: ${error}`);
     throw error;
+  }
+}
+
+/**
+ * Simple email function (fallback)
+ */
+function sendSimpleEmail(docId, email, fullName) {
+  try {
+    const doc = DriveApp.getFileById(docId);
+    const pdfBlob = doc.getBlob().getAs('application/pdf')
+      .setName(doc.getName() + '.pdf');
+    
+    const subject = 'Your Retirement Blueprint Report';
+    const body = `Dear ${fullName.split(' ')[0]},\n\n` +
+      `Thank you for completing your Retirement Blueprint assessment. ` +
+      `Attached you'll find your personalized retirement savings strategy report.\n\n` +
+      `Please review the report carefully and don't hesitate to reach out if you have any questions.\n\n` +
+      `Best regards,\nThe Retirement Blueprint Team`;
+    
+    MailApp.sendEmail({
+      to: email,
+      subject: subject,
+      body: body,
+      attachments: [pdfBlob]
+    });
+    
+    Logger.log(`Email sent to ${email}`);
+  } catch (error) {
+    Logger.log(`Error sending email: ${error}`);
   }
 }
 
