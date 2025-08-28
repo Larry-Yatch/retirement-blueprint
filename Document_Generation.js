@@ -848,6 +848,7 @@ function addDocumentGenerationMenu(ui) {
   ui.createMenu('📄 Document Generation')
     .addItem('Create Template Documents', 'createTemplateDocuments')
     .addItem('Generate Document for Current Row', 'generateDocumentForCurrentRow')
+    .addItem('Generate Document SAFE (Current Row)', 'generateDocumentSafe')
     .addItem('Generate All Pending Documents', 'generateAllPendingDocuments')
     .addItem('Test Email (Current Row)', 'testEmailCurrentRow')
     .addSeparator()
