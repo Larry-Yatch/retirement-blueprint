@@ -48,11 +48,11 @@ function onOpen() {
     
     // Document Generation menu
     ui.createMenu('📄 Document Generation')
-      .addItem('Generate Safe Document (Current Row)', 'generateDocumentSafe')
-      .addItem('Generate Complete Document (Current Row)', 'generateDocumentComplete')
+      .addItem('Generate Retirement Blueprint', 'generateDocumentEnhanced')
       .addSeparator()
       .addItem('Test Document Generation', 'runDocumentGenerationTest')
-      .addItem('Create Bulletproof Template', 'createBulletproofTemplate')
+      .addItem('Legacy: Safe Version', 'generateDocumentSafe')
+      .addItem('Legacy: Complete Version', 'generateDocumentComplete')
       .addToUi();
     
     // Testing menu
