@@ -20,7 +20,7 @@ const BRANDING_CONFIG = {
   logo: {
     // Replace with your logo's Google Drive file ID
     // To get the ID: Upload logo to Drive, right-click > Get link > extract ID from URL
-    driveFileId: 'YOUR_LOGO_FILE_ID_HERE',
+    driveFileId: '1brLIwiMr7wvlYLHTOKLUCZWMLHLRdvlx',
     width: 150,  // Width in pixels
     height: 50,  // Height in pixels
     alignment: DocumentApp.HorizontalAlignment.LEFT
