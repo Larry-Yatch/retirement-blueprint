@@ -12,7 +12,8 @@ const BRANDING_CONFIG = {
     name: 'Retirement Blueprint',
     tagline: 'Your Path to Financial Freedom',
     website: 'www.TrupathMastery.com',
-    email: 'Sarah@TrupathMastery.com'
+    email: 'Sarah@TrupathMastery.com',
+    phone: '(555) 123-4567'  // Update with actual phone number
   },
   
   // Logo configuration

@@ -181,3 +181,163 @@ function generateProfileNarrative(profileId, rowData, hdr) {
   
   return narrative;
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HELPER FUNCTIONS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Calculate total monthly contributions across all vehicles
+ */
+function calculateTotalMonthly(rowData, hdr, type) {
+  let total = 0;
+  
+  // Find all columns ending with _actual or _ideal
+  Object.entries(hdr).forEach(([header, idx]) => {
+    if (header.endsWith(`_${type}`) && !header.includes('_fv_')) {
+      const value = parseFloat(rowData[idx]) || 0;
+      total += value;
+    }
+  });
+  
+  return total;
+}
+
+/**
+ * Format currency values
+ */
+function formatCurrency(value) {
+  const num = parseFloat(value) || 0;
+  return '$' + num.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+/**
+ * Format percentage values
+ */
+function formatPercentage(value) {
+  const num = parseFloat(value) || 0;
+  // If value is already in percentage form (e.g., 0.15 for 15%)
+  if (num < 1) {
+    return (num * 100).toFixed(1) + '%';
+  }
+  // If value is already in whole number form (e.g., 15 for 15%)
+  return num.toFixed(1) + '%';
+}
+
+/**
+ * Format values based on field type
+ */
+function formatValue(header, value) {
+  if (value === null || value === undefined || value === '') return 'N/A';
+  
+  // Currency fields
+  if (header.includes('income') || header.includes('balance') || 
+      header.includes('actual') || header.includes('ideal') || 
+      header.includes('fv_') || header.includes('contribution')) {
+    return formatCurrency(value);
+  }
+  
+  // Percentage fields
+  if (header.includes('percentage') || header.includes('rate')) {
+    return formatPercentage(value);
+  }
+  
+  // Age fields
+  if (header.includes('age')) {
+    return `${value} years`;
+  }
+  
+  return String(value);
+}
+
+/**
+ * Format vehicle recommendations into a structured array
+ */
+function formatVehicleRecommendations(rowData, hdr) {
+  const recommendations = [];
+  
+  // Define all vehicle types to check
+  const vehicleTypes = [
+    // Retirement vehicles
+    { name: 'ROBS Solo 401(k) - Profit Distribution', actual: 'retirement_robs_solo_401k_profit_distribution_actual', ideal: 'retirement_robs_solo_401k_profit_distribution_ideal' },
+    { name: 'ROBS Solo 401(k) - Roth', actual: 'retirement_robs_solo_401k_roth_actual', ideal: 'retirement_robs_solo_401k_roth_ideal' },
+    { name: 'ROBS Solo 401(k) - Traditional', actual: 'retirement_robs_solo_401k_traditional_actual', ideal: 'retirement_robs_solo_401k_traditional_ideal' },
+    { name: 'Solo 401(k) - Employee', actual: 'retirement_solo_401k_employee_actual', ideal: 'retirement_solo_401k_employee_ideal' },
+    { name: 'Solo 401(k) - Employer', actual: 'retirement_solo_401k_employer_actual', ideal: 'retirement_solo_401k_employer_ideal' },
+    { name: 'Traditional 401(k)', actual: 'retirement_traditional_401k_actual', ideal: 'retirement_traditional_401k_ideal' },
+    { name: '401(k) Catch-Up', actual: 'retirement_401k_catch_up_actual', ideal: 'retirement_401k_catch_up_ideal' },
+    { name: 'Traditional IRA', actual: 'retirement_traditional_ira_actual', ideal: 'retirement_traditional_ira_ideal' },
+    { name: 'Roth IRA', actual: 'retirement_roth_ira_actual', ideal: 'retirement_roth_ira_ideal' },
+    { name: 'Backdoor Roth IRA', actual: 'retirement_backdoor_roth_ira_actual', ideal: 'retirement_backdoor_roth_ira_ideal' },
+    { name: 'IRA Catch-Up', actual: 'retirement_ira_catch_up_actual', ideal: 'retirement_ira_catch_up_ideal' },
+    { name: 'Cash Balance Plan', actual: 'retirement_cash_balance_plan_actual', ideal: 'retirement_cash_balance_plan_ideal' },
+    { name: 'Defined Benefit Plan', actual: 'retirement_defined_benefit_plan_actual', ideal: 'retirement_defined_benefit_plan_ideal' },
+    { name: 'Group 401(k) - Employee', actual: 'retirement_group_401k_employee_actual', ideal: 'retirement_group_401k_employee_ideal' },
+    { name: 'Group 401(k) - Employer', actual: 'retirement_group_401k_employer_actual', ideal: 'retirement_group_401k_employer_ideal' },
+    { name: 'HSA (Retirement)', actual: 'retirement_hsa_actual', ideal: 'retirement_hsa_ideal' },
+    // Education vehicles
+    { name: 'Combined CESA', actual: 'education_combined_cesa_actual', ideal: 'education_combined_cesa_ideal' },
+    // Health vehicles
+    { name: 'HSA (Health)', actual: 'health_hsa_actual', ideal: 'health_hsa_ideal' },
+    // Other
+    { name: 'Family Bank', actual: '', ideal: 'family_bank_ideal' }
+  ];
+  
+  // Collect vehicles with non-zero recommendations
+  vehicleTypes.forEach(vehicle => {
+    const actualValue = vehicle.actual && hdr[vehicle.actual] !== undefined ? 
+      parseFloat(rowData[hdr[vehicle.actual]]) || 0 : 0;
+    const idealValue = vehicle.ideal && hdr[vehicle.ideal] !== undefined ? 
+      parseFloat(rowData[hdr[vehicle.ideal]]) || 0 : 0;
+    
+    if (actualValue > 0 || idealValue > 0) {
+      recommendations.push({
+        name: vehicle.name,
+        actual: actualValue,
+        ideal: idealValue,
+        difference: idealValue - actualValue
+      });
+    }
+  });
+  
+  // Sort by ideal value descending
+  recommendations.sort((a, b) => b.ideal - a.ideal);
+  
+  return recommendations;
+}
+
+/**
+ * Populate vehicle recommendations table
+ */
+function populateVehicleRecommendationsTable(table, recommendations) {
+  if (!recommendations || recommendations.length === 0) {
+    const row = table.appendTableRow();
+    row.appendTableCell('No vehicle recommendations available.');
+    return;
+  }
+  
+  // Header row
+  const headerRow = table.appendTableRow();
+  headerRow.appendTableCell('Investment Vehicle').getChild(0).asParagraph().setBold(true);
+  headerRow.appendTableCell('Current Monthly').getChild(0).asParagraph().setBold(true);
+  headerRow.appendTableCell('Recommended Monthly').getChild(0).asParagraph().setBold(true);
+  headerRow.appendTableCell('Action Needed').getChild(0).asParagraph().setBold(true);
+  
+  // Data rows
+  recommendations.forEach(rec => {
+    const row = table.appendTableRow();
+    row.appendTableCell(rec.name);
+    row.appendTableCell(formatCurrency(rec.actual));
+    row.appendTableCell(formatCurrency(rec.ideal));
+    
+    let action = '';
+    if (rec.difference > 0) {
+      action = `Increase by ${formatCurrency(rec.difference)}`;
+    } else if (rec.difference < 0) {
+      action = `Decrease by ${formatCurrency(Math.abs(rec.difference))}`;
+    } else {
+      action = 'On track!';
+    }
+    row.appendTableCell(action);
+  });
+}
