@@ -53,6 +53,12 @@ function onOpen() {
       .addSeparator()
       .addItem('Test Document Generation', 'runDocumentGenerationTest')
       .addItem('Test Branding', 'testBranding')
+      .addSeparator()
+      .addSubMenu(ui.createMenu('🖼️ Logo Setup')
+        .addItem('Test Logo Setup', 'testLogoSetup')
+        .addItem('Create Sample Logo', 'setupSampleLogo')
+        .addItem('Get Logo URL', 'getLogoSharingUrl'))
+      .addSeparator()
       .addItem('Legacy: Complete Version', 'generateDocumentComplete')
       .addToUi();
     
