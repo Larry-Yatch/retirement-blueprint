@@ -7,7 +7,7 @@
  */
 const DOC_CONFIG = {
   // Template document IDs (to be set after creating templates)
-  UNIVERSAL_TEMPLATE_ID: '1oQsN-ZuRNQQ3Tm6VAjzWkDDbCD_LkIehM5t-KnhXb-8',
+  UNIVERSAL_TEMPLATE_ID: '1MdogVOYTrkdcQhPf2KarWrMgF4pQQQAluuciDjGHSrQ',
   PROFILE_TEMPLATES: {
     '1_ROBS_In_Use': '',
     '2_ROBS_Curious': '',
@@ -189,7 +189,8 @@ function createMergedDocument(docName, profileId, headers, rowData, hdr) {
   
   // Add profile-specific content if template exists
   const profileTemplateId = DOC_CONFIG.PROFILE_TEMPLATES[profileId];
-  if (profileTemplateId) {
+  if (profileTemplateId && profileTemplateId !== '') {
+    // Only append if we have a valid template ID
     appendProfileContent(doc, profileTemplateId);
   }
   
@@ -321,16 +322,25 @@ function formatPercentage(value) {
  */
 function appendProfileContent(doc, profileTemplateId) {
   try {
+    // Safety check - don't append if it's the same document
+    if (doc.getId() === profileTemplateId) {
+      Logger.log('Warning: Attempted to append document to itself');
+      return;
+    }
+    
     const profileDoc = DocumentApp.openById(profileTemplateId);
     const profileBody = profileDoc.getBody();
     const targetBody = doc.getBody();
     
     // Add section break
     targetBody.appendPageBreak();
+    targetBody.appendParagraph('PROFILE-SPECIFIC GUIDANCE').setHeading(DocumentApp.ParagraphHeading.HEADING1);
     
     // Copy all elements from profile template (with safety limit)
     const totalElements = profileBody.getNumChildren();
-    const maxElements = Math.min(totalElements, 100); // Safety limit
+    const maxElements = Math.min(totalElements, 50); // Reduced safety limit
+    
+    Logger.log(`Appending ${maxElements} elements from profile template`);
     
     for (let i = 0; i < maxElements; i++) {
       const element = profileBody.getChild(i);
