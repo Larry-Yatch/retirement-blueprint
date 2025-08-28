@@ -10,44 +10,8 @@ const DOC_CONFIG = {
   OUTPUT_FOLDER_ID: '16KZLGRzLxa-e-jxnkDVb-sZcbosgPvGM'
 };
 
-const PROFILE_CONFIG = {
-  '1_ROBS_In_Use': {
-    title: 'ROBS Business Owner',
-    description: 'Using retirement funds to build your business'
-  },
-  '2_ROBS_Curious': {
-    title: 'ROBS Explorer',
-    description: 'Considering business ownership through retirement funds'
-  },
-  '3_Solo401k_Builder': {
-    title: 'Solo 401(k) Builder',
-    description: 'Self-employed retirement maximizer'
-  },
-  '4_Roth_Reclaimer': {
-    title: 'Roth Reclaimer',
-    description: 'High-income Roth strategist'
-  },
-  '5_Bracket_Strategist': {
-    title: 'Tax Bracket Strategist',
-    description: 'Optimizing across tax brackets'
-  },
-  '6_Catch_Up': {
-    title: 'Catch-Up Contributor',
-    description: 'Accelerating retirement savings at 50+'
-  },
-  '7_Foundation_Builder': {
-    title: 'Foundation Builder',
-    description: 'Building long-term wealth'
-  },
-  '8_Biz_Owner_Group': {
-    title: 'Business Owner with Employees',
-    description: 'Advanced strategies for business owners'
-  },
-  '9_Late_Stage_Growth': {
-    title: 'Late Stage Growth',
-    description: 'Final sprint to retirement'
-  }
-};
+// PROFILE_CONFIG is already defined in code.js
+// Using the existing global constant
 
 /**
  * Main function - generates complete retirement blueprint document
