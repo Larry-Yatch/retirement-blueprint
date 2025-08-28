@@ -1,3 +1,21 @@
+// Configuration for addendum documents
+const ADDENDUM_CONFIG = {
+  // Profile-specific addendum document IDs
+  PROFILE_ADDENDUMS: {
+    '1_ROBS_In_Use': '1i2Ghcm938x4tG-h0awrCDhDL5k8tGiplB36N1fQrwTA',
+    '2_ROBS_Curious': '16XfI39hU6AC5JtX389hxkY_Tu7uRHt4bw6vlslO4d0w',
+    '3_Solo401k_Builder': '1Ye_m2jE34E-fA8W0VJV7_cRnxXnjezcWCRzkVMakoZs',
+    '4_Roth_Reclaimer': '1yJBXpv12uN00_OboM96d1by5JXnj0JUlMdooH5XzUQ0',
+    '5_Bracket_Strategist': '14eWZWHT6mbs72du30QBzwoOaWOrhyoSXMWB5jLVzoTM',
+    '6_Catch_Up': '1_O_aldmpAzJf6W2vrpYTuynL54YBU8rASHv5TKCocPo',
+    '7_Foundation_Builder': '1407aq99LJWEILaqh8W0za-NVO_FKu7gsERY1IzdTHk4',
+    '8_Biz_Owner_Group': '1zpwqMQDQ6-5UA1FUDyLCZyei3jgzJwG23FPq1XPqjnc',
+    '9_Late_Stage_Growth': '13zE5KhZd_IVZlzZadtUf2v5jWQMoNQbZKYSUDOWj7xs'
+  },
+  // Universal addendum document ID
+  UNIVERSAL_ADDENDUM_ID: '1aYMYsskG_1BDkf-ySV_0z1JMLHVryEg5o3ceZkAZzQI'
+};
+
 /**
  * Safe document generation - prevents content repetition
  */
@@ -174,7 +192,7 @@ function generateRetirementBlueprintSafe(rowNum) {
     
     // Generate PDF and email if requested
     if (email) {
-      sendRetirementBlueprintEmail(doc.getId(), email, fullName, headers, rowData, hdr);
+      sendRetirementBlueprintEmail(doc.getId(), email, fullName, headers, rowData, hdr, profileId);
     }
     
     return docUrl;
@@ -186,12 +204,165 @@ function generateRetirementBlueprintSafe(rowNum) {
 }
 
 /**
+ * Send retirement blueprint email with PDF attachments
+ * Includes: main blueprint PDF, universal addendum, and profile-specific addendum
+ */
+function sendRetirementBlueprintEmail(docId, email, fullName, headers, rowData, hdr, profileId) {
+  try {
+    Logger.log(`Preparing email for ${email}`);
+    
+    // Get the main document as PDF
+    const doc = DriveApp.getFileById(docId);
+    const mainPdfBlob = doc.getBlob().getAs('application/pdf')
+      .setName(doc.getName() + '.pdf');
+    
+    // Prepare attachments array
+    const attachments = [mainPdfBlob];
+    
+    // Add universal addendum
+    if (ADDENDUM_CONFIG.UNIVERSAL_ADDENDUM_ID) {
+      try {
+        const universalFile = DriveApp.getFileById(ADDENDUM_CONFIG.UNIVERSAL_ADDENDUM_ID);
+        const universalPdf = universalFile.getBlob().getAs('application/pdf')
+          .setName('Retirement Blueprint - Universal Guide.pdf');
+        attachments.push(universalPdf);
+        Logger.log('Added universal addendum');
+      } catch (error) {
+        Logger.log(`Warning: Could not attach universal addendum: ${error}`);
+      }
+    }
+    
+    // Add profile-specific addendum
+    const profileAddendumId = ADDENDUM_CONFIG.PROFILE_ADDENDUMS[profileId];
+    if (profileAddendumId) {
+      try {
+        const profileFile = DriveApp.getFileById(profileAddendumId);
+        const profileName = PROFILE_CONFIG[profileId]?.title || profileId;
+        const profilePdf = profileFile.getBlob().getAs('application/pdf')
+          .setName(`Retirement Blueprint - ${profileName} Guide.pdf`);
+        attachments.push(profilePdf);
+        Logger.log(`Added profile addendum for ${profileId}`);
+      } catch (error) {
+        Logger.log(`Warning: Could not attach profile addendum: ${error}`);
+      }
+    }
+    
+    // Prepare email body with replacements
+    const replacements = prepareReplacements(headers, rowData, hdr);
+    const firstName = fullName.split(' ')[0] || fullName;
+    const profileTitle = PROFILE_CONFIG[profileId]?.title || 'Retirement Strategist';
+    
+    // Enhanced email template
+    const emailBody = `Dear ${firstName},
+
+Thank you for completing your Retirement Blueprint assessment. I'm pleased to deliver your personalized retirement strategy documents.
+
+**Your Documents Include:**
+
+1. **Retirement Blueprint Report** - Your personalized analysis showing:
+   • Current savings path vs. optimized strategy
+   • Projected future values at your ${replacements.personalized_annual_rate || 'personalized'} growth rate
+   • Specific vehicle recommendations ranked by priority
+   • Step-by-step action plan
+
+2. **Universal Planning Guide** - Essential strategies that apply to all retirement savers:
+   • Tax optimization techniques
+   • Contribution limit reference for ${new Date().getFullYear()}
+   • Common planning mistakes to avoid
+
+3. **${profileTitle} Specialized Guide** - Advanced strategies specific to your profile:
+   • Tailored recommendations for your situation
+   • Profile-specific optimization opportunities
+   • Case studies and examples
+
+**Key Highlights from Your Analysis:**
+• Current monthly contributions: ${replacements.total_actual_monthly || '$0'}
+• Optimized monthly strategy: ${replacements.total_ideal_monthly || '$0'}
+• Potential additional wealth at retirement: ${replacements.retirement_fv_gain || '$0'}
+
+**Next Steps:**
+1. Review your main Blueprint report first
+2. Implement the prioritized vehicle recommendations
+3. Reference the guides for deeper strategies
+4. Schedule a review in 6 months to track progress
+
+Remember: The best retirement plan is the one you actually implement. Start with your highest-priority recommendations and build from there.
+
+Best regards,
+The Retirement Blueprint Team
+
+P.S. This analysis was generated on ${replacements.report_date || new Date().toLocaleDateString()} based on your current situation. As your circumstances change, your optimal strategy may evolve as well.`;
+
+    // Send email
+    MailApp.sendEmail({
+      to: email,
+      subject: 'Your Retirement Blueprint Strategy Documents',
+      body: emailBody,
+      attachments: attachments
+    });
+    
+    Logger.log(`Email sent successfully to ${email} with ${attachments.length} attachments`);
+    
+  } catch (error) {
+    Logger.log(`Error sending email: ${error}`);
+    throw error;
+  }
+}
+
+/**
  * Helper function to prevent excessive narrative length
  */
 function truncateNarrative(text, maxLength) {
   if (!text) return '';
   if (text.length <= maxLength) return text;
   return text.substring(0, maxLength) + '...';
+}
+
+/**
+ * Prepare all replacements including calculated fields
+ */
+function prepareReplacements(headers, rowData, hdr) {
+  const replacements = {};
+  
+  // Add all raw data fields
+  headers.forEach((header, idx) => {
+    if (header) {
+      const value = rowData[idx];
+      replacements[header] = formatValue(header, value);
+    }
+  });
+  
+  // Add calculated fields
+  const firstName = (rowData[hdr['Full_Name']] || '').split(' ')[0];
+  replacements['FirstName'] = firstName;
+  replacements['report_date'] = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MMMM d, yyyy');
+  
+  // Calculate total actual vs ideal monthly contributions
+  const actualTotal = calculateTotalMonthly(rowData, hdr, 'actual');
+  const idealTotal = calculateTotalMonthly(rowData, hdr, 'ideal');
+  replacements['total_actual_monthly'] = formatCurrency(actualTotal);
+  replacements['total_ideal_monthly'] = formatCurrency(idealTotal);
+  replacements['monthly_difference'] = formatCurrency(idealTotal - actualTotal);
+  
+  // Format percentages
+  if (replacements['personalized_annual_rate']) {
+    replacements['personalized_annual_rate'] = formatPercentage(replacements['personalized_annual_rate']);
+  }
+  
+  // Calculate future value gains
+  const retirementFvActual = parseFloat(rowData[hdr['retirement_fv_actual']]) || 0;
+  const retirementFvIdeal = parseFloat(rowData[hdr['retirement_fv_ideal']]) || 0;
+  replacements['retirement_fv_gain'] = formatCurrency(retirementFvIdeal - retirementFvActual);
+  
+  // Profile information
+  const profileConfig = PROFILE_CONFIG[rowData[hdr['ProfileID']]] || {
+    title: 'Retirement Strategist',
+    description: ''
+  };
+  replacements['profile_title'] = profileConfig.title;
+  replacements['profile_description'] = profileConfig ? profileConfig.description : '';
+  
+  return replacements;
 }
 
 /**
