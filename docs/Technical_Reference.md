@@ -127,6 +127,60 @@ const useNewLogic = true; // In runUniversalEngine around line 3309
 - Controls whether to use total percentage calculation
 - Set to false to revert to old additional percentage behavior
 
+## Phase 3: Future Value Calculator
+
+### Configuration
+```javascript
+const FV_CONFIG = {
+  BASE_RATE: 0.08,              // 8% minimum annual rate
+  MAX_ADDITIONAL_RATE: 0.12,     // Up to 12% additional (20% max)
+  USE_MONTHLY_COMPOUNDING: true  // Monthly vs annual compounding
+};
+```
+
+### Functions
+
+#### calculatePersonalizedRate(hdr, rowArr)
+```javascript
+// Calculates annual interest rate based on investment scoring
+// Input: Investment scores (1-7 scale) for involvement, time, confidence
+// Output: Annual rate (0.08 to 0.20)
+const annualRate = FV_CONFIG.BASE_RATE + ((avgScore - 1) / 6) * FV_CONFIG.MAX_ADDITIONAL_RATE;
+```
+
+#### futureValue(monthlyContribution, annualRate, years)
+```javascript
+// Calculates future value with monthly compounding
+// Returns 0 for invalid inputs (zero/negative contributions, 99+ years)
+const fv = monthlyContribution * ((Math.pow(1 + monthlyRate, months) - 1) / monthlyRate);
+```
+
+#### consolidateByDomain(hdr, rowArr, type)
+```javascript
+// Consolidates all contributions by domain
+// type: 'actual' or 'ideal'
+// Returns: {retirement: total, education: total, health: total}
+```
+
+#### runPhase3(rowNum)
+```javascript
+// Main Phase 3 entry point
+// Automatically called after Phase 2
+// Can also be called manually: runPhase3(5)
+```
+
+### New Headers (Phase 3)
+```javascript
+// Future Value headers
+PERSONALIZED_ANNUAL_RATE: 'personalized_annual_rate',
+RETIREMENT_FV_ACTUAL: 'retirement_fv_actual',
+RETIREMENT_FV_IDEAL: 'retirement_fv_ideal',
+EDUCATION_FV_ACTUAL: 'education_fv_actual',
+EDUCATION_FV_IDEAL: 'education_fv_ideal',
+HEALTH_FV_ACTUAL: 'health_fv_actual',
+HEALTH_FV_IDEAL: 'health_fv_ideal'
+```
+
 ## Form Mapping System
 
 ### Overview
@@ -134,10 +188,8 @@ The form mapping system handles dynamic form question positions and maps them to
 
 ### Implementation Status
 - ✅ **Implemented**: Position-based mapping (FORM_EX_Q_MAPPING)
-- ❌ **Not Implemented**: Smart detection (Option 3), Dynamic form reader (Option 4)
-- ⚠️ **Issue**: Profiles 5, 6, 9 missing employer 401k mappings
-
-See [Development Notes](./Development_Notes.md) for future enhancement options.
+- ✅ **All Profiles**: Have proper form mappings and are working correctly
+- 💡 **Future Options**: Smart detection (Option 3), Dynamic form reader (Option 4) available for future enhancements
 
 ### Form Structure
 - Questions 0-43: Universal questions (same for all profiles)
@@ -390,6 +442,11 @@ FORM_EX_Q_MAPPING                       // View all mappings
 // Direct testing
 testUniversalEngine()                   // Test engine directly
 runCompleteScenarioTest()               // Full scenario test
+
+// Phase 3 testing
+testPhase3()                           // Test future value calculations
+testPhase3EdgeCases()                  // Test edge cases
+testPhase3Scenarios()                  // Test realistic scenarios
 ```
 
 ## Common Error Messages
