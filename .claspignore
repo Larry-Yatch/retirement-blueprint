@@ -11,6 +11,7 @@
 !Fix_Missing_Headers.js
 !Test_Actual_Ideal_Outputs.js
 !Document_Generation.js
+!Document_Generation_Narrative.js
 !Create_Enhanced_Template.js
 !Create_Template_Bulletproof.js
 !Document_Generation_Debug.js
