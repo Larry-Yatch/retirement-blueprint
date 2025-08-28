@@ -687,10 +687,14 @@ function assertAllocationAmount(result, vehicleName, expectedAmount, tolerance =
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
   
-  // Add Document Generation menu if function exists
-  if (typeof addDocumentGenerationMenu === 'function') {
-    addDocumentGenerationMenu(ui);
-  }
+  // Add Document Generation menu
+  ui.createMenu('📄 Document Generation')
+    .addItem('Generate Safe Document (Current Row)', 'generateDocumentSafe')
+    .addItem('Generate Complete Document (Current Row)', 'generateDocumentComplete')
+    .addSeparator()
+    .addItem('Test Document Generation', 'runDocumentGenerationTest')
+    .addItem('Create Bulletproof Template', 'createBulletproofTemplate')
+    .addToUi();
   
   ui.createMenu('🧪 Testing')
     .addItem('Test All Profiles', 'testAllProfiles')
