@@ -681,45 +681,7 @@ function assertAllocationAmount(result, vehicleName, expectedAmount, tolerance =
 // SECTION 7: TEST MENU AND RUNNERS
 // ============================================
 
-/**
- * Create a custom menu for easy test access
- */
-function onOpen() {
-  const ui = SpreadsheetApp.getUi();
-  
-  // Add Document Generation menu
-  ui.createMenu('📄 Document Generation')
-    .addItem('Generate Safe Document (Current Row)', 'generateDocumentSafe')
-    .addItem('Generate Complete Document (Current Row)', 'generateDocumentComplete')
-    .addSeparator()
-    .addItem('Test Document Generation', 'runDocumentGenerationTest')
-    .addItem('Create Bulletproof Template', 'createBulletproofTemplate')
-    .addToUi();
-  
-  ui.createMenu('🧪 Testing')
-    .addItem('Test All Profiles', 'testAllProfiles')
-    .addSeparator()
-    .addSubMenu(ui.createMenu('Profile 2 (ROBS Curious)')
-      .addItem('W-2 Employee', 'testProfile2W2')
-      .addItem('Self-Employed', 'testProfile2Self')
-      .addItem('All Scenarios', 'testProfile2All'))
-    .addSubMenu(ui.createMenu('Profile 4 (Roth Reclaimer)')
-      .addItem('High Income Backdoor', 'testProfile4HighIncome')
-      .addItem('Low Income Direct', 'testProfile4LowIncome')
-      .addItem('All Scenarios', 'testProfile4All'))
-    .addSubMenu(ui.createMenu('Profile 7 (Foundation Builder)')
-      .addItem('Young Professional', 'testProfile7YoungPro')
-      .addItem('Family Starter', 'testProfile7Family')
-      .addItem('All Scenarios', 'testProfile7All'))
-    .addSeparator()
-    .addItem('Test Universal Engine', 'testUniversalEngine')
-    .addItem('Verify Column Structure', 'verifyWorkingSheetColumns')
-    .addItem('Validate Headers', 'validateHeaders')
-    .addSeparator()
-    .addItem('Generate Profile 4 Validation Report', 'generateProfile4Report')
-    .addItem('Generate Profile 7 Validation Report', 'generateProfile7Report')
-    .addToUi();
-}
+// onOpen function moved to code.js to ensure it runs properly
 
 // Quick test runners
 function testProfile2W2() {

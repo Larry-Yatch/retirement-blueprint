@@ -3,7 +3,7 @@
 
 # But include these specific files
 !appsscript.json
-!Code.js
+!code.js
 !Testing.js
 !Testing_Scenarios.js
 !Form_Management.js
