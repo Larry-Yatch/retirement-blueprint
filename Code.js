@@ -48,10 +48,9 @@ function onOpen() {
     
     // Document Generation menu
     ui.createMenu('📄 Document Generation')
-      .addItem('Generate Retirement Blueprint', 'generateDocumentEnhanced')
+      .addItem('Generate Retirement Blueprint', 'generateDocumentSafe')
       .addSeparator()
       .addItem('Test Document Generation', 'runDocumentGenerationTest')
-      .addItem('Legacy: Safe Version', 'generateDocumentSafe')
       .addItem('Legacy: Complete Version', 'generateDocumentComplete')
       .addToUi();
     

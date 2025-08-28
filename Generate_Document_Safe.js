@@ -50,14 +50,14 @@ function generateRetirementBlueprintSafe(rowNum) {
     
     body.appendPageBreak();
     
-    // Generate narratives safely
-    const opening = truncateNarrative(generateOpeningNarrative(rowData, hdr), 500);
+    // Generate narratives safely - with increased character limits
+    const opening = truncateNarrative(generateOpeningNarrative(rowData, hdr), 1500);
     body.appendParagraph(opening);
     body.appendParagraph('');
     
     // Chapter 1
     body.appendParagraph('CHAPTER 1: YOUR CURRENT PATH').setHeading(DocumentApp.ParagraphHeading.HEADING1);
-    const phase1 = truncateNarrative(generatePhase1Narrative(rowData, hdr), 500);
+    const phase1 = truncateNarrative(generatePhase1Narrative(rowData, hdr), 1200);
     body.appendParagraph(phase1);
     body.appendParagraph('');
     
@@ -69,11 +69,11 @@ function generateRetirementBlueprintSafe(rowNum) {
     
     // Chapter 2
     body.appendParagraph('CHAPTER 2: YOUR PRIORITIES').setHeading(DocumentApp.ParagraphHeading.HEADING1);
-    const phase2 = truncateNarrative(generatePhase2Narrative(rowData, hdr), 500);
+    const phase2 = truncateNarrative(generatePhase2Narrative(rowData, hdr), 1200);
     body.appendParagraph(phase2);
     body.appendParagraph('');
     
-    const profileNarrative = truncateNarrative(generateProfileNarrative(profileId, rowData, hdr), 500);
+    const profileNarrative = truncateNarrative(generateProfileNarrative(profileId, rowData, hdr), 1500);
     if (profileNarrative) {
       body.appendParagraph(profileNarrative);
       body.appendParagraph('');
@@ -81,7 +81,7 @@ function generateRetirementBlueprintSafe(rowNum) {
     
     // Chapter 3
     body.appendParagraph('CHAPTER 3: YOUR OPPORTUNITY').setHeading(DocumentApp.ParagraphHeading.HEADING1);
-    const results = truncateNarrative(generateResultsNarrative(rowData, hdr), 500);
+    const results = truncateNarrative(generateResultsNarrative(rowData, hdr), 1200);
     body.appendParagraph(results);
     body.appendParagraph('');
     
@@ -125,7 +125,7 @@ function generateRetirementBlueprintSafe(rowNum) {
     body.appendParagraph('CHAPTER 6: YOUR ACTION PLAN').setHeading(DocumentApp.ParagraphHeading.HEADING1);
     const actionSteps = truncateNarrative(
       generateActionStepsNarrative(rowData, hdr, recommendations), 
-      800
+      2000
     );
     body.appendParagraph(actionSteps);
     body.appendParagraph('');
