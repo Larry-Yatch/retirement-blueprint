@@ -52,30 +52,31 @@ function calculateTotalMonthly(rowData, hdr, type) {
   let total = 0;
   
   // Define the columns to sum based on type
+  // Note: Using actual column names from the spreadsheet
   const columns = type === 'actual' ? [
     'retirement_traditional_401k_actual',
-    'retirement_roth_401k_actual',
-    'retirement_traditional_ira_actual',
     'retirement_roth_ira_actual',
-    'retirement_solo_401k_actual',
-    'retirement_other_actual',
-    'education_cesa_actual',
-    'education_529_actual',
-    'education_other_actual',
-    'health_hsa_actual',
-    'health_other_actual'
+    'retirement_traditional_ira_actual',
+    'retirement_backdoor_roth_ira_actual',
+    'retirement_solo_401k_employee_actual',
+    'retirement_solo_401k_employer_actual',
+    'retirement_401k_catch_up_actual',
+    'retirement_ira_catch_up_actual',
+    'retirement_hsa_actual',
+    'education_combined_cesa_actual',
+    'health_hsa_actual'
   ] : [
     'retirement_traditional_401k_ideal',
-    'retirement_roth_401k_ideal',
-    'retirement_traditional_ira_ideal',
     'retirement_roth_ira_ideal',
-    'retirement_solo_401k_ideal',
-    'retirement_other_ideal',
-    'education_cesa_ideal',
-    'education_529_ideal',
-    'education_other_ideal',
-    'health_hsa_ideal',
-    'health_other_ideal'
+    'retirement_traditional_ira_ideal',
+    'retirement_backdoor_roth_ira_ideal',
+    'retirement_solo_401k_employee_ideal',
+    'retirement_solo_401k_employer_ideal',
+    'retirement_401k_catch_up_ideal',
+    'retirement_ira_catch_up_ideal',
+    'retirement_hsa_ideal',
+    'education_combined_cesa_ideal',
+    'health_hsa_ideal'
   ];
   
   // Sum up all the columns safely
@@ -95,12 +96,13 @@ function getVehicleRecommendations(rowData, hdr) {
   
   const vehicles = [
     { name: 'Traditional 401(k)', actual: 'retirement_traditional_401k_actual', ideal: 'retirement_traditional_401k_ideal' },
-    { name: 'Roth 401(k)', actual: 'retirement_roth_401k_actual', ideal: 'retirement_roth_401k_ideal' },
     { name: 'Traditional IRA', actual: 'retirement_traditional_ira_actual', ideal: 'retirement_traditional_ira_ideal' },
     { name: 'Roth IRA', actual: 'retirement_roth_ira_actual', ideal: 'retirement_roth_ira_ideal' },
-    { name: 'Solo 401(k)', actual: 'retirement_solo_401k_actual', ideal: 'retirement_solo_401k_ideal' },
+    { name: 'Backdoor Roth IRA', actual: 'retirement_backdoor_roth_ira_actual', ideal: 'retirement_backdoor_roth_ira_ideal' },
+    { name: 'Solo 401(k) Employee', actual: 'retirement_solo_401k_employee_actual', ideal: 'retirement_solo_401k_employee_ideal' },
+    { name: 'Solo 401(k) Employer', actual: 'retirement_solo_401k_employer_actual', ideal: 'retirement_solo_401k_employer_ideal' },
     { name: 'HSA', actual: 'health_hsa_actual', ideal: 'health_hsa_ideal' },
-    { name: 'CESA', actual: 'education_cesa_actual', ideal: 'education_cesa_ideal' }
+    { name: 'CESA', actual: 'education_combined_cesa_actual', ideal: 'education_combined_cesa_ideal' }
   ];
   
   return vehicles.map(v => ({
@@ -155,8 +157,8 @@ function generateDocumentBranded() {
     const sheet = SpreadsheetApp.getActiveSheet();
     const row = sheet.getActiveRange().getRow();
     
-    if (row < 2) {
-      throw new Error('Please select a data row (row 2 or below)');
+    if (row < 3) {
+      throw new Error('Please select a data row (row 3 or below)');
     }
     
     Logger.log(`Starting BRANDED document generation for row ${row}`);
@@ -170,10 +172,10 @@ function generateDocumentBranded() {
       throw new Error('Branding configuration not loaded. Please ensure Document_Branding.js is deployed.');
     }
     
-    // Get headers and data safely
-    const headerRange = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues();
+    // Get headers and data safely (headers are in row 2)
+    const headerRange = sheet.getRange(2, 1, 1, sheet.getLastColumn()).getValues();
     if (!headerRange || headerRange.length === 0 || !headerRange[0]) {
-      throw new Error('No headers found in row 1');
+      throw new Error('No headers found in row 2');
     }
     const headers = headerRange[0];
     
@@ -235,8 +237,10 @@ function generateBrandedDocumentCore(rowData, hdr) {
   
   // Create new document
   const docName = `Retirement Blueprint - ${clientName} - ${new Date().toLocaleDateString()}`;
+  Logger.log(`Creating document: ${docName}`);
   const newDoc = DocumentApp.create(docName);
   const body = newDoc.getBody();
+  Logger.log(`Document created with ID: ${newDoc.getId()}`);
   
   // Clear default content
   body.clear();
@@ -300,7 +304,9 @@ function generateBrandedDocumentCore(rowData, hdr) {
     body.appendParagraph('Error generating some sections. Please check the logs.');
   }
   
-  return newDoc.getUrl();
+  const docUrl = newDoc.getUrl();
+  Logger.log(`Document URL: ${docUrl}`);
+  return docUrl;
 }
 
 // Safe section builders with error handling
