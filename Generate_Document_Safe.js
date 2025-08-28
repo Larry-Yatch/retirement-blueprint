@@ -145,11 +145,30 @@ function generateRetirementBlueprintSafe(rowNum) {
     const docUrl = doc.getUrl();
     
     // Save URL to sheet
-    const urlCol = hdr['retirement_blueprint_doc_url'] || lastCol + 1;
-    if (!hdr['retirement_blueprint_doc_url']) {
-      ws.getRange(DOC_CONFIG.HEADER_ROW, urlCol).setValue('retirement_blueprint_doc_url');
+    let urlCol = hdr['retirement_blueprint_doc_url'];
+    
+    // If column doesn't exist in header map, search for it
+    if (urlCol === undefined) {
+      // Search through headers to find the column
+      for (let i = 0; i < headers.length; i++) {
+        if (headers[i] === 'retirement_blueprint_doc_url') {
+          urlCol = i;
+          hdr['retirement_blueprint_doc_url'] = i;
+          break;
+        }
+      }
     }
-    ws.getRange(rowNum, urlCol).setValue(docUrl);
+    
+    // If still not found, add it as a new column
+    if (urlCol === undefined) {
+      urlCol = lastCol;  // This will be the next column (0-based index)
+      ws.getRange(DOC_CONFIG.HEADER_ROW, urlCol + 1).setValue('retirement_blueprint_doc_url');
+      Logger.log(`Added retirement_blueprint_doc_url header at column ${urlCol + 1}`);
+    }
+    
+    // Save the URL (urlCol is 0-based, getRange needs 1-based)
+    ws.getRange(rowNum, urlCol + 1).setValue(docUrl);
+    Logger.log(`Saved document URL to row ${rowNum}, column ${urlCol + 1}`);
     
     Logger.log(`Safe document created successfully: ${docUrl}`);
     
