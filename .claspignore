@@ -13,6 +13,8 @@
 !Document_Generation.js
 !Create_Enhanced_Template.js
 !Create_Template_Bulletproof.js
+!Document_Generation_Debug.js
+!Generate_Document_Safe.js
 
 # Make sure to exclude node_modules
 node_modules/**
