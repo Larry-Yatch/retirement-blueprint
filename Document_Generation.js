@@ -7,7 +7,7 @@
  */
 const DOC_CONFIG = {
   // Template document IDs (to be set after creating templates)
-  UNIVERSAL_TEMPLATE_ID: '', // To be filled in after creating template
+  UNIVERSAL_TEMPLATE_ID: '1f1lFQRx4NBClZ8x5hjWJDMsMv4z5jeamPbuutglBfj0',
   PROFILE_TEMPLATES: {
     '1_ROBS_In_Use': '',
     '2_ROBS_Curious': '',
@@ -211,6 +211,19 @@ function prepareReplacements(headers, rowData, hdr) {
   if (replacements['personalized_annual_rate']) {
     replacements['personalized_annual_rate'] = formatPercentage(replacements['personalized_annual_rate']);
   }
+  
+  // Calculate future value gains
+  const retirementFvActual = parseFloat(rowData[hdr['retirement_fv_actual']]) || 0;
+  const retirementFvIdeal = parseFloat(rowData[hdr['retirement_fv_ideal']]) || 0;
+  replacements['retirement_fv_gain'] = formatCurrency(retirementFvIdeal - retirementFvActual);
+  
+  const educationFvActual = parseFloat(rowData[hdr['education_fv_actual']]) || 0;
+  const educationFvIdeal = parseFloat(rowData[hdr['education_fv_ideal']]) || 0;
+  replacements['education_fv_gain'] = formatCurrency(educationFvIdeal - educationFvActual);
+  
+  const healthFvActual = parseFloat(rowData[hdr['health_fv_actual']]) || 0;
+  const healthFvIdeal = parseFloat(rowData[hdr['health_fv_ideal']]) || 0;
+  replacements['health_fv_gain'] = formatCurrency(healthFvIdeal - healthFvActual);
   
   // Profile information
   const profileConfig = PROFILE_CONFIG[rowData[hdr['ProfileID']]];
@@ -419,52 +432,70 @@ function createTemplateDocuments() {
   
   universalBody.appendParagraph('Key Metrics').setHeading(DocumentApp.ParagraphHeading.HEADING2);
   const metricsTable = universalBody.appendTable();
-  metricsTable.appendTableRow().appendTableCell('Annual Income').appendTableCell('{{gross_annual_income}}');
-  metricsTable.appendTableRow().appendTableCell('Monthly Net Income').appendTableCell('{{Net_Monthly_Income}}');
-  metricsTable.appendTableRow().appendTableCell('Target Savings Rate').appendTableCell('{{Allocation_Percentage}}');
-  metricsTable.appendTableRow().appendTableCell('Personalized Growth Rate').appendTableCell('{{personalized_annual_rate}}');
+  
+  let row1 = metricsTable.appendTableRow();
+  row1.appendTableCell('Annual Income');
+  row1.appendTableCell('{{gross_annual_income}}');
+  
+  let row2 = metricsTable.appendTableRow();
+  row2.appendTableCell('Monthly Net Income');
+  row2.appendTableCell('{{Net_Monthly_Income}}');
+  
+  let row3 = metricsTable.appendTableRow();
+  row3.appendTableCell('Target Savings Rate');
+  row3.appendTableCell('{{Allocation_Percentage}}');
+  
+  let row4 = metricsTable.appendTableRow();
+  row4.appendTableCell('Personalized Growth Rate');
+  row4.appendTableCell('{{personalized_annual_rate}}');
   
   // Current vs Recommended Analysis
   universalBody.appendParagraph('CURRENT VS RECOMMENDED ANALYSIS').setHeading(DocumentApp.ParagraphHeading.HEADING1);
   
   universalBody.appendParagraph('Monthly Contribution Summary').setHeading(DocumentApp.ParagraphHeading.HEADING2);
   const contributionTable = universalBody.appendTable();
-  contributionTable.appendTableRow()
-    .appendTableCell('Category')
-    .appendTableCell('Current (Actual)')
-    .appendTableCell('Recommended (Ideal)')
-    .appendTableCell('Difference');
-  contributionTable.appendTableRow()
-    .appendTableCell('Total Monthly')
-    .appendTableCell('{{total_actual_monthly}}')
-    .appendTableCell('{{total_ideal_monthly}}')
-    .appendTableCell('{{monthly_difference}}');
+  
+  let headerRow = contributionTable.appendTableRow();
+  headerRow.appendTableCell('Category');
+  headerRow.appendTableCell('Current (Actual)');
+  headerRow.appendTableCell('Recommended (Ideal)');
+  headerRow.appendTableCell('Difference');
+  
+  let dataRow = contributionTable.appendTableRow();
+  dataRow.appendTableCell('Total Monthly');
+  dataRow.appendTableCell('{{total_actual_monthly}}');
+  dataRow.appendTableCell('{{total_ideal_monthly}}');
+  dataRow.appendTableCell('{{monthly_difference}}');
   
   // Future Value Projections
   universalBody.appendParagraph('FUTURE VALUE PROJECTIONS').setHeading(DocumentApp.ParagraphHeading.HEADING1);
   universalBody.appendParagraph('Based on your personalized annual growth rate of {{personalized_annual_rate}}');
   
   const fvTable = universalBody.appendTable();
-  fvTable.appendTableRow()
-    .appendTableCell('Domain')
-    .appendTableCell('Current Path')
-    .appendTableCell('Recommended Path')
-    .appendTableCell('Potential Gain');
-  fvTable.appendTableRow()
-    .appendTableCell('Retirement')
-    .appendTableCell('{{retirement_fv_actual}}')
-    .appendTableCell('{{retirement_fv_ideal}}')
-    .appendTableCell('$X,XXX,XXX'); // TODO: Calculate difference
-  fvTable.appendTableRow()
-    .appendTableCell('Education')
-    .appendTableCell('{{education_fv_actual}}')
-    .appendTableCell('{{education_fv_ideal}}')
-    .appendTableCell('$X,XXX,XXX');
-  fvTable.appendTableRow()
-    .appendTableCell('Health')
-    .appendTableCell('{{health_fv_actual}}')
-    .appendTableCell('{{health_fv_ideal}}')
-    .appendTableCell('$X,XXX,XXX');
+  
+  let fvHeader = fvTable.appendTableRow();
+  fvHeader.appendTableCell('Domain');
+  fvHeader.appendTableCell('Current Path');
+  fvHeader.appendTableCell('Recommended Path');
+  fvHeader.appendTableCell('Potential Gain');
+  
+  let fvRow1 = fvTable.appendTableRow();
+  fvRow1.appendTableCell('Retirement');
+  fvRow1.appendTableCell('{{retirement_fv_actual}}');
+  fvRow1.appendTableCell('{{retirement_fv_ideal}}');
+  fvRow1.appendTableCell('{{retirement_fv_gain}}');
+  
+  let fvRow2 = fvTable.appendTableRow();
+  fvRow2.appendTableCell('Education');
+  fvRow2.appendTableCell('{{education_fv_actual}}');
+  fvRow2.appendTableCell('{{education_fv_ideal}}');
+  fvRow2.appendTableCell('{{education_fv_gain}}');
+  
+  let fvRow3 = fvTable.appendTableRow();
+  fvRow3.appendTableCell('Health');
+  fvRow3.appendTableCell('{{health_fv_actual}}');
+  fvRow3.appendTableCell('{{health_fv_ideal}}');
+  fvRow3.appendTableCell('{{health_fv_gain}}');
   
   // Vehicle Recommendations
   universalBody.appendParagraph('VEHICLE ALLOCATION RECOMMENDATIONS').setHeading(DocumentApp.ParagraphHeading.HEADING1);
