@@ -3,6 +3,91 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
+ * Utility function to truncate narratives
+ */
+function truncateNarrative(text, maxLength) {
+  if (!text) return '';
+  if (text.length <= maxLength) return text;
+  return text.substring(0, maxLength) + '...';
+}
+
+/**
+ * Calculate total monthly contributions
+ */
+function calculateTotalMonthly(rowData, hdr, type) {
+  let total = 0;
+  
+  // Define the columns to sum based on type
+  const columns = type === 'actual' ? [
+    'retirement_traditional_401k_actual',
+    'retirement_roth_401k_actual',
+    'retirement_traditional_ira_actual',
+    'retirement_roth_ira_actual',
+    'retirement_solo_401k_actual',
+    'retirement_other_actual',
+    'education_cesa_actual',
+    'education_529_actual',
+    'education_other_actual',
+    'health_hsa_actual',
+    'health_other_actual'
+  ] : [
+    'retirement_traditional_401k_ideal',
+    'retirement_roth_401k_ideal',
+    'retirement_traditional_ira_ideal',
+    'retirement_roth_ira_ideal',
+    'retirement_solo_401k_ideal',
+    'retirement_other_ideal',
+    'education_cesa_ideal',
+    'education_529_ideal',
+    'education_other_ideal',
+    'health_hsa_ideal',
+    'health_other_ideal'
+  ];
+  
+  // Sum up all the columns
+  columns.forEach(col => {
+    const value = parseFloat(rowData[hdr[col]]) || 0;
+    total += value;
+  });
+  
+  return total;
+}
+
+/**
+ * Get vehicle recommendations from row data
+ */
+function getVehicleRecommendations(rowData, hdr) {
+  const vehicles = [
+    { name: 'Traditional 401(k)', actual: 'retirement_traditional_401k_actual', ideal: 'retirement_traditional_401k_ideal' },
+    { name: 'Roth 401(k)', actual: 'retirement_roth_401k_actual', ideal: 'retirement_roth_401k_ideal' },
+    { name: 'Traditional IRA', actual: 'retirement_traditional_ira_actual', ideal: 'retirement_traditional_ira_ideal' },
+    { name: 'Roth IRA', actual: 'retirement_roth_ira_actual', ideal: 'retirement_roth_ira_ideal' },
+    { name: 'Solo 401(k)', actual: 'retirement_solo_401k_actual', ideal: 'retirement_solo_401k_ideal' },
+    { name: 'HSA', actual: 'health_hsa_actual', ideal: 'health_hsa_ideal' },
+    { name: 'CESA', actual: 'education_cesa_actual', ideal: 'education_cesa_ideal' }
+  ];
+  
+  return vehicles.map(v => ({
+    name: v.name,
+    actual: parseFloat(rowData[hdr[v.actual]]) || 0,
+    ideal: parseFloat(rowData[hdr[v.ideal]]) || 0
+  })).filter(v => v.actual > 0 || v.ideal > 0);
+}
+
+/**
+ * Format currency values
+ */
+function formatCurrency(amount) {
+  if (typeof amount === 'string') amount = parseFloat(amount) || 0;
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(amount);
+}
+
+/**
  * Generate a branded retirement blueprint document
  * This is the safe version with professional formatting and branding
  */
@@ -49,7 +134,24 @@ function generateBrandedDocument(rowData, hdr) {
   const clientName = rowData[hdr['Full_Name']] || 'Client';
   const firstName = clientName.split(' ')[0];
   const profileId = rowData[hdr['ProfileID']] || 'Unknown';
-  const profileConfig = PROFILE_CONFIG[profileId] || { title: 'General Profile', color: '#666666' };
+  
+  // Better error handling for profile configuration
+  let profileConfig;
+  if (!PROFILE_CONFIG) {
+    Logger.log('ERROR: PROFILE_CONFIG is not defined');
+    throw new Error('Profile configuration not found. Please ensure code.js is properly loaded.');
+  }
+  
+  profileConfig = PROFILE_CONFIG[profileId];
+  if (!profileConfig) {
+    Logger.log(`WARNING: No profile config found for ProfileID: "${profileId}"`);
+    Logger.log('Available profiles: ' + Object.keys(PROFILE_CONFIG).join(', '));
+    profileConfig = { 
+      title: 'General Profile', 
+      color: '#666666',
+      description: 'Standard retirement planning profile'
+    };
+  }
   
   // Create new document
   const docName = `Retirement Blueprint - ${clientName} - ${new Date().toLocaleDateString()}`;
