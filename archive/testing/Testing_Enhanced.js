@@ -1,395 +1,332 @@
 /**
- * Enhanced Testing Framework with Header Validation
- * 
- * This file demonstrates best practices for avoiding header mismatch issues:
- * 1. Always validate headers before running tests
- * 2. Use a centralized header mapping system
- * 3. Build header maps dynamically from the actual Working Sheet
- * 4. Provide clear error messages when headers don't match
+ * Test Suite for Actual/Ideal Output Generation
+ * Tests that Phase 2 processing correctly calculates and writes actual/ideal values
  */
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// HEADER MANAGEMENT SYSTEM
-// ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Centralized header mapping - Single source of truth
- * Update this when Working Sheet headers change
+ * Test the actual/ideal calculation for a specific profile
  */
-const HEADER_MAPPING = {
-  // Phase 1 Headers
-  TIMESTAMP: 'Timestamp',
-  FULL_NAME: 'Full_Name',
-  EMAIL: 'Email',
-  STUDENT_ID: 'Student_ID_Last4',
-  AGE: 'Current_Age',
-  WORK: 'Work_Situation',
-  OWNS_BIZ: 'Owns_Biz',
-  TAX_APPROACH: 'Tax_Minimization',
-  PROFILE: 'ProfileID',
-  
-  // Phase 2 Headers
-  FILING: 'filing_status',
-  INCOME: 'gross_annual_income',
-  NET_INCOME: 'Net_Monthly_Income',
-  ALLOCATION_PCT: 'Allocation_Percentage',
-  
-  // Extra Questions
-  EX_Q1: 'ex_q1',
-  EX_Q2: 'ex_q2',
-  EX_Q3: 'ex_q3',
-  EX_Q4: 'ex_q4',
-  EX_Q5: 'ex_q5',
-  EX_Q6: 'ex_q6',
-  EX_Q7: 'ex_q7',
-  EX_Q8: 'ex_q8',
-  EX_Q9: 'ex_q9',
-  EX_Q10: 'ex_q10',
-  
-  // Other important headers
-  HSA_ELIG: 'hsa_eligibility',
-  HAS_CHILDREN: 'has_children_or_plan_children_education',
-  NUM_CHILDREN: 'cesa_num_children',
-  RETIREMENT_IMPORTANCE: 'retirement_importance',
-  EDUCATION_IMPORTANCE: 'education_importance',
-  HEALTH_IMPORTANCE: 'health_importance'
-};
-
-/**
- * Gets headers from Working Sheet and validates against expected headers
- * @returns {Object} { hdr: headerMap, valid: boolean, errors: string[] }
- */
-function getValidatedHeaders() {
-  const ws = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Working Sheet');
-  if (!ws) {
-    return { 
-      hdr: {}, 
-      valid: false, 
-      errors: ['Working Sheet not found'] 
-    };
-  }
-  
-  // Get headers from row 2 (not row 1)
-  const headerRange = ws.getRange(2, 1, 1, ws.getLastColumn());
-  const headers = headerRange.getValues()[0];
-  const hdr = {};
-  const foundHeaders = new Set();
-  
-  // Build header map
-  headers.forEach((header, index) => {
-    if (header) {
-      hdr[header] = index + 1; // 1-based index
-      foundHeaders.add(header);
-    }
-  });
-  
-  // Validate expected headers exist
-  const errors = [];
-  Object.entries(HEADER_MAPPING).forEach(([key, expectedHeader]) => {
-    if (!foundHeaders.has(expectedHeader)) {
-      errors.push(`Missing expected header: ${expectedHeader} (${key})`);
-    }
-  });
-  
-  return {
-    hdr,
-    valid: errors.length === 0,
-    errors,
-    foundHeaders: Array.from(foundHeaders)
-  };
-}
-
-/**
- * Safe header value setter with validation
- */
-function safeSetValue(rowArr, hdr, headerKey, value) {
-  const headerName = HEADER_MAPPING[headerKey] || headerKey;
-  
-  if (hdr[headerName]) {
-    rowArr[hdr[headerName] - 1] = value;
-    return true;
-  } else {
-    console.warn(`Header not found: ${headerName} (key: ${headerKey})`);
-    return false;
-  }
-}
-
-/**
- * Creates test data with header validation
- */
-function createValidatedTestData(customData = {}) {
-  const validation = getValidatedHeaders();
-  
-  if (!validation.valid) {
-    console.error('Header validation failed:');
-    validation.errors.forEach(err => console.error(`  - ${err}`));
-    throw new Error('Cannot create test data - header validation failed');
-  }
-  
-  const { hdr } = validation;
-  const rowArr = new Array(Object.keys(hdr).length).fill('');
-  
-  // Set defaults using HEADER_MAPPING
-  const defaults = {
-    TIMESTAMP: new Date().toISOString(),
-    FULL_NAME: 'Test User',
-    EMAIL: 'test@example.com',
-    STUDENT_ID: '1234',
-    AGE: 45,
-    WORK: 'W-2 employee',
-    OWNS_BIZ: 'No',
-    TAX_APPROACH: 'Both',
-    PROFILE: '7_Foundation_Builder',
-    FILING: 'Single',
-    INCOME: 75000,
-    NET_INCOME: 5000,
-    ALLOCATION_PCT: 15,
-    RETIREMENT_IMPORTANCE: 5,
-    EDUCATION_IMPORTANCE: 3,
-    HEALTH_IMPORTANCE: 4,
-    HSA_ELIG: 'Yes',
-    HAS_CHILDREN: 'Yes',
-    NUM_CHILDREN: 2
-  };
-  
-  // Apply defaults
-  Object.entries(defaults).forEach(([key, value]) => {
-    safeSetValue(rowArr, hdr, key, value);
-  });
-  
-  // Apply custom data
-  Object.entries(customData).forEach(([key, value]) => {
-    safeSetValue(rowArr, hdr, key, value);
-  });
-  
-  return { hdr, rowArr };
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST FUNCTIONS USING VALIDATED HEADERS
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Test ROBS Curious with header validation
- */
-function testROBSCuriousWithValidation() {
-  console.log('\n=== TESTING ROBS CURIOUS WITH HEADER VALIDATION ===\n');
+function testActualIdealForProfile(profileId, testData) {
+  console.log(`\n=== Testing Actual/Ideal for ${profileId} ===`);
   
   try {
-    // Validate headers first
-    const validation = getValidatedHeaders();
-    if (!validation.valid) {
-      console.error('Cannot run test - header validation failed');
+    // Get the Working Sheet and set up test row
+    const ws = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Working Sheet');
+    const testRow = ws.getLastRow() + 1;
+    const hdr = getHeaderMap(ws);
+    
+    // Write test data to the sheet
+    Object.keys(testData).forEach(key => {
+      if (hdr[key]) {
+        ws.getRange(testRow, hdr[key]).setValue(testData[key]);
+      }
+    });
+    
+    // Run the allocation engine
+    console.log('Running allocation engine...');
+    const results = runUniversalEngine(testRow);
+    
+    if (!results) {
+      console.error('❌ Allocation engine returned no results');
       return;
     }
     
-    // Test scenarios using HEADER_MAPPING keys
-    const scenarios = [
-      {
-        name: 'Self-employed with Solo 401(k)',
-        data: {
-          PROFILE: '2_ROBS_Curious',
-          WORK: 'Self-employed',
-          AGE: 45,
-          INCOME: 150000,
-          EX_Q5: '100000',  // rollover
-          EX_Q6: '80000',   // business savings
-          EX_Q7: 'No'       // spouse
-        }
-      },
-      {
-        name: 'W-2 employee with employer 401(k)',
-        data: {
-          PROFILE: '2_ROBS_Curious',
-          WORK: 'W-2 employee',
-          AGE: 48,
-          INCOME: 120000,
-          EX_Q1: 'Yes',     // has employer 401k
-          EX_Q2: 'Yes',     // has match
-          EX_Q3: '50% up to 6%',
-          EX_Q4: 'Yes',     // has Roth option
-          EX_Q5: '75000',   // rollover
-          EX_Q6: '0',       // no business yet
-          EX_Q7: 'No'       // spouse
-        }
-      }
+    // Get the row data
+    const rowData = ws.getRange(testRow, 1, 1, ws.getLastColumn()).getValues()[0];
+    
+    // Check actual values written
+    console.log('\n📊 ACTUAL VALUES (Current Contributions):');
+    const actualColumns = [
+      'retirement_hsa_actual',
+      'health_hsa_actual',
+      'retirement_combined_cesa_actual',
+      'education_combined_cesa_actual',
+      'retirement_traditional_401k_actual',
+      'retirement_401k_match_traditional_actual',
+      'retirement_robs_solo_401k_profit_distribution_actual',
+      'retirement_solo_401k_employee_actual',
+      'retirement_solo_401k_employer_actual',
+      'retirement_group_401k_employee_actual'
     ];
     
-    scenarios.forEach(scenario => {
-      console.log(`\nTesting: ${scenario.name}`);
-      console.log('─'.repeat(50));
-      
-      const testData = createValidatedTestData(scenario.data);
-      const result = profileHelpers['2_ROBS_Curious'](testData.rowArr, testData.hdr);
-      
-      console.log('Retirement Vehicles:');
-      result.vehicleOrders.Retirement.forEach(v => {
-        if (!v.name.includes('Bank')) {
-          console.log(`  ${v.name}: $${Math.round(v.capMonthly)}/mo`);
+    actualColumns.forEach(col => {
+      if (hdr[col]) {
+        const value = rowData[hdr[col] - 1];
+        if (value && value !== 0) {
+          console.log(`  ${col}: ${value}`);
         }
-      });
+      }
     });
     
+    // Check ideal values written
+    console.log('\n💎 IDEAL VALUES (Recommended Allocations):');
+    const idealColumns = [];
+    
+    // Collect all ideal columns from the sheet
+    Object.keys(hdr).forEach(header => {
+      if (header.endsWith('_ideal')) {
+        idealColumns.push(header);
+      }
+    });
+    
+    let totalIdeal = 0;
+    idealColumns.sort().forEach(col => {
+      const value = rowData[hdr[col] - 1];
+      if (value && value !== 0) {
+        console.log(`  ${col}: ${value}`);
+        // Extract numeric value from currency format
+        const numValue = typeof value === 'string' ? 
+          parseFloat(value.replace(/[$,]/g, '')) : value;
+        if (!isNaN(numValue)) {
+          totalIdeal += numValue;
+        }
+      }
+    });
+    
+    console.log(`\n  Total Ideal: $${totalIdeal.toFixed(0)}`);
+    
+    // Verify calculations
+    console.log('\n✅ VERIFICATION:');
+    
+    // Check if total matches expected
+    const netMonthly = testData.Net_Monthly_Income || 0;
+    const allocPercent = testData.Allocation_Percentage || 0;
+    const expectedTotal = netMonthly * (allocPercent / 100);
+    console.log(`  Expected allocation (${allocPercent}% of $${netMonthly}): $${expectedTotal.toFixed(0)}`);
+    
+    // Check family bank
+    const familyBankIdeal = rowData[hdr['family_bank_ideal'] - 1];
+    console.log(`  Family Bank (overflow): ${familyBankIdeal || '$0'}`);
+    
+    // Clean up test row
+    ws.deleteRow(testRow);
+    
   } catch (error) {
-    console.error('Test failed:', error.message);
+    console.error('❌ Error during test:', error);
+    console.error('Stack:', error.stack);
   }
 }
 
 /**
- * Header diagnostic tool - shows what headers are actually in the sheet
+ * Test Profile 1: ROBS In Use - with profit distributions
  */
-function diagnoseHeaders() {
-  console.log('\n=== HEADER DIAGNOSTIC TOOL ===\n');
+function testProfile1ActualIdeal() {
+  const testData = {
+    ProfileID: '1_ROBS_In_Use',
+    Current_Age: 45,
+    filing_status: 'Married Filing Jointly',
+    gross_annual_income: 120000,
+    Net_Monthly_Income: 8000,
+    Allocation_Percentage: 25,
+    
+    // Investment scoring
+    investment_involvement: 5,
+    investment_time: 5,
+    investment_confidence: 5,
+    retirement_importance: 7,
+    education_importance: 3,
+    health_importance: 5,
+    retirement_years_until_target: 20,
+    
+    // Phase 2 actuals
+    current_monthly_hsa_contribution: 300,  // P2_HSA_MONTHLY_CONTRIB
+    cesa_monthly_contribution: 200,         // P2_CESA_MONTHLY_CONTRIB
+    retirement_personal_contribution: 500,  // P2_RETIREMENT_PERSONAL
+    
+    // Profile specific
+    hsa_eligibility: 'Yes',
+    cesa_num_children: 2,
+    ex_q6: 48000  // Annual profit distribution
+  };
+  
+  testActualIdealForProfile('1_ROBS_In_Use', testData);
+}
+
+/**
+ * Test Profile 2: ROBS Curious - with employer match
+ */
+function testProfile2ActualIdeal() {
+  const testData = {
+    ProfileID: '2_ROBS_Curious',
+    Current_Age: 40,
+    Work_Situation: 'W-2 employee',
+    filing_status: 'Single',
+    gross_annual_income: 90000,
+    Net_Monthly_Income: 5500,
+    Allocation_Percentage: 20,
+    
+    // Investment scoring
+    investment_involvement: 4,
+    investment_time: 4,
+    investment_confidence: 4,
+    retirement_importance: 6,
+    education_importance: 1,
+    health_importance: 4,
+    retirement_years_until_target: 25,
+    
+    // Phase 2 actuals
+    current_monthly_hsa_contribution: 200,
+    retirement_personal_contribution: 800,
+    
+    // Profile specific
+    hsa_eligibility: 'Yes',
+    ex_q1: 'Yes',  // Has employer 401k
+    ex_q2: 'Yes',  // Has match
+    ex_q3: '100% up to 3%',  // Match percentage
+    ex_q4: 'Yes'   // Has Roth option
+  };
+  
+  testActualIdealForProfile('2_ROBS_Curious', testData);
+}
+
+/**
+ * Test Profile 3: Solo 401k Builder
+ */
+function testProfile3ActualIdeal() {
+  const testData = {
+    ProfileID: '3_Solo401k_Builder',
+    Current_Age: 42,
+    Work_Situation: 'Self-employed',
+    filing_status: 'Married Filing Jointly',
+    gross_annual_income: 150000,
+    Net_Monthly_Income: 10000,
+    Allocation_Percentage: 30,
+    
+    // Investment scoring
+    investment_involvement: 6,
+    investment_time: 5,
+    investment_confidence: 6,
+    retirement_importance: 7,
+    education_importance: 4,
+    health_importance: 5,
+    retirement_years_until_target: 23,
+    
+    // Phase 2 actuals
+    current_monthly_hsa_contribution: 400,
+    cesa_monthly_contribution: 300,
+    
+    // Profile specific
+    hsa_eligibility: 'Yes',
+    cesa_num_children: 2,
+    ex_q1: 'S-Corp',  // Business type
+    ex_q3: 'Yes',     // Has Solo 401k
+    ex_q4: 18000,     // Employee contribution (annual)
+    ex_q5: 12000      // Employer contribution (annual)
+  };
+  
+  testActualIdealForProfile('3_Solo401k_Builder', testData);
+}
+
+/**
+ * Test all profiles with actual/ideal
+ */
+function testAllProfilesActualIdeal() {
+  console.log('=== TESTING ACTUAL/IDEAL OUTPUTS FOR ALL PROFILES ===\n');
+  console.log('This test verifies that:');
+  console.log('1. Actual values are correctly read from Phase 2 form data');
+  console.log('2. Ideal values include both discretionary and non-discretionary amounts');
+  console.log('3. Family Bank captures overflow correctly');
+  console.log('4. Total allocations match expected percentages\n');
+  
+  // Test each profile
+  testProfile1ActualIdeal();
+  testProfile2ActualIdeal();
+  testProfile3ActualIdeal();
+  
+  console.log('\n=== TEST COMPLETE ===');
+  console.log('Review the output above to verify:');
+  console.log('- Actual columns show current contributions from form data');
+  console.log('- Ideal columns show recommended allocations');
+  console.log('- Non-discretionary items (matches, distributions) are included in ideal');
+  console.log('- Family Bank ideal captures any remaining funds');
+}
+
+/**
+ * Verify actual/ideal columns exist
+ */
+function verifyActualIdealColumns() {
+  console.log('=== Verifying Actual/Ideal Columns ===\n');
   
   const ws = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Working Sheet');
-  if (!ws) {
-    console.error('Working Sheet not found!');
-    return;
-  }
+  const headers = ws.getRange(2, 1, 1, ws.getLastColumn()).getValues()[0];
   
-  // Check both row 1 and row 2 for headers
-  console.log('Checking Row 1:');
-  const row1 = ws.getRange(1, 1, 1, ws.getLastColumn()).getValues()[0];
-  const row1Headers = row1.filter(h => h).slice(0, 10); // Show first 10
-  console.log(row1Headers.join(', ') + '...');
+  const actualColumns = headers.filter(h => h.endsWith('_actual'));
+  const idealColumns = headers.filter(h => h.endsWith('_ideal'));
   
-  console.log('\nChecking Row 2:');
-  const row2 = ws.getRange(2, 1, 1, ws.getLastColumn()).getValues()[0];
-  const row2Headers = row2.filter(h => h).slice(0, 10); // Show first 10
-  console.log(row2Headers.join(', ') + '...');
+  console.log(`Found ${actualColumns.length} actual columns`);
+  console.log(`Found ${idealColumns.length} ideal columns`);
   
-  // Validate against expected headers
-  const validation = getValidatedHeaders();
+  // Check for critical columns
+  const criticalActuals = [
+    'retirement_hsa_actual',
+    'health_hsa_actual',
+    'retirement_traditional_401k_actual',
+    'retirement_401k_match_traditional_actual',
+    'retirement_combined_cesa_actual',
+    'education_combined_cesa_actual'
+  ];
   
-  console.log('\n\nValidation Results:');
-  console.log(`Valid: ${validation.valid ? '✅' : '❌'}`);
+  const criticalIdeals = [
+    'retirement_hsa_ideal',
+    'health_hsa_ideal',
+    'retirement_traditional_401k_ideal',
+    'retirement_roth_401k_ideal',
+    'retirement_traditional_ira_ideal',
+    'retirement_roth_ira_ideal',
+    'family_bank_ideal'
+  ];
   
-  if (validation.errors.length > 0) {
-    console.log('\nErrors:');
-    validation.errors.forEach(err => console.log(`  - ${err}`));
-  }
+  console.log('\nChecking critical actual columns:');
+  criticalActuals.forEach(col => {
+    const exists = headers.includes(col);
+    console.log(`  ${col}: ${exists ? '✅' : '❌'}`);
+  });
   
-  console.log(`\nTotal headers found: ${validation.foundHeaders.length}`);
-  console.log('\nSample of found headers:');
-  validation.foundHeaders.slice(0, 20).forEach(h => console.log(`  - ${h}`));
+  console.log('\nChecking critical ideal columns:');
+  criticalIdeals.forEach(col => {
+    const exists = headers.includes(col);
+    console.log(`  ${col}: ${exists ? '✅' : '❌'}`);
+  });
 }
 
 /**
- * Test runner with pre-flight checks
+ * Test the new actual/ideal logic flag
  */
-function runTestsWithValidation() {
-  console.log('\n=== RUNNING TESTS WITH VALIDATION ===\n');
+function testActualIdealLogicFlag() {
+  console.log('=== Testing Actual/Ideal Logic Flag ===\n');
   
-  // Step 1: Diagnose headers
-  console.log('Step 1: Header Diagnosis');
-  diagnoseHeaders();
+  // This would need to check if useNewLogic is true in runUniversalEngine
+  console.log('The system should be using the new logic where:');
+  console.log('- Allocation % represents TOTAL savings rate (not additional)');
+  console.log('- Non-discretionary items are added ON TOP');
+  console.log('- Family Bank gets remainder of total target');
   
-  // Step 2: Validate headers
-  console.log('\n\nStep 2: Header Validation');
-  const validation = getValidatedHeaders();
-  
-  if (!validation.valid) {
-    console.error('\n❌ CANNOT RUN TESTS - Headers are not valid');
-    console.error('Please fix the header issues before running tests');
-    return;
-  }
-  
-  console.log('✅ Headers validated successfully');
-  
-  // Step 3: Run tests
-  console.log('\n\nStep 3: Running Tests');
-  
-  try {
-    testROBSCuriousWithValidation();
-    console.log('\n✅ All tests completed');
-  } catch (error) {
-    console.error('\n❌ Tests failed:', error.message);
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// MIGRATION HELPER
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Helps migrate old test code to use the new header system
- */
-function migrateTestCode() {
-  console.log('\n=== TEST CODE MIGRATION GUIDE ===\n');
-  
-  console.log('Replace hardcoded headers with HEADER_MAPPING keys:\n');
-  
-  console.log('OLD: setValueInRow(rowArr, hdr, "Full_Name", "Test User")');
-  console.log('NEW: safeSetValue(rowArr, hdr, "FULL_NAME", "Test User")\n');
-  
-  console.log('OLD: rowArr[hdr["Current_Age"] - 1] = 45');
-  console.log('NEW: safeSetValue(rowArr, hdr, "AGE", 45)\n');
-  
-  console.log('OLD: const age = rowArr[hdr["Current_Age"] - 1]');
-  console.log('NEW: const age = rowArr[hdr[HEADER_MAPPING.AGE] - 1]\n');
-  
-  console.log('Benefits:');
-  console.log('1. Single source of truth for header names');
-  console.log('2. Validation before tests run');
-  console.log('3. Clear error messages when headers change');
-  console.log('4. Easy to update when Working Sheet changes');
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// HEADER CHANGE DETECTION
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Saves current headers to Script Properties for change detection
- */
-function saveCurrentHeaders() {
-  const validation = getValidatedHeaders();
-  const headerSnapshot = JSON.stringify(validation.foundHeaders);
-  
-  PropertiesService.getScriptProperties().setProperty('HEADER_SNAPSHOT', headerSnapshot);
-  PropertiesService.getScriptProperties().setProperty('HEADER_SNAPSHOT_DATE', new Date().toISOString());
-  
-  console.log('Header snapshot saved');
-}
-
-/**
- * Checks if headers have changed since last snapshot
- */
-function checkForHeaderChanges() {
-  const savedSnapshot = PropertiesService.getScriptProperties().getProperty('HEADER_SNAPSHOT');
-  const snapshotDate = PropertiesService.getScriptProperties().getProperty('HEADER_SNAPSHOT_DATE');
-  
-  if (!savedSnapshot) {
-    console.log('No previous header snapshot found');
-    saveCurrentHeaders();
-    return;
-  }
-  
-  const validation = getValidatedHeaders();
-  const currentSnapshot = JSON.stringify(validation.foundHeaders);
-  
-  if (currentSnapshot !== savedSnapshot) {
-    console.log('\n⚠️  HEADERS HAVE CHANGED!');
-    console.log(`Last snapshot: ${snapshotDate}`);
+  // You could test by running a scenario and checking the math
+  const testCase = {
+    netMonthly: 10000,
+    allocPercent: 25,  // 25% total
+    robsDistribution: 4000,  // Non-discretionary
     
-    const oldHeaders = JSON.parse(savedSnapshot);
-    const newHeaders = validation.foundHeaders;
-    
-    const added = newHeaders.filter(h => !oldHeaders.includes(h));
-    const removed = oldHeaders.filter(h => !newHeaders.includes(h));
-    
-    if (added.length > 0) {
-      console.log('\nAdded headers:');
-      added.forEach(h => console.log(`  + ${h}`));
+    expectedDiscretionary: 2500,  // 25% of 10000
+    expectedTotal: 6500  // 2500 + 4000
+  };
+  
+  console.log('\nTest case:');
+  console.log(`- Net monthly: $${testCase.netMonthly}`);
+  console.log(`- Allocation %: ${testCase.allocPercent}%`);
+  console.log(`- ROBS distribution: $${testCase.robsDistribution}`);
+  console.log(`- Expected discretionary: $${testCase.expectedDiscretionary}`);
+  console.log(`- Expected total: $${testCase.expectedTotal}`);
+}
+
+// Helper function
+function getHeaderMap(sheet) {
+  const headers = sheet.getRange(2, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const headerMap = {};
+  headers.forEach((header, index) => {
+    if (header) {
+      headerMap[header] = index + 1;
     }
-    
-    if (removed.length > 0) {
-      console.log('\nRemoved headers:');
-      removed.forEach(h => console.log(`  - ${h}`));
-    }
-    
-    console.log('\nUpdate HEADER_MAPPING and run saveCurrentHeaders() to acknowledge changes');
-  } else {
-    console.log('✅ Headers unchanged since ' + snapshotDate);
-  }
+  });
+  return headerMap;
 }
