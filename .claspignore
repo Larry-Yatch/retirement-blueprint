@@ -15,6 +15,8 @@
 !Create_Template_Bulletproof.js
 !Document_Generation_Debug.js
 !Generate_Document_Safe.js
+!Document_Generation_Complete.js
+!Test_Document_Generation.js
 
 # Make sure to exclude node_modules
 node_modules/**
