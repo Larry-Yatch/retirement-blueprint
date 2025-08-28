@@ -7,7 +7,7 @@
  */
 const DOC_CONFIG = {
   // Template document IDs (to be set after creating templates)
-  UNIVERSAL_TEMPLATE_ID: '1f1lFQRx4NBClZ8x5hjWJDMsMv4z5jeamPbuutglBfj0',
+  UNIVERSAL_TEMPLATE_ID: '1oQsN-ZuRNQQ3Tm6VAjzWkDDbCD_LkIehM5t-KnhXb-8',
   PROFILE_TEMPLATES: {
     '1_ROBS_In_Use': '',
     '2_ROBS_Curious': '',
@@ -137,35 +137,54 @@ function createMergedDocument(docName, profileId, headers, rowData, hdr) {
   const doc = DocumentApp.openById(newFile.getId());
   const body = doc.getBody();
   
-  // Replace all placeholders with data
+  // Prepare all replacements including narratives
   const replacements = prepareReplacements(headers, rowData, hdr);
+  
+  // Add narrative replacements
+  replacements['opening_narrative'] = generateOpeningNarrative(rowData, hdr);
+  replacements['phase1_narrative'] = generatePhase1Narrative(rowData, hdr);
+  replacements['phase2_narrative'] = generatePhase2Narrative(rowData, hdr);
+  replacements['results_narrative'] = generateResultsNarrative(rowData, hdr);
+  replacements['profile_narrative'] = generateProfileNarrative(profileId, rowData, hdr);
+  
+  // Replace all placeholders with data
   Object.entries(replacements).forEach(([placeholder, value]) => {
     body.replaceText(`{{${placeholder}}}`, value);
   });
   
-  // Find and replace the vehicle recommendations placeholder with actual table
+  // Handle vehicle recommendations table
+  const recommendations = formatVehicleRecommendations(rowData, hdr);
   const vehiclePlaceholder = '[Vehicle recommendations will be inserted here]';
   const bodyText = body.getText();
   if (bodyText.includes(vehiclePlaceholder)) {
     // Find the paragraph containing the placeholder
     let foundElement = null;
+    let foundIndex = -1;
     const numChildren = body.getNumChildren();
     for (let i = 0; i < numChildren; i++) {
       const child = body.getChild(i);
       if (child.getType() === DocumentApp.ElementType.PARAGRAPH) {
         if (child.asText().getText().includes(vehiclePlaceholder)) {
           foundElement = child;
+          foundIndex = i;
           break;
         }
       }
     }
     
     if (foundElement) {
-      // Insert the table after the placeholder paragraph
-      const index = body.getChildIndex(foundElement);
       foundElement.asText().setText(''); // Clear placeholder text
-      addVehicleRecommendationsTable(body, rowData, hdr);
+      // Insert table at the correct position
+      const table = body.insertTable(foundIndex + 1);
+      populateVehicleRecommendationsTable(table, recommendations);
     }
+  }
+  
+  // Handle action steps with narrative
+  const actionPlaceholder = '[Action steps will be inserted here]';
+  if (body.getText().includes(actionPlaceholder)) {
+    const actionNarrative = generateActionStepsNarrative(rowData, hdr, recommendations);
+    body.replaceText(actionPlaceholder, actionNarrative);
   }
   
   // Add profile-specific content if template exists
@@ -309,9 +328,11 @@ function appendProfileContent(doc, profileTemplateId) {
     // Add section break
     targetBody.appendPageBreak();
     
-    // Copy all elements from profile template
+    // Copy all elements from profile template (with safety limit)
     const totalElements = profileBody.getNumChildren();
-    for (let i = 0; i < totalElements; i++) {
+    const maxElements = Math.min(totalElements, 100); // Safety limit
+    
+    for (let i = 0; i < maxElements; i++) {
       const element = profileBody.getChild(i);
       const type = element.getType();
       
@@ -408,29 +429,36 @@ function sendRetirementBlueprintEmail(docId, email, fullName, headers, rowData, 
  * Create template documents for initial setup
  * Run this once to create the template structure
  */
-function createTemplateDocuments() {
+function createTemplateDocumentsOLD() {
   const folder = DOC_CONFIG.OUTPUT_FOLDER_ID ? 
     DriveApp.getFolderById(DOC_CONFIG.OUTPUT_FOLDER_ID) : 
     DriveApp.getRootFolder();
     
   // Create universal template
-  const universalDoc = DocumentApp.create('TEMPLATE - Retirement Blueprint Universal');
+  const universalDoc = DocumentApp.create('TEMPLATE - Retirement Blueprint Universal Enhanced');
   const universalBody = universalDoc.getBody();
   
   // Add template structure
   universalBody.clear();
-  universalBody.appendParagraph('RETIREMENT BLUEPRINT REPORT').setHeading(DocumentApp.ParagraphHeading.HEADING1);
-  universalBody.appendParagraph('Personalized Retirement Savings Strategy for {{Full_Name}}');
-  universalBody.appendParagraph('Generated: {{report_date}}');
+  
+  // Title Page
+  universalBody.appendParagraph('RETIREMENT BLUEPRINT').setHeading(DocumentApp.ParagraphHeading.TITLE);
+  universalBody.appendParagraph('Your Personalized Path to Financial Freedom').setHeading(DocumentApp.ParagraphHeading.SUBTITLE);
+  universalBody.appendParagraph('');
+  universalBody.appendParagraph('Prepared for: {{Full_Name}}');
+  universalBody.appendParagraph('Date: {{report_date}}');
+  universalBody.appendParagraph('Profile Type: {{profile_title}}');
   
   universalBody.appendPageBreak();
   
-  // Executive Summary
-  universalBody.appendParagraph('EXECUTIVE SUMMARY').setHeading(DocumentApp.ParagraphHeading.HEADING1);
-  universalBody.appendParagraph('Profile: {{profile_title}}').setHeading(DocumentApp.ParagraphHeading.HEADING2);
-  universalBody.appendParagraph('{{profile_description}}');
+  // Personal Opening
+  universalBody.appendParagraph('{{opening_narrative}}');
   
-  universalBody.appendParagraph('Key Metrics').setHeading(DocumentApp.ParagraphHeading.HEADING2);
+  // Chapter 1: Your Current Path
+  universalBody.appendParagraph('CHAPTER 1: YOUR CURRENT PATH').setHeading(DocumentApp.ParagraphHeading.HEADING1);
+  universalBody.appendParagraph('{{phase1_narrative}}');
+  
+  universalBody.appendParagraph('Financial Snapshot').setHeading(DocumentApp.ParagraphHeading.HEADING2);
   const metricsTable = universalBody.appendTable();
   
   let row1 = metricsTable.appendTableRow();
@@ -442,42 +470,55 @@ function createTemplateDocuments() {
   row2.appendTableCell('{{Net_Monthly_Income}}');
   
   let row3 = metricsTable.appendTableRow();
-  row3.appendTableCell('Target Savings Rate');
-  row3.appendTableCell('{{Allocation_Percentage}}');
+  row3.appendTableCell('Filing Status');
+  row3.appendTableCell('{{filing_status}}');
   
   let row4 = metricsTable.appendTableRow();
-  row4.appendTableCell('Personalized Growth Rate');
-  row4.appendTableCell('{{personalized_annual_rate}}');
+  row4.appendTableCell('Current Savings Rate');
+  row4.appendTableCell('{{Allocation_Percentage}}%');
   
-  // Current vs Recommended Analysis
-  universalBody.appendParagraph('CURRENT VS RECOMMENDED ANALYSIS').setHeading(DocumentApp.ParagraphHeading.HEADING1);
+  let row5 = metricsTable.appendTableRow();
+  row5.appendTableCell('Years to Retirement');
+  row5.appendTableCell('{{retirement_years_until_target}}');
   
-  universalBody.appendParagraph('Monthly Contribution Summary').setHeading(DocumentApp.ParagraphHeading.HEADING2);
+  // Chapter 2: Your Priorities and Vision
+  universalBody.appendParagraph('CHAPTER 2: YOUR PRIORITIES AND VISION').setHeading(DocumentApp.ParagraphHeading.HEADING1);
+  universalBody.appendParagraph('{{phase2_narrative}}');
+  
+  // Profile-specific insights
+  universalBody.appendParagraph('Your Unique Advantages').setHeading(DocumentApp.ParagraphHeading.HEADING2);
+  universalBody.appendParagraph('{{profile_narrative}}');
+  
+  // Chapter 3: Your Optimization Opportunity
+  universalBody.appendParagraph('CHAPTER 3: YOUR OPTIMIZATION OPPORTUNITY').setHeading(DocumentApp.ParagraphHeading.HEADING1);
+  universalBody.appendParagraph('{{results_narrative}}');
+  
+  universalBody.appendParagraph('Monthly Contribution Analysis').setHeading(DocumentApp.ParagraphHeading.HEADING2);
   const contributionTable = universalBody.appendTable();
   
   let headerRow = contributionTable.appendTableRow();
   headerRow.appendTableCell('Category');
-  headerRow.appendTableCell('Current (Actual)');
-  headerRow.appendTableCell('Recommended (Ideal)');
-  headerRow.appendTableCell('Difference');
+  headerRow.appendTableCell('Current Monthly');
+  headerRow.appendTableCell('Optimized Monthly');
+  headerRow.appendTableCell('Improvement');
   
   let dataRow = contributionTable.appendTableRow();
-  dataRow.appendTableCell('Total Monthly');
+  dataRow.appendTableCell('Total Contributions');
   dataRow.appendTableCell('{{total_actual_monthly}}');
   dataRow.appendTableCell('{{total_ideal_monthly}}');
   dataRow.appendTableCell('{{monthly_difference}}');
   
-  // Future Value Projections
-  universalBody.appendParagraph('FUTURE VALUE PROJECTIONS').setHeading(DocumentApp.ParagraphHeading.HEADING1);
-  universalBody.appendParagraph('Based on your personalized annual growth rate of {{personalized_annual_rate}}');
+  // Chapter 4: Your Future Wealth Projection
+  universalBody.appendParagraph('CHAPTER 4: YOUR FUTURE WEALTH PROJECTION').setHeading(DocumentApp.ParagraphHeading.HEADING1);
+  universalBody.appendParagraph('With your personalized growth rate of {{personalized_annual_rate}}, here\'s how your wealth will accumulate:');
   
   const fvTable = universalBody.appendTable();
   
   let fvHeader = fvTable.appendTableRow();
-  fvHeader.appendTableCell('Domain');
+  fvHeader.appendTableCell('Wealth Domain');
   fvHeader.appendTableCell('Current Path');
-  fvHeader.appendTableCell('Recommended Path');
-  fvHeader.appendTableCell('Potential Gain');
+  fvHeader.appendTableCell('Optimized Path');
+  fvHeader.appendTableCell('Additional Wealth');
   
   let fvRow1 = fvTable.appendTableRow();
   fvRow1.appendTableCell('Retirement');
@@ -492,22 +533,28 @@ function createTemplateDocuments() {
   fvRow2.appendTableCell('{{education_fv_gain}}');
   
   let fvRow3 = fvTable.appendTableRow();
-  fvRow3.appendTableCell('Health');
+  fvRow3.appendTableCell('Healthcare');
   fvRow3.appendTableCell('{{health_fv_actual}}');
   fvRow3.appendTableCell('{{health_fv_ideal}}');
   fvRow3.appendTableCell('{{health_fv_gain}}');
   
-  // Vehicle Recommendations
-  universalBody.appendParagraph('VEHICLE ALLOCATION RECOMMENDATIONS').setHeading(DocumentApp.ParagraphHeading.HEADING1);
-  universalBody.appendParagraph('The following allocation maximizes your tax advantages and long-term growth:');
-  universalBody.appendParagraph('[Vehicle recommendations will be inserted here]'); // Placeholder for now
+  // Chapter 5: Your Vehicle Allocation Strategy
+  universalBody.appendParagraph('CHAPTER 5: YOUR VEHICLE ALLOCATION STRATEGY').setHeading(DocumentApp.ParagraphHeading.HEADING1);
+  universalBody.appendParagraph('We\'ve carefully ordered your investment vehicles to maximize tax advantages and compound growth:');
+  universalBody.appendParagraph('[Vehicle recommendations will be inserted here]');
   
-  // Action Steps
-  universalBody.appendParagraph('IMMEDIATE ACTION STEPS').setHeading(DocumentApp.ParagraphHeading.HEADING1);
-  universalBody.appendListItem('Review your current contribution allocations against our recommendations');
-  universalBody.appendListItem('Prioritize vehicles with employer matching first (free money!)');
-  universalBody.appendListItem('Maximize HSA contributions if eligible (triple tax advantage)');
-  universalBody.appendListItem('Consider automating contributions to ensure consistency');
+  // Chapter 6: Your Action Plan
+  universalBody.appendParagraph('CHAPTER 6: YOUR ACTION PLAN').setHeading(DocumentApp.ParagraphHeading.HEADING1);
+  universalBody.appendParagraph('[Action steps will be inserted here]');
+  
+  // Closing
+  universalBody.appendPageBreak();
+  universalBody.appendParagraph('YOUR NEXT STEPS').setHeading(DocumentApp.ParagraphHeading.HEADING1);
+  universalBody.appendParagraph('Success in retirement planning comes from taking action. Start today with your personalized action plan above.');
+  
+  universalBody.appendParagraph('');
+  universalBody.appendParagraph('To your financial freedom,');
+  universalBody.appendParagraph('The Retirement Blueprint Team');
   
   universalDoc.saveAndClose();
   
@@ -516,12 +563,114 @@ function createTemplateDocuments() {
     DriveApp.getFileById(universalDoc.getId()).moveTo(folder);
   }
   
-  Logger.log(`Universal template created with ID: ${universalDoc.getId()}`);
+  Logger.log(`Enhanced universal template created with ID: ${universalDoc.getId()}`);
   Logger.log('Update DOC_CONFIG.UNIVERSAL_TEMPLATE_ID with this ID');
   
-  // TODO: Create profile-specific templates
-  // For now, return the universal template ID
   return universalDoc.getId();
+}
+
+/**
+ * Create template documents - NEW EFFICIENT VERSION
+ */
+function createTemplateDocuments() {
+  try {
+    const folder = DOC_CONFIG.OUTPUT_FOLDER_ID ? 
+      DriveApp.getFolderById(DOC_CONFIG.OUTPUT_FOLDER_ID) : 
+      DriveApp.getRootFolder();
+      
+    // Create document with simpler approach
+    const doc = DocumentApp.create('TEMPLATE - Retirement Blueprint Enhanced V2');
+    const body = doc.getBody();
+    
+    // Clear and build efficiently
+    body.clear();
+    
+    // Title section
+    body.appendParagraph('RETIREMENT BLUEPRINT').setHeading(DocumentApp.ParagraphHeading.TITLE);
+    body.appendParagraph('Your Personalized Path to Financial Freedom');
+    body.appendParagraph('');
+    body.appendParagraph('Prepared for: {{Full_Name}}');
+    body.appendParagraph('Date: {{report_date}}');
+    body.appendParagraph('Profile: {{profile_title}}');
+    
+    body.appendPageBreak();
+    
+    // Opening
+    body.appendParagraph('{{opening_narrative}}');
+    body.appendParagraph('');
+    
+    // Chapter 1
+    body.appendParagraph('CHAPTER 1: YOUR CURRENT PATH').setHeading(DocumentApp.ParagraphHeading.HEADING1);
+    body.appendParagraph('{{phase1_narrative}}');
+    body.appendParagraph('');
+    
+    // Simple table for financial snapshot
+    body.appendParagraph('Financial Snapshot:');
+    body.appendParagraph('Annual Income: {{gross_annual_income}}');
+    body.appendParagraph('Monthly Net: {{Net_Monthly_Income}}');
+    body.appendParagraph('Savings Rate: {{Allocation_Percentage}}%');
+    body.appendParagraph('');
+    
+    // Chapter 2
+    body.appendParagraph('CHAPTER 2: YOUR PRIORITIES').setHeading(DocumentApp.ParagraphHeading.HEADING1);
+    body.appendParagraph('{{phase2_narrative}}');
+    body.appendParagraph('');
+    body.appendParagraph('{{profile_narrative}}');
+    body.appendParagraph('');
+    
+    // Chapter 3
+    body.appendParagraph('CHAPTER 3: YOUR OPPORTUNITY').setHeading(DocumentApp.ParagraphHeading.HEADING1);
+    body.appendParagraph('{{results_narrative}}');
+    body.appendParagraph('');
+    body.appendParagraph('Monthly Contributions:');
+    body.appendParagraph('Current: {{total_actual_monthly}}');
+    body.appendParagraph('Optimized: {{total_ideal_monthly}}');
+    body.appendParagraph('Improvement: {{monthly_difference}}');
+    body.appendParagraph('');
+    
+    // Chapter 4
+    body.appendParagraph('CHAPTER 4: FUTURE PROJECTIONS').setHeading(DocumentApp.ParagraphHeading.HEADING1);
+    body.appendParagraph('Growth Rate: {{personalized_annual_rate}}');
+    body.appendParagraph('');
+    body.appendParagraph('Retirement Future Value:');
+    body.appendParagraph('Current Path: {{retirement_fv_actual}}');
+    body.appendParagraph('Optimized Path: {{retirement_fv_ideal}}');
+    body.appendParagraph('Additional Wealth: {{retirement_fv_gain}}');
+    body.appendParagraph('');
+    
+    // Chapter 5
+    body.appendParagraph('CHAPTER 5: YOUR VEHICLES').setHeading(DocumentApp.ParagraphHeading.HEADING1);
+    body.appendParagraph('[Vehicle recommendations will be inserted here]');
+    body.appendParagraph('');
+    
+    // Chapter 6
+    body.appendParagraph('CHAPTER 6: YOUR ACTION PLAN').setHeading(DocumentApp.ParagraphHeading.HEADING1);
+    body.appendParagraph('[Action steps will be inserted here]');
+    body.appendParagraph('');
+    
+    // Simple closing
+    body.appendParagraph('Remember: The best plan is the one you implement.');
+    body.appendParagraph('Start today!');
+    
+    // Save and close
+    doc.saveAndClose();
+    
+    // Move to folder
+    if (DOC_CONFIG.OUTPUT_FOLDER_ID) {
+      const file = DriveApp.getFileById(doc.getId());
+      file.moveTo(folder);
+    }
+    
+    const docId = doc.getId();
+    Logger.log('Enhanced template created successfully!');
+    Logger.log('Template ID: ' + docId);
+    
+    return docId;
+    
+  } catch (error) {
+    Logger.log('Error creating template: ' + error.toString());
+    throw error;
+  }
 }
 
 /**
@@ -601,17 +750,14 @@ function formatVehicleRecommendations(rowData, hdr) {
 }
 
 /**
- * Add formatted vehicle recommendations to document
+ * Populate vehicle recommendations table
  */
-function addVehicleRecommendationsTable(body, rowData, hdr) {
-  const recommendations = formatVehicleRecommendations(rowData, hdr);
-  
-  if (recommendations.length === 0) {
-    body.appendParagraph('No vehicle recommendations available.');
+function populateVehicleRecommendationsTable(table, recommendations) {
+  if (!recommendations || recommendations.length === 0) {
+    const row = table.appendTableRow();
+    row.appendTableCell('No vehicle recommendations available.');
     return;
   }
-  
-  const table = body.appendTable();
   
   // Header row
   const headerRow = table.appendTableRow();
@@ -797,4 +943,309 @@ Current Configuration:
 `;
 
   SpreadsheetApp.getUi().alert(instructions);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// NARRATIVE GENERATION FUNCTIONS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Generate opening narrative based on client data
+ */
+function generateOpeningNarrative(rowData, hdr) {
+  const firstName = (rowData[hdr['Full_Name']] || '').split(' ')[0];
+  const age = rowData[hdr['Current_Age']];
+  const workSituation = rowData[hdr['Work_Situation']];
+  const profileId = rowData[hdr['ProfileID']];
+  const profileConfig = PROFILE_CONFIG[profileId];
+  
+  let narrative = `Dear ${firstName},\n\n`;
+  
+  // Age-based opening
+  if (age < 35) {
+    narrative += `At ${age}, you're at an ideal stage to build a powerful financial foundation. `;
+  } else if (age < 50) {
+    narrative += `At ${age}, you're in your peak earning years with significant opportunities to accelerate your wealth building. `;
+  } else if (age < 60) {
+    narrative += `At ${age}, you've entered a critical phase where strategic decisions can dramatically impact your retirement security. `;
+  } else {
+    narrative += `At ${age}, you're approaching or in retirement with important opportunities to optimize and protect your wealth. `;
+  }
+  
+  // Work situation context
+  if (workSituation === 'Self-employed') {
+    narrative += `As a self-employed professional, you have unique control over your retirement strategy. `;
+  } else if (workSituation === 'W-2 employee') {
+    narrative += `As an employee, you have access to valuable workplace benefits that we'll help you maximize. `;
+  } else if (workSituation === 'Both') {
+    narrative += `With both employment and self-employment income, you have exceptional opportunities to diversify your retirement savings. `;
+  }
+  
+  narrative += `\n\nThis personalized Retirement Blueprint has been crafted specifically for your situation as a ${profileConfig.title}. `;
+  narrative += `We've analyzed your current financial position, understood your priorities, and designed a strategy that aligns with your goals.`;
+  
+  return narrative;
+}
+
+/**
+ * Generate Phase 1 narrative - Current Situation Story
+ */
+function generatePhase1Narrative(rowData, hdr) {
+  const income = formatCurrency(rowData[hdr['gross_annual_income']]);
+  const netMonthly = formatCurrency(rowData[hdr['Net_Monthly_Income']]);
+  const savingsRate = rowData[hdr['Allocation_Percentage']] + '%';
+  const filingStatus = rowData[hdr['filing_status']];
+  const retirementTimeframe = rowData[hdr['Retirement_Timeframe']];
+  const actionMotivation = rowData[hdr['Action_Motivation']];
+  
+  let narrative = '\n\nWith an annual income of ' + income + ' and monthly net income of ' + netMonthly + ', ';
+  narrative += 'you\'ve committed to saving ' + savingsRate + ' of your income for the future. ';
+  
+  // Tax situation
+  if (filingStatus === 'Single') {
+    narrative += 'As a single filer, we\'ll help you maximize individual contribution limits and tax advantages. ';
+  } else if (filingStatus === 'Married Filing Jointly') {
+    narrative += 'Filing jointly provides opportunities for higher contribution limits and coordinated tax strategies. ';
+  }
+  
+  // Urgency and motivation
+  if (retirementTimeframe === 'Less than 5 years') {
+    narrative += '\n\nWith retirement approaching soon, every decision counts. ';
+  } else if (retirementTimeframe === '5-10 years') {
+    narrative += '\n\nWith 5-10 years until retirement, you\'re in the critical accumulation phase. ';
+  } else {
+    narrative += '\n\nWith over 10 years until retirement, time is your greatest asset. ';
+  }
+  
+  if (actionMotivation === 'Urgent - Need to act now') {
+    narrative += 'Your sense of urgency is well-founded, and we\'re here to help you take immediate, effective action.';
+  } else {
+    narrative += 'Your proactive approach to planning will pay significant dividends over time.';
+  }
+  
+  return narrative;
+}
+
+/**
+ * Generate Phase 2 narrative - Priorities and Goals
+ */
+function generatePhase2Narrative(rowData, hdr) {
+  const retirementImportance = rowData[hdr['retirement_importance']];
+  const educationImportance = rowData[hdr['education_importance']];
+  const healthImportance = rowData[hdr['health_importance']];
+  const hasChildren = rowData[hdr['cesa_num_children']] > 0;
+  const hsaEligible = rowData[hdr['hsa_eligibility']] === 'Yes';
+  const investmentConfidence = rowData[hdr['investment_confidence']];
+  
+  let narrative = '\n\n';
+  
+  // Investment philosophy
+  const confidenceLevel = parseInt(investmentConfidence) || 4;
+  if (confidenceLevel >= 6) {
+    narrative += 'Your high investment confidence (' + confidenceLevel + '/7) indicates you\'re ready for sophisticated strategies. ';
+  } else if (confidenceLevel >= 4) {
+    narrative += 'Your moderate investment confidence (' + confidenceLevel + '/7) suggests a balanced approach with room for growth. ';
+  } else {
+    narrative += 'We\'ll help build your investment confidence (currently ' + confidenceLevel + '/7) through education and gradual implementation. ';
+  }
+  
+  // Domain priorities
+  const priorities = [
+    { domain: 'retirement', importance: parseInt(retirementImportance) || 0 },
+    { domain: 'education', importance: parseInt(educationImportance) || 0 },
+    { domain: 'health', importance: parseInt(healthImportance) || 0 }
+  ].sort((a, b) => b.importance - a.importance);
+  
+  narrative += '\n\nYour priorities are clear: ';
+  
+  if (priorities[0].domain === 'retirement') {
+    narrative += 'Retirement security is your top priority, ';
+  } else if (priorities[0].domain === 'education' && hasChildren) {
+    narrative += 'Funding your children\'s education is your top priority, ';
+  } else if (priorities[0].domain === 'health') {
+    narrative += 'Health security and medical expense planning is your top priority, ';
+  }
+  
+  narrative += 'and we\'ve designed your strategy accordingly. ';
+  
+  // Specific goals
+  const desiredRetirement = rowData[hdr['retirement_desired_monthly_income']];
+  if (desiredRetirement) {
+    narrative += 'Your goal of ' + formatCurrency(desiredRetirement) + ' monthly retirement income guides our recommendations. ';
+  }
+  
+  return narrative;
+}
+
+/**
+ * Generate results interpretation narrative
+ */
+function generateResultsNarrative(rowData, hdr) {
+  const actualTotal = calculateTotalMonthly(rowData, hdr, 'actual');
+  const idealTotal = calculateTotalMonthly(rowData, hdr, 'ideal');
+  const difference = idealTotal - actualTotal;
+  const percentIncrease = actualTotal > 0 ? ((difference / actualTotal) * 100).toFixed(0) : 100;
+  
+  let narrative = '\n\n';
+  
+  if (difference > 0) {
+    narrative += 'By optimizing your allocation strategy, you can increase your monthly contributions by ' + formatCurrency(difference) + ' ';
+    narrative += '(a ' + percentIncrease + '% improvement) while maximizing tax advantages. ';
+  } else if (difference === 0) {
+    narrative += 'Congratulations! You\'re already optimizing your contributions effectively. ';
+    narrative += 'Our recommendations confirm your current strategy while ensuring you\'re not missing any opportunities. ';
+  }
+  
+  // Future value impact
+  const retirementFvActual = parseFloat(rowData[hdr['retirement_fv_actual']]) || 0;
+  const retirementFvIdeal = parseFloat(rowData[hdr['retirement_fv_ideal']]) || 0;
+  const fvDifference = retirementFvIdeal - retirementFvActual;
+  
+  if (fvDifference > 1000000) {
+    narrative += '\n\nThis optimization could mean an additional ' + formatCurrency(fvDifference) + ' in retirement savings - ';
+    narrative += 'that\'s over a million dollars in additional wealth for your future. ';
+  } else if (fvDifference > 100000) {
+    narrative += '\n\nOver time, this strategy could generate an additional ' + formatCurrency(fvDifference) + ' for retirement. ';
+  }
+  
+  return narrative;
+}
+
+/**
+ * Generate action steps narrative
+ */
+function generateActionStepsNarrative(rowData, hdr, recommendations) {
+  let narrative = 'Based on your unique situation, here are your priority actions:\n\n';
+  
+  // Get top 3 recommendations by ideal amount
+  const topActions = recommendations
+    .filter(r => r.ideal > r.actual)
+    .sort((a, b) => (b.ideal - b.actual) - (a.ideal - a.actual))
+    .slice(0, 3);
+  
+  topActions.forEach((action, index) => {
+    narrative += (index + 1) + '. ' + action.name + ': ';
+    
+    if (action.actual === 0) {
+      narrative += 'Open and fund with ' + formatCurrency(action.ideal) + ' monthly. ';
+    } else {
+      narrative += 'Increase from ' + formatCurrency(action.actual) + ' to ' + formatCurrency(action.ideal) + ' monthly. ';
+    }
+    
+    // Add specific guidance
+    if (action.name.includes('401(k) Match')) {
+      narrative += 'This is free money from your employer - make this your #1 priority. ';
+    } else if (action.name.includes('HSA')) {
+      narrative += 'Triple tax advantage makes this incredibly valuable for long-term growth. ';
+    } else if (action.name.includes('Backdoor')) {
+      narrative += 'This strategy reclaims Roth benefits despite income limits. ';
+    }
+    
+    narrative += '\n\n';
+  });
+  
+  return narrative;
+}
+
+/**
+ * Generate profile-specific narrative section
+ */
+function generateProfileNarrative(profileId, rowData, hdr) {
+  const narratives = {
+    '1_ROBS_In_Use': generateROBSInUseNarrative,
+    '2_ROBS_Curious': generateROBSCuriousNarrative,
+    '3_Solo401k_Builder': generateSolo401kNarrative,
+    '4_Roth_Reclaimer': generateRothReclaimerNarrative,
+    '5_Bracket_Strategist': generateBracketStrategistNarrative,
+    '6_Catch_Up': generateCatchUpNarrative,
+    '7_Foundation_Builder': generateFoundationBuilderNarrative,
+    '8_Biz_Owner_Group': generateBizOwnerNarrative,
+    '9_Late_Stage_Growth': generateLateStageNarrative
+  };
+  
+  const narrativeFunction = narratives[profileId];
+  if (narrativeFunction && typeof narrativeFunction === 'function') {
+    return narrativeFunction(rowData, hdr);
+  }
+  
+  return '';
+}
+
+// Profile-specific narrative generators
+
+function generateROBSInUseNarrative(rowData, hdr) {
+  const profitDistribution = rowData[hdr['ex_q6']];
+  const contributionType = rowData[hdr['ex_q3']];
+  
+  let narrative = '\n\nYou\'ve taken the entrepreneurial leap, using your retirement funds to build your business through a ROBS structure. ';
+  narrative += 'This positions you uniquely in the retirement planning landscape.\n\n';
+  
+  if (profitDistribution) {
+    narrative += 'With projected annual profit distributions of ' + formatCurrency(profitDistribution) + ', ';
+    narrative += 'you have virtually unlimited contribution capacity - a massive advantage over traditional retirement savers. ';
+  }
+  
+  narrative += '\n\nYour C-corporation structure allows you to contribute far beyond normal limits, ';
+  narrative += 'turning business profits into tax-advantaged retirement savings. ';
+  
+  if (contributionType === 'Roth only') {
+    narrative += 'Your preference for Roth contributions will create tax-free wealth for retirement. ';
+  } else if (contributionType === 'Traditional only') {
+    narrative += 'Your traditional contributions provide immediate tax deductions to fuel business growth. ';
+  } else {
+    narrative += 'Your balanced approach between Roth and traditional gives you tax flexibility. ';
+  }
+  
+  return narrative;
+}
+
+function generateROBSCuriousNarrative(rowData, hdr) {
+  const rolloverBalance = rowData[hdr['ex_q5']];
+  const businessSavings = rowData[hdr['ex_q6']];
+  
+  let narrative = '\n\nYou\'re considering one of the most powerful strategies for entrepreneurial wealth building. ';
+  
+  if (rolloverBalance) {
+    narrative += 'With ' + formatCurrency(rolloverBalance) + ' available for rollover, ';
+    narrative += 'you have substantial capital to launch or acquire a business while maintaining tax advantages. ';
+  }
+  
+  narrative += '\n\nA ROBS structure could transform your retirement savings into active business capital, ';
+  narrative += 'potentially accelerating wealth creation beyond traditional investment returns. ';
+  
+  if (businessSavings) {
+    narrative += 'Your projected business savings of ' + formatCurrency(businessSavings) + ' annually ';
+    narrative += 'could flow into your Solo 401(k) with no contribution limits. ';
+  }
+  
+  return narrative;
+}
+
+// Placeholder functions for other profiles
+function generateSolo401kNarrative(rowData, hdr) {
+  return '\n\nAs a self-employed professional, you have the unique ability to contribute as both employee and employer, potentially doubling your retirement savings capacity.';
+}
+
+function generateRothReclaimerNarrative(rowData, hdr) {
+  return '\n\nYour high income is both a blessing and a challenge. We\'ll help you navigate income limits to reclaim valuable Roth contribution opportunities.';
+}
+
+function generateBracketStrategistNarrative(rowData, hdr) {
+  return '\n\nYour tax-aware approach positions you well for both current deductions and future tax-free growth. Balance is key to your strategy.';
+}
+
+function generateCatchUpNarrative(rowData, hdr) {
+  return '\n\nAt 50+, you\'ve unlocked powerful catch-up provisions that can accelerate your retirement savings in these critical final accumulation years.';
+}
+
+function generateFoundationBuilderNarrative(rowData, hdr) {
+  return '\n\nYou\'re building your financial foundation at the perfect time. With decades ahead, even modest contributions will compound into significant wealth.';
+}
+
+function generateBizOwnerNarrative(rowData, hdr) {
+  return '\n\nAs a business owner with employees, you have access to advanced strategies that can save hundreds of thousands in taxes while securing your retirement.';
+}
+
+function generateLateStageNarrative(rowData, hdr) {
+  return '\n\nYou\'re in the home stretch with important decisions ahead. We\'ll help you optimize these final years while preparing for the transition to retirement income.';
 }
