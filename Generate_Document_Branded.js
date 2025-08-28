@@ -81,10 +81,25 @@ function extractDocIdFromUrl(url) {
     return url;
   }
   
-  // Try to extract from URL
-  const match = url.match(/\/document\/d\/([a-zA-Z0-9-_]+)/);
+  // Try to extract from URL - handle multiple formats
+  // Format 1: /document/d/DOCUMENT_ID
+  let match = url.match(/\/document\/d\/([a-zA-Z0-9-_]+)/);
   if (match && match[1]) {
-    Logger.log(`Extracted document ID: ${match[1]}`);
+    Logger.log(`Extracted document ID from /document/d/ format: ${match[1]}`);
+    return match[1];
+  }
+  
+  // Format 2: open?id=DOCUMENT_ID (the format we're actually getting)
+  match = url.match(/[?&]id=([a-zA-Z0-9-_]+)/);
+  if (match && match[1]) {
+    Logger.log(`Extracted document ID from open?id= format: ${match[1]}`);
+    return match[1];
+  }
+  
+  // Format 3: /d/DOCUMENT_ID (shortened format)
+  match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
+  if (match && match[1]) {
+    Logger.log(`Extracted document ID from /d/ format: ${match[1]}`);
     return match[1];
   }
   
