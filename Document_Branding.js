@@ -11,9 +11,8 @@ const BRANDING_CONFIG = {
   company: {
     name: 'Retirement Blueprint',
     tagline: 'Your Path to Financial Freedom',
-    website: 'www.retirementblueprint.com',
-    email: 'info@retirementblueprint.com',
-    phone: '(555) 123-4567'
+    website: 'www.TrupathMastery.com',
+    email: 'Sarah@TrupathMastery.com'
   },
   
   // Logo configuration
@@ -28,8 +27,8 @@ const BRANDING_CONFIG = {
   
   // Color scheme (use hex colors)
   colors: {
-    primary: '#003366',      // Dark blue - main headers
-    secondary: '#0066CC',    // Medium blue - subheaders
+    primary: '#361852',      // Dark blue - main headers
+    secondary: '#b39062',    // Medium blue - subheaders
     accent: '#FF6600',       // Orange - highlights, calls to action
     text: '#333333',         // Dark gray - body text
     lightGray: '#666666',    // Light gray - secondary text
@@ -39,17 +38,17 @@ const BRANDING_CONFIG = {
   
   // Typography
   fonts: {
-    heading: 'Georgia',      // Or 'Playfair Display' if available
+    heading: 'Arial',      // Or 'Playfair Display' if available
     body: 'Arial',          // Or 'Open Sans' if available
     accent: 'Arial'         // For special callouts
   },
   
   // Font sizes (in points)
   sizes: {
-    title: 28,
-    heading1: 22,
-    heading2: 18,
-    heading3: 16,
+    title: 20,
+    heading1: 17,
+    heading2: 15,
+    heading3: 13,
     body: 11,
     small: 9,
     footer: 8

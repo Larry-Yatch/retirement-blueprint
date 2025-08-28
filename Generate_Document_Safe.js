@@ -1,3 +1,19 @@
+// Configuration for document generation
+const DOC_CONFIG = {
+  // Output folder configuration
+  OUTPUT_FOLDER_ID: '16KZLGRzLxa-e-jxnkDVb-sZcbosgPvGM',
+  
+  // Working Sheet configuration
+  SHEET_NAME: 'Working Sheet',
+  HEADER_ROW: 2,
+  
+  // Email configuration (no longer used - we have custom email function)
+  EMAIL_TEMPLATE: {
+    subject: 'Your Retirement Blueprint Report',
+    body: 'See custom email function for current template'
+  }
+};
+
 // Configuration for addendum documents
 const ADDENDUM_CONFIG = {
   // Profile-specific addendum document IDs
