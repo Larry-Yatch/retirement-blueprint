@@ -3,8 +3,8 @@
  * This is the production-ready version that works reliably
  */
 
-// Configuration
-const DOC_CONFIG = {
+// Configuration - using a different name to avoid conflicts with Document_Generation.js
+const DOC_CONFIG_COMPLETE = {
   SHEET_NAME: 'Working Sheet',
   HEADER_ROW: 2,
   OUTPUT_FOLDER_ID: '16KZLGRzLxa-e-jxnkDVb-sZcbosgPvGM'
@@ -21,12 +21,12 @@ function generateRetirementBlueprintComplete(rowNum) {
     Logger.log(`Starting complete document generation for row ${rowNum}`);
     
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const ws = ss.getSheetByName(DOC_CONFIG.SHEET_NAME);
+    const ws = ss.getSheetByName(DOC_CONFIG_COMPLETE.SHEET_NAME);
     if (!ws) throw new Error('Working Sheet not found');
     
     // Get headers and data
     const lastCol = ws.getLastColumn();
-    const headers = ws.getRange(DOC_CONFIG.HEADER_ROW, 1, 1, lastCol).getValues()[0];
+    const headers = ws.getRange(DOC_CONFIG_COMPLETE.HEADER_ROW, 1, 1, lastCol).getValues()[0];
     const rowData = ws.getRange(rowNum, 1, 1, lastCol).getValues()[0];
     
     // Create header map
@@ -46,8 +46,8 @@ function generateRetirementBlueprintComplete(rowNum) {
     const docName = `Retirement Blueprint_${cleanName}_${timestamp}`;
     
     // Create NEW document
-    const folder = DOC_CONFIG.OUTPUT_FOLDER_ID ? 
-      DriveApp.getFolderById(DOC_CONFIG.OUTPUT_FOLDER_ID) : 
+    const folder = DOC_CONFIG_COMPLETE.OUTPUT_FOLDER_ID ? 
+      DriveApp.getFolderById(DOC_CONFIG_COMPLETE.OUTPUT_FOLDER_ID) : 
       DriveApp.getRootFolder();
     
     const doc = DocumentApp.create(docName);
@@ -74,7 +74,7 @@ function generateRetirementBlueprintComplete(rowNum) {
     // Save URL to sheet
     const urlCol = hdr['retirement_blueprint_doc_url'] || lastCol + 1;
     if (!hdr['retirement_blueprint_doc_url']) {
-      ws.getRange(DOC_CONFIG.HEADER_ROW, urlCol).setValue('retirement_blueprint_doc_url');
+      ws.getRange(DOC_CONFIG_COMPLETE.HEADER_ROW, urlCol).setValue('retirement_blueprint_doc_url');
     }
     ws.getRange(rowNum, urlCol).setValue(docUrl);
     
