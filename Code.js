@@ -20,6 +20,21 @@ const CONFIG = {
 };
 
 /**
+ * Future Value calculation configuration
+ */
+const FV_CONFIG = {
+  // Base annual rate when investment score = 1 (8%)
+  BASE_RATE: 0.08,
+  
+  // Additional rate range based on score (12% max additional)
+  // Score 1 = 8%, Score 7 = 20%
+  MAX_ADDITIONAL_RATE: 0.12,
+  
+  // Use monthly compounding for more accurate projections
+  USE_MONTHLY_COMPOUNDING: true
+};
+
+/**
  * IRS contribution limits for various investment vehicles
  */
 const LIMITS = {
@@ -2575,7 +2590,16 @@ const HEADERS = {
   // Family Bank
   FAMILY_BANK_IDEAL:                 'family_bank_ideal',
   // Vehicle Recommendations
-  VEHICLE_RECOMMENDATIONS:           'vehicle_recommendations'
+  VEHICLE_RECOMMENDATIONS:           'vehicle_recommendations',
+  
+  // ── Future Value Calculations ──
+  PERSONALIZED_ANNUAL_RATE:          'personalized_annual_rate',
+  RETIREMENT_FV_ACTUAL:              'retirement_fv_actual',
+  RETIREMENT_FV_IDEAL:               'retirement_fv_ideal',
+  EDUCATION_FV_ACTUAL:               'education_fv_actual',
+  EDUCATION_FV_IDEAL:                'education_fv_ideal',
+  HEALTH_FV_ACTUAL:                  'health_fv_actual',
+  HEALTH_FV_IDEAL:                   'health_fv_ideal'
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -3383,6 +3407,14 @@ function handlePhase2(e) {
   });
 
   Logger.log(`✔️ Phase 2 done — wrote ${Object.keys(actualMap).length} actual + ${writtenIdeal.size} ideal`);
+  
+  // Automatically trigger Phase 3 - Future Value Calculations
+  try {
+    runPhase3(rowNum);
+  } catch (error) {
+    Logger.log(`⚠️ Phase 3 failed but Phase 2 completed successfully: ${error.message}`);
+    // Don't throw - Phase 2 was successful even if Phase 3 fails
+  }
 }
 
 
@@ -3521,6 +3553,217 @@ function calculateEmployerMatch(grossIncome, matchPercentage) {
   }
   
   return matchCap;
+}
+
+/**
+ * Calculate personalized annual interest rate based on investment scoring
+ * @param {Object} hdr - Header mapping object
+ * @param {Array} rowArr - Row data array
+ * @returns {number} Annual interest rate (e.g., 0.12 for 12%)
+ */
+function calculatePersonalizedRate(hdr, rowArr) {
+  // Get investment scoring values (1-7 scale)
+  const inv1 = Number(getValue(hdr, rowArr, HEADERS.P2_INV_INVOLVEMENT)) || 4;
+  const inv2 = Number(getValue(hdr, rowArr, HEADERS.P2_INV_TIME)) || 4;
+  const inv3 = Number(getValue(hdr, rowArr, HEADERS.P2_INV_CONFIDENCE)) || 4;
+  
+  // Calculate average score
+  const avgScore = (inv1 + inv2 + inv3) / 3;
+  
+  // Convert to annual rate using tunable constants
+  // Score 1 = BASE_RATE (8%), Score 7 = BASE_RATE + MAX_ADDITIONAL_RATE (20%)
+  const annualRate = FV_CONFIG.BASE_RATE + ((avgScore - 1) / 6) * FV_CONFIG.MAX_ADDITIONAL_RATE;
+  
+  return annualRate;
+}
+
+/**
+ * Calculate future value with monthly contributions
+ * @param {number} monthlyContribution - Monthly contribution amount
+ * @param {number} annualRate - Annual interest rate (e.g., 0.12 for 12%)
+ * @param {number} years - Number of years
+ * @returns {number} Future value
+ */
+function futureValue(monthlyContribution, annualRate, years) {
+  if (!monthlyContribution || monthlyContribution <= 0 || years <= 0 || years >= 99) {
+    return 0;
+  }
+  
+  if (FV_CONFIG.USE_MONTHLY_COMPOUNDING) {
+    // Monthly compounding
+    const monthlyRate = annualRate / 12;
+    const months = years * 12;
+    
+    // FV = PMT × ((1 + r)^n - 1) / r
+    const fv = monthlyContribution * ((Math.pow(1 + monthlyRate, months) - 1) / monthlyRate);
+    
+    return Math.round(fv);
+  } else {
+    // Annual compounding (simplified)
+    const fv = monthlyContribution * 12 * ((Math.pow(1 + annualRate, years) - 1) / annualRate);
+    return Math.round(fv);
+  }
+}
+
+/**
+ * Consolidate contributions by domain
+ * @param {Object} hdr - Header mapping object
+ * @param {Array} rowArr - Row data array
+ * @param {string} type - 'actual' or 'ideal'
+ * @returns {Object} Totals by domain
+ */
+function consolidateByDomain(hdr, rowArr, type) {
+  const totals = {
+    retirement: 0,
+    education: 0,
+    health: 0
+  };
+  
+  // Get all headers that end with _actual or _ideal
+  const suffix = `_${type}`;
+  
+  Object.entries(HEADERS).forEach(([key, headerName]) => {
+    if (headerName.endsWith(suffix)) {
+      const value = Number(getValue(hdr, rowArr, headerName)) || 0;
+      
+      // Determine domain from header name
+      if (headerName.startsWith('retirement_')) {
+        totals.retirement += value;
+      } else if (headerName.startsWith('education_')) {
+        totals.education += value;
+      } else if (headerName.startsWith('health_')) {
+        totals.health += value;
+      }
+    }
+  });
+  
+  return totals;
+}
+
+/**
+ * Calculate and write future values to the Working Sheet
+ * @param {Object} hdr - Header mapping object
+ * @param {Array} rowArr - Row data array
+ * @param {number} rowNum - Row number in the sheet
+ * @param {string} profileId - Profile identifier
+ */
+function calculateAndWriteFutureValues(hdr, rowArr, rowNum, profileId) {
+  const ws = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Working Sheet');
+  
+  // 1. Calculate and save personalized annual rate
+  const annualRate = calculatePersonalizedRate(hdr, rowArr);
+  const rateCol = hdr[HEADERS.PERSONALIZED_ANNUAL_RATE];
+  if (rateCol) {
+    ws.getRange(rowNum, rateCol)
+      .setValue(annualRate)
+      .setNumberFormat('0.00%');
+  }
+  
+  // 2. Get timeline data
+  const timelines = {
+    retirement: Number(getValue(hdr, rowArr, HEADERS.P2_RETIREMENT_YEARS)) || 30,
+    education: Number(getValue(hdr, rowArr, HEADERS.P2_CESA_YEARS_UNTIL_FIRST)) || 99,
+    health: Number(getValue(hdr, rowArr, HEADERS.P2_HSA_YEARS_UNTIL_NEED)) || 30
+  };
+  
+  // 3. Consolidate contributions by domain
+  const actualTotals = consolidateByDomain(hdr, rowArr, 'actual');
+  const idealTotals = consolidateByDomain(hdr, rowArr, 'ideal');
+  
+  // 4. Calculate and write future values
+  const domains = ['retirement', 'education', 'health'];
+  domains.forEach(domain => {
+    const actualFV = futureValue(actualTotals[domain], annualRate, timelines[domain]);
+    const idealFV = futureValue(idealTotals[domain], annualRate, timelines[domain]);
+    
+    // Write actual FV
+    const actualCol = hdr[HEADERS[`${domain.toUpperCase()}_FV_ACTUAL`]];
+    if (actualCol) {
+      ws.getRange(rowNum, actualCol)
+        .setValue(actualFV)
+        .setNumberFormat('$#,##0');
+    }
+    
+    // Write ideal FV
+    const idealCol = hdr[HEADERS[`${domain.toUpperCase()}_FV_IDEAL`]];
+    if (idealCol) {
+      ws.getRange(rowNum, idealCol)
+        .setValue(idealFV)
+        .setNumberFormat('$#,##0');
+    }
+  });
+  
+  Logger.log(`✅ Future values calculated for row ${rowNum}`);
+}
+
+/**
+ * Test Phase 3 Future Value calculations
+ * Run this after a successful Phase 2 test to verify FV calculations
+ */
+function testPhase3() {
+  try {
+    const { sheet: ws, hdr } = initWS();
+    
+    // Find a row with Phase 2 data (has ideal values)
+    const testRow = 3; // Start with row 3
+    const rowArr = ws.getRange(testRow, 1, 1, ws.getLastColumn()).getValues()[0];
+    
+    // Check if row has Phase 2 data by looking for any ideal column
+    const hasIdealData = getValue(hdr, rowArr, 'retirement_traditional_401k_ideal') || 
+                        getValue(hdr, rowArr, 'health_hsa_ideal') ||
+                        getValue(hdr, rowArr, 'family_bank_ideal');
+    if (!hasIdealData) {
+      Logger.log('❌ Test row does not have Phase 2 data. Run Phase 2 first.');
+      return;
+    }
+    
+    // Run Phase 3
+    Logger.log('🧪 Testing Phase 3 calculations...');
+    runPhase3(testRow);
+    
+    // Read back results
+    const updatedRowArr = ws.getRange(testRow, 1, 1, ws.getLastColumn()).getValues()[0];
+    
+    // Log results
+    const rate = getValue(hdr, updatedRowArr, HEADERS.PERSONALIZED_ANNUAL_RATE);
+    Logger.log(`📊 Personalized Rate: ${(rate * 100).toFixed(2)}%`);
+    
+    const domains = ['retirement', 'education', 'health'];
+    domains.forEach(domain => {
+      const actualFV = getValue(hdr, updatedRowArr, HEADERS[`${domain.toUpperCase()}_FV_ACTUAL`]);
+      const idealFV = getValue(hdr, updatedRowArr, HEADERS[`${domain.toUpperCase()}_FV_IDEAL`]);
+      Logger.log(`💰 ${domain}: Actual FV = $${actualFV}, Ideal FV = $${idealFV}`);
+    });
+    
+    Logger.log('✅ Phase 3 test complete');
+  } catch (error) {
+    Logger.log(`❌ Phase 3 test failed: ${error.message}`);
+    console.error(error);
+  }
+}
+
+/**
+ * Run Phase 3: Future Value Calculations
+ * Can be called automatically from Phase 2 or manually for specific rows
+ * @param {number} rowNum - Row number in the Working Sheet
+ */
+function runPhase3(rowNum) {
+  try {
+    Logger.log(`🔮 Phase 3 starting for row ${rowNum}`);
+    
+    // Initialize and get data
+    const { sheet: ws, hdr } = initWS();
+    const rowArr = ws.getRange(rowNum, 1, 1, ws.getLastColumn()).getValues()[0];
+    const profileId = getValue(hdr, rowArr, HEADERS.PROFILE_ID);
+    
+    // Run future value calculations
+    calculateAndWriteFutureValues(hdr, rowArr, rowNum, profileId);
+    
+    Logger.log(`✅ Phase 3 complete for row ${rowNum}`);
+  } catch (error) {
+    Logger.log(`❌ Phase 3 error for row ${rowNum}: ${error.message}`);
+    throw error;
+  }
 }
 
 /**
