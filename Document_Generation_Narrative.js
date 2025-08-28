@@ -385,18 +385,87 @@ function generateROBSCuriousNarrative(rowData, hdr) {
   return narrative;
 }
 
-// ... Continue with other profile narratives ...
+function generateSolo401kNarrative(rowData, hdr) {
+  let narrative = `## Your Solo 401(k) Advantage\n\n`;
+  narrative += `As a self-employed professional, you have access to one of the most powerful retirement vehicles available. `;
+  narrative += `The Solo 401(k) allows you to contribute as both employee AND employer, potentially sheltering more than $70,000 annually from taxes.\n\n`;
+  
+  const businessIncome = rowData[hdr['business_income']] || rowData[hdr['gross_annual_income']];
+  if (businessIncome) {
+    narrative += `With your business income, you can maximize both employee deferrals and employer profit-sharing contributions. `;
+    narrative += `This dual contribution structure can accelerate your retirement savings far beyond what traditional employees can achieve. `;
+  }
+  
+  narrative += `\n\nThe flexibility of self-employment combined with the Solo 401(k)'s generous limits creates an unparalleled opportunity for wealth building.`;
+  return narrative;
+}
 
-/**
- * Export functions for use in Document_Generation.js
- */
-if (typeof module !== 'undefined') {
-  module.exports = {
-    generateOpeningNarrative,
-    generatePhase1Narrative,
-    generatePhase2Narrative,
-    generateResultsNarrative,
-    generateActionStepsNarrative,
-    generateProfileNarrative
-  };
+function generateRothReclaimerNarrative(rowData, hdr) {
+  let narrative = `## Reclaiming Your Roth Benefits\n\n`;
+  narrative += `High income doesn't have to mean losing access to Roth benefits. `;
+  narrative += `Through strategic planning and the backdoor Roth IRA strategy, you can still build tax-free retirement wealth.\n\n`;
+  
+  narrative += `The key is understanding and navigating the rules correctly. `;
+  narrative += `By converting traditional IRA contributions to Roth, you bypass income limits while building a tax-free retirement bucket. `;
+  narrative += `This strategy becomes even more powerful when combined with workplace retirement plans.`;
+  
+  return narrative;
+}
+
+function generateBracketStrategistNarrative(rowData, hdr) {
+  let narrative = `## Optimizing Across Tax Brackets\n\n`;
+  narrative += `Your tax-conscious approach positions you to maximize after-tax wealth through strategic account selection. `;
+  narrative += `By balancing traditional and Roth contributions, you're creating tax flexibility for retirement.\n\n`;
+  
+  narrative += `This isn't just about saving taxes today – it's about controlling your tax burden throughout retirement. `;
+  narrative += `Your diversified approach across account types gives you options to manage income and taxes in any economic environment.`;
+  
+  return narrative;
+}
+
+function generateCatchUpNarrative(rowData, hdr) {
+  const age = rowData[hdr['Current_Age']] || 50;
+  let narrative = `## Accelerating Your Retirement Savings\n\n`;
+  narrative += `At ${age}, you've unlocked powerful catch-up contribution opportunities. `;
+  narrative += `These additional contribution limits recognize that your peak earning years often coincide with reduced expenses as children become independent.\n\n`;
+  
+  narrative += `Every additional dollar you can save now benefits from fewer years until retirement, making immediate action crucial. `;
+  narrative += `The combination of higher limits and your experience-driven earning power creates a unique window for rapid wealth accumulation.`;
+  
+  return narrative;
+}
+
+function generateFoundationBuilderNarrative(rowData, hdr) {
+  let narrative = `## Building Your Financial Foundation\n\n`;
+  narrative += `You're taking the crucial first steps in building long-term wealth. `;
+  narrative += `By starting now, you're harnessing the incredible power of compound growth over decades.\n\n`;
+  
+  const age = rowData[hdr['Current_Age']] || 30;
+  const yearsToRetirement = 65 - age;
+  narrative += `With approximately ${yearsToRetirement} years until retirement, even modest contributions today can grow into substantial wealth. `;
+  narrative += `The key is establishing good habits now and gradually increasing contributions as your income grows.`;
+  
+  return narrative;
+}
+
+function generateBizOwnerNarrative(rowData, hdr) {
+  let narrative = `## Advanced Strategies for Business Owners\n\n`;
+  narrative += `As a business owner with employees, you have access to sophisticated retirement strategies that can save hundreds of thousands in taxes. `;
+  narrative += `From cash balance plans to profit sharing, your options extend far beyond typical 401(k) limits.\n\n`;
+  
+  narrative += `The key is balancing your retirement goals with employee benefit costs and regulatory requirements. `;
+  narrative += `Properly structured, these plans can dramatically accelerate your wealth building while providing valuable employee benefits.`;
+  
+  return narrative;
+}
+
+function generateLateStageNarrative(rowData, hdr) {
+  let narrative = `## Optimizing Your Final Working Years\n\n`;
+  narrative += `You're in the critical final phase where every decision has immediate impact. `;
+  narrative += `This is your opportunity to maximize contributions, optimize asset allocation, and prepare for the transition to retirement income.\n\n`;
+  
+  narrative += `Beyond just saving more, this phase requires strategic thinking about Social Security timing, healthcare coverage, and tax-efficient withdrawal strategies. `;
+  narrative += `The decisions you make now will determine your financial security and flexibility throughout retirement.`;
+  
+  return narrative;
 }
