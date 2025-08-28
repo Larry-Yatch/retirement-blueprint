@@ -112,6 +112,11 @@ function generateDocumentBranded() {
       hdr[header] = index;
     });
     
+    // Log ProfileID for debugging
+    const profileId = rowData[hdr['ProfileID']];
+    Logger.log(`ProfileID from row: "${profileId}"`);
+    Logger.log(`ProfileID column index: ${hdr['ProfileID']}`);
+    
     // Generate the branded document
     const docUrl = generateBrandedDocument(rowData, hdr);
     
@@ -121,6 +126,7 @@ function generateDocumentBranded() {
     
   } catch (error) {
     Logger.log(`Error in branded generation: ${error.toString()}`);
+    Logger.log(`Error stack: ${error.stack}`);
     SpreadsheetApp.getUi().alert('❌ Error', 
       `Failed to generate document: ${error.toString()}`, 
       SpreadsheetApp.getUi().ButtonSet.OK);
@@ -390,13 +396,19 @@ function addExecutiveSummary(body, rowData, hdr) {
   
   body.appendParagraph('');
   
+  // Get profile title safely
+  const profileId = rowData[hdr['ProfileID']] || 'Unknown';
+  const profileTitle = PROFILE_CONFIG && PROFILE_CONFIG[profileId] 
+    ? PROFILE_CONFIG[profileId].title 
+    : 'Custom Profile';
+  
   // Summary points
   const summaryPoints = [
     `Current Monthly Retirement Savings: ${formatCurrency(actualTotal)}`,
     `Optimized Monthly Savings Potential: ${formatCurrency(idealTotal)}`,
     `Monthly Increase Opportunity: ${formatCurrency(difference)}`,
     `Projected Retirement Value: ${formatCurrency(retirementFvIdeal)}`,
-    `Investment Profile: ${PROFILE_CONFIG[rowData[hdr['ProfileID']]]?.title || 'Custom'}`
+    `Investment Profile: ${profileTitle}`
   ];
   
   summaryPoints.forEach(point => {
