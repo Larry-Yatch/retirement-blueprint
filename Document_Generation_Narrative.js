@@ -37,6 +37,22 @@ function generateOpeningNarrative(rowData, hdr) {
   narrative += `\n\nThis personalized Retirement Blueprint has been crafted specifically for your situation as a ${profileConfig.title}. `;
   narrative += `We've analyzed your current financial position, understood your priorities, and designed a strategy that aligns with your goals.`;
   
+  // Add more context about the process
+  narrative += `\n\nThrough our comprehensive analysis, we've examined over 15 different investment vehicles, calculated personalized growth projections based on your unique profile, and identified specific opportunities that could significantly enhance your financial future. `;
+  narrative += `This isn't a generic plan – every recommendation has been tailored to your specific circumstances, tax situation, and long-term objectives.`;
+  
+  // Add urgency or encouragement based on age
+  if (age < 40) {
+    narrative += `\n\nThe decisions you make today will compound exponentially over the next ${65 - age} years. `;
+    narrative += `By taking action now, you're positioning yourself for extraordinary long-term wealth building that many people miss by waiting too long.`;
+  } else if (age < 55) {
+    narrative += `\n\nYou're in a powerful position to make strategic moves that can dramatically improve your retirement readiness. `;
+    narrative += `The next decade represents your peak earning and saving opportunity – let's make it count.`;
+  } else {
+    narrative += `\n\nWhile others might think it's too late to make meaningful changes, we know better. `;
+    narrative += `Strategic optimization at this stage can still create substantial improvements in your retirement security and legacy planning.`;
+  }
+  
   return narrative;
 }
 
@@ -77,6 +93,28 @@ function generatePhase1Narrative(rowData, hdr) {
     narrative += `Your sense of urgency is well-founded, and we're here to help you take immediate, effective action.`;
   } else {
     narrative += `Your proactive approach to planning will pay significant dividends over time.`;
+  }
+  
+  // Add current savings analysis
+  const actualTotal = Number(rowData[hdr['retirement_traditional_401k_actual']]) || 0;
+  const netIncome = Number(rowData[hdr['Net_Monthly_Income']]) || 0;
+  const currentSavingsRate = netIncome > 0 ? (actualTotal / netIncome * 100).toFixed(1) : 0;
+  
+  narrative += `\n\nCurrently, you're saving approximately ${currentSavingsRate}% of your net income toward retirement. `;
+  
+  if (currentSavingsRate >= 15) {
+    narrative += `This puts you well ahead of most Americans, but there's still room to optimize where these dollars go for maximum tax efficiency and growth. `;
+  } else if (currentSavingsRate >= 10) {
+    narrative += `While this is a solid foundation, increasing your savings rate even modestly can have dramatic long-term impacts on your wealth. `;
+  } else {
+    narrative += `There's significant opportunity to accelerate your wealth building by gradually increasing this percentage and optimizing your vehicle selection. `;
+  }
+  
+  // Add context about their current tax situation  
+  narrative += `\n\nYour current tax situation provides specific opportunities we'll leverage. `;
+  const age = Number(rowData[hdr['Current_Age']]) || 0;
+  if (age >= 50) {
+    narrative += `Being ${age} years old, you have access to valuable catch-up contribution limits that can accelerate your wealth building in these critical years. `;
   }
   
   return narrative;
@@ -130,6 +168,31 @@ function generatePhase2Narrative(rowData, hdr) {
     narrative += `Your goal of ${formatCurrency(desiredRetirement)} monthly retirement income guides our recommendations. `;
   }
   
+  // Add more context about their priorities
+  narrative += `\n\nUnderstanding these priorities allows us to create a strategy that balances your immediate needs with long-term wealth building. `;
+  
+  // Add investment time and involvement context
+  const invTime = Number(rowData[hdr['investment_time']]) || 4;
+  const invInvolvement = Number(rowData[hdr['investment_involvement']]) || 4;
+  
+  if (invTime >= 5 && invInvolvement >= 5) {
+    narrative += `Your willingness to dedicate time and be actively involved in your investments opens doors to more sophisticated strategies that can significantly enhance returns. `;
+  } else if (invTime <= 3 || invInvolvement <= 3) {
+    narrative += `We've designed a streamlined approach that respects your time constraints while still maximizing growth opportunities. `;
+  }
+  
+  // HSA context if eligible
+  if (hsaEligible) {
+    narrative += `\n\nYour HSA eligibility is a hidden gem in your retirement strategy. This "triple tax advantage" vehicle can serve as a powerful supplemental retirement account, growing tax-free for decades. `;
+  }
+  
+  // Children/education context
+  if (hasChildren) {
+    const numChildren = Number(rowData[hdr['cesa_num_children']]) || 0;
+    narrative += `\n\nBalancing retirement savings with education funding for your ${numChildren} ${numChildren === 1 ? 'child' : 'children'} requires careful planning. `;
+    narrative += `We'll show you how to optimize both goals without sacrificing your own financial security. `;
+  }
+  
   return narrative;
 }
 
@@ -160,8 +223,22 @@ function generateResultsNarrative(rowData, hdr) {
   if (fvDifference > 1000000) {
     narrative += `\n\nThis optimization could mean an additional ${formatCurrency(fvDifference)} in retirement savings - `;
     narrative += `that's over a million dollars in additional wealth for your future. `;
+    narrative += `To put this in perspective, this could mean the difference between a modest retirement and true financial freedom - `;
+    narrative += `the ability to travel, support family, pursue passions, and leave a meaningful legacy. `;
   } else if (fvDifference > 100000) {
     narrative += `\n\nOver time, this strategy could generate an additional ${formatCurrency(fvDifference)} for retirement. `;
+    narrative += `This isn't just a number – it represents years of additional financial security and flexibility in your golden years. `;
+  }
+  
+  // Add tax efficiency context
+  narrative += `\n\nBeyond the raw numbers, our strategy emphasizes tax efficiency at every level. `;
+  narrative += `By strategically utilizing tax-advantaged accounts, you'll keep more of what you earn and accelerate your wealth building through compound growth. `;
+  
+  // Add context about the optimization
+  const yearlyIncrease = difference * 12;
+  if (yearlyIncrease > 0) {
+    narrative += `\n\nThe additional ${formatCurrency(yearlyIncrease)} per year we've identified isn't about dramatic lifestyle changes. `;
+    narrative += `It's about redirecting money you're already planning to save into more efficient vehicles that work harder for your future. `;
   }
   
   return narrative;
@@ -193,14 +270,41 @@ function generateActionStepsNarrative(rowData, hdr, recommendations) {
     // Add specific guidance
     if (action.name.includes('401(k) Match')) {
       narrative += `This is free money from your employer - make this your #1 priority. `;
+      narrative += `Every dollar you don't capture is a 100% guaranteed loss of return. `;
     } else if (action.name.includes('HSA')) {
       narrative += `Triple tax advantage makes this incredibly valuable for long-term growth. `;
+      narrative += `Tax-deductible going in, tax-free growth, and tax-free withdrawals for medical expenses - no other account offers this combination. `;
     } else if (action.name.includes('Backdoor')) {
       narrative += `This strategy reclaims Roth benefits despite income limits. `;
+      narrative += `While it requires a few extra steps, the long-term tax savings make it absolutely worth the effort. `;
+    } else if (action.name.includes('Solo 401(k)')) {
+      narrative += `As a self-employed individual, this gives you the highest contribution limits available. `;
+      narrative += `You can contribute as both employee AND employer, potentially sheltering $70,000+ annually. `;
+    } else if (action.name.includes('Traditional IRA')) {
+      narrative += `Immediate tax deduction provides instant savings to reinvest for growth. `;
+    } else if (action.name.includes('Roth IRA')) {
+      narrative += `Tax-free growth and withdrawals in retirement - especially powerful if you expect higher future tax rates. `;
     }
     
     narrative += `\n\n`;
   });
+  
+  // Add implementation guidance
+  narrative += `\n## Implementation Strategy\n\n`;
+  narrative += `Start with the highest-impact changes first. Even if you can't implement everything immediately, each step forward compounds over time. `;
+  narrative += `We recommend setting up automatic contributions to ensure consistency and remove the temptation to skip months. `;
+  
+  // Add timeline context
+  narrative += `\n\nMost of these changes can be implemented within 30 days. `;
+  narrative += `Contact your HR department or benefits administrator for employer-sponsored plans, and work with a reputable custodian for IRAs and HSAs. `;
+  narrative += `The key is to start – even partial implementation beats analysis paralysis. `;
+  
+  // Add motivation
+  const age = Number(rowData[hdr['Current_Age']]) || 35;
+  const yearsToRetirement = Math.max(65 - age, 5);
+  narrative += `\n\nRemember: You have approximately ${yearsToRetirement} years until traditional retirement age. `;
+  narrative += `Every month you delay is a month of compound growth lost forever. `;
+  narrative += `The best time to plant a tree was 20 years ago; the second-best time is today.`;
   
   return narrative;
 }
