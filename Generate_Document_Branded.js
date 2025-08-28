@@ -22,14 +22,19 @@ function generateDocumentBranded() {
     Logger.log('Generating safe document as base...');
     const docUrl = generateRetirementBlueprintSafe(row);
     
+    Logger.log(`Safe document returned URL: ${docUrl}`);
+    Logger.log(`URL type: ${typeof docUrl}`);
+    
     if (!docUrl) {
-      throw new Error('Failed to generate base document');
+      throw new Error('Failed to generate base document - no URL returned');
     }
     
     // Extract document ID from URL
     const docId = extractDocIdFromUrl(docUrl);
+    Logger.log(`Extracted document ID: ${docId}`);
+    
     if (!docId) {
-      throw new Error('Could not extract document ID from URL');
+      throw new Error(`Could not extract document ID from URL: ${docUrl}`);
     }
     
     Logger.log(`Base document created with ID: ${docId}`);
@@ -57,13 +62,34 @@ function generateDocumentBranded() {
  * Extract document ID from Google Docs URL
  */
 function extractDocIdFromUrl(url) {
-  if (!url) return null;
+  if (!url) {
+    Logger.log('extractDocIdFromUrl: No URL provided');
+    return null;
+  }
   
-  // Match patterns like:
+  Logger.log(`extractDocIdFromUrl: Processing URL: ${url}`);
+  
+  // Handle various Google Docs URL formats:
   // https://docs.google.com/document/d/DOCUMENT_ID/edit
   // https://docs.google.com/document/d/DOCUMENT_ID/edit?usp=sharing
+  // https://docs.google.com/document/d/DOCUMENT_ID
+  // Also handle if just the ID is passed
+  
+  // First check if it's already just an ID
+  if (/^[a-zA-Z0-9-_]+$/.test(url) && url.length > 20) {
+    Logger.log('URL appears to be just the document ID');
+    return url;
+  }
+  
+  // Try to extract from URL
   const match = url.match(/\/document\/d\/([a-zA-Z0-9-_]+)/);
-  return match ? match[1] : null;
+  if (match && match[1]) {
+    Logger.log(`Extracted document ID: ${match[1]}`);
+    return match[1];
+  }
+  
+  Logger.log('Could not extract document ID from URL');
+  return null;
 }
 
 /**
