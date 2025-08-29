@@ -11,6 +11,7 @@
 !Generate_Document_Safe.js
 !Logo_Helper.js
 !Document_Narratives.js
+!Phase3_Document_Integration.js
 
 # Exclude node_modules and archive
 node_modules/**
