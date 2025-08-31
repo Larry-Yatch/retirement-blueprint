@@ -265,6 +265,7 @@ function formatVehicleRecommendations(rowData, hdr) {
     { name: 'Solo 401(k) - Employee', actual: 'retirement_solo_401k_employee_actual', ideal: 'retirement_solo_401k_employee_ideal' },
     { name: 'Solo 401(k) - Employer', actual: 'retirement_solo_401k_employer_actual', ideal: 'retirement_solo_401k_employer_ideal' },
     { name: 'Traditional 401(k)', actual: 'retirement_traditional_401k_actual', ideal: 'retirement_traditional_401k_ideal' },
+    { name: '401(k) Match Traditional', actual: 'retirement_401k_match_traditional_actual', ideal: 'retirement_401k_match_traditional_ideal' },
     { name: '401(k) Catch-Up', actual: 'retirement_401k_catch_up_actual', ideal: 'retirement_401k_catch_up_ideal' },
     { name: 'Traditional IRA', actual: 'retirement_traditional_ira_actual', ideal: 'retirement_traditional_ira_ideal' },
     { name: 'Roth IRA', actual: 'retirement_roth_ira_actual', ideal: 'retirement_roth_ira_ideal' },

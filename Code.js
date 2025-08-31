@@ -1333,11 +1333,13 @@ const profileHelpers = {
       const hasRoth401k = getValue(hdr, rowArr, HEADERS.P2_EX_Q6) === 'Yes';
       
       if (hasEmployer401k && hasEmployerMatch) {
+        // Calculate match amount using the universal function
+        const matchCap = calculateEmployerMatch(grossIncome, matchPercentage);
+        
         // Insert 401(k) Match at the beginning (free money)
         baseRetirementOrder.unshift({ 
-          name: '401(k) Match', 
-          capMonthly: 500, // Default estimate, would need to calculate based on match %
-          note: `Employer match: ${matchPercentage || 'See plan details'}`
+          name: `401(k) Match Traditional (${matchPercentage})`, 
+          capMonthly: matchCap
         });
       }
       
@@ -3272,8 +3274,8 @@ function handlePhase2(e) {
     let matchPercentage = '';
     
     if (profileId === '2_ROBS_Curious') {
-      hasMatch = getValue(hdr,rowArr,HEADERS.P2_EX_Q2) === 'Yes';
-      matchPercentage = getValue(hdr,rowArr,HEADERS.P2_EX_Q3) || '';
+      hasMatch = getValue(hdr,rowArr,HEADERS.P2_EX_Q4) === 'Yes';
+      matchPercentage = getValue(hdr,rowArr,HEADERS.P2_EX_Q5) || '';
     } else if (['4_Roth_Reclaimer'].includes(profileId)) {
       hasMatch = getValue(hdr,rowArr,HEADERS.P2_EX_Q6) === 'Yes';
       matchPercentage = getValue(hdr,rowArr,HEADERS.P2_EX_Q7) || '';
@@ -3327,7 +3329,7 @@ function handlePhase2(e) {
   // Profile 8: Business Owner Group - Required contributions
   else if (profileId === '8_Biz_Owner_Group') {
     // Check for safe harbor or other required contributions
-    const planType = getValue(hdr,rowArr,HEADERS.P2_EX_Q3) || '';
+    const planType = getValue(hdr,rowArr,HEADERS.P2_EX_Q5) || '';
     if (planType.includes('Defined Benefit')) {
       const annualDB = Number(getValue(hdr,rowArr,HEADERS.P2_EX_Q6))||0;
       if (annualDB > 0) {
@@ -3344,8 +3346,8 @@ function handlePhase2(e) {
     let matchPercentage = '';
     
     if (profileId === '2_ROBS_Curious') {
-      hasMatch = getValue(hdr,rowArr,HEADERS.P2_EX_Q2) === 'Yes';
-      matchPercentage = getValue(hdr,rowArr,HEADERS.P2_EX_Q3) || '';
+      hasMatch = getValue(hdr,rowArr,HEADERS.P2_EX_Q4) === 'Yes';
+      matchPercentage = getValue(hdr,rowArr,HEADERS.P2_EX_Q5) || '';
     } else if (['4_Roth_Reclaimer'].includes(profileId)) {
       hasMatch = getValue(hdr,rowArr,HEADERS.P2_EX_Q6) === 'Yes';
       matchPercentage = getValue(hdr,rowArr,HEADERS.P2_EX_Q7) || '';
