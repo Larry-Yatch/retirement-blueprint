@@ -584,6 +584,7 @@ function formatVehicleRecommendations(rowData, hdr) {
     { name: 'Defined Benefit Plan', actual: 'retirement_defined_benefit_plan_actual', ideal: 'retirement_defined_benefit_plan_ideal' },
     { name: 'Group 401(k) - Employee', actual: 'retirement_group_401k_employee_actual', ideal: 'retirement_group_401k_employee_ideal' },
     { name: 'Group 401(k) - Employer', actual: 'retirement_group_401k_employer_actual', ideal: 'retirement_group_401k_employer_ideal' },
+    { name: 'Group 401(k) - Employer Profit Sharing', actual: 'retirement_group_401k_employer_profit_sharing_actual', ideal: 'retirement_group_401k_employer_profit_sharing_ideal' },
     { name: 'HSA (Retirement)', actual: 'retirement_hsa_actual', ideal: 'retirement_hsa_ideal' },
     // Education vehicles
     { name: 'Combined CESA', actual: 'education_combined_cesa_actual', ideal: 'education_combined_cesa_ideal' },

@@ -12,7 +12,8 @@
 !Logo_Helper.js
 !Document_Narratives.js
 !Phase3_Document_Integration.js
+!Reprocess_Allocations.js
 
 # Exclude node_modules and archive
 node_modules/**
-archive/**
+archive/**Test_Audit_Fixes_Complete.js

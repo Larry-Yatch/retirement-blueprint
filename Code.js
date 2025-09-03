@@ -62,6 +62,15 @@ function onOpen() {
       .addItem('Legacy: Complete Version', 'generateDocumentComplete')
       .addToUi();
     
+    // Reprocess menu
+    ui.createMenu('🔄 Reprocess Allocations')
+      .addItem('📝 Test Reprocess (Enter Row #)', 'testReprocessWithPrompt')
+      .addItem('🎯 Reprocess Current Row', 'reprocessCurrentRow')
+      .addSeparator()
+      .addItem('⚠️ Reprocess ALL Rows', 'reprocessAllRows')
+      .addItem('📄 Regenerate ALL Documents', 'regenerateAllDocuments')
+      .addToUi();
+    
     // Testing menu
     ui.createMenu('🧪 Testing')
       .addItem('Test All Profiles', 'testAllProfiles')
@@ -133,6 +142,11 @@ const LIMITS = {
   OTHER: {
     ALTERNATIVE_INVESTMENTS: Infinity,
     ROTH_CONVERSION: Infinity
+  },
+  DEFAULTS: {
+    ANNUAL_PROFIT_DISTRIBUTION: 100000,
+    GROSS_ANNUAL_INCOME: 100000,
+    QCD_ANNUAL_LIMIT: 100000
   }
 };
 
@@ -879,7 +893,7 @@ function addEmployer401kVehicles(baseOrder, params) {
     
     // Insert match at the beginning - employer match is highest priority (free money!)
     const matchVehicle = { 
-      name: `401(k) Match Traditional (${matchPercentage})`, 
+      name: '401(k) Match Traditional', 
       capMonthly: matchCap
     };
     updatedOrder.unshift(matchVehicle); // Add to beginning of array
@@ -1112,7 +1126,7 @@ const profileHelpers = {
     const contributionType = getValue(hdr, rowArr, HEADERS.P2_EX_Q3) || 'Both'; // Roth/Traditional/Both
     const contributionFrequency = getValue(hdr, rowArr, HEADERS.P2_EX_Q4) || 'Monthly';
     const rothIRAContribution = getValue(hdr, rowArr, HEADERS.P2_EX_Q5) === 'Yes';
-    const annualProfitDistribution = Number(getValue(hdr, rowArr, HEADERS.P2_EX_Q6)) || 100000;
+    const annualProfitDistribution = Number(getValue(hdr, rowArr, HEADERS.P2_EX_Q6)) || LIMITS.DEFAULTS.ANNUAL_PROFIT_DISTRIBUTION;
     
     // Calculate monthly capacities using universal functions
     const hsaCap = calculateHsaMonthlyCapacity(hsaElig, age, filing);
@@ -1215,7 +1229,7 @@ const profileHelpers = {
     const numKids = Number(getValue(hdr, rowArr, HEADERS.P2_CESA_NUM_CHILDREN)) || 0;
     const age = Number(getValue(hdr, rowArr, HEADERS.CURRENT_AGE));
     const filing = getValue(hdr, rowArr, HEADERS.FILING_STATUS);
-    const grossIncome = Number(getValue(hdr, rowArr, HEADERS.GROSS_ANNUAL_INCOME)) || 100000;
+    const grossIncome = Number(getValue(hdr, rowArr, HEADERS.GROSS_ANNUAL_INCOME)) || LIMITS.DEFAULTS.GROSS_ANNUAL_INCOME;
     
     // Get tax preference and employment info
     const taxFocus = getValue(hdr, rowArr, HEADERS.TAX_MINIMIZATION);
@@ -1338,8 +1352,9 @@ const profileHelpers = {
         
         // Insert 401(k) Match at the beginning (free money)
         baseRetirementOrder.unshift({ 
-          name: `401(k) Match Traditional (${matchPercentage})`, 
-          capMonthly: matchCap
+          name: '401(k) Match Traditional', 
+          capMonthly: matchCap,
+          note: matchPercentage // Store percentage as metadata
         });
       }
       
@@ -1484,7 +1499,7 @@ const profileHelpers = {
         
         if (matchCap > 0) {
           baseRetirementOrder.push({ 
-            name: `401(k) Match Traditional (${matchPercentage})`,
+            name: '401(k) Match Traditional',
             capMonthly: matchCap
           });
         }
@@ -1595,7 +1610,7 @@ const profileHelpers = {
         
         if (matchCap > 0) {
           baseRetirementOrder.push({ 
-            name: `401(k) Match Traditional (${matchPercentage})`,
+            name: '401(k) Match Traditional',
             capMonthly: matchCap
           });
         }
@@ -2430,7 +2445,7 @@ const profileHelpers = {
     if (age >= 70.5) {
       baseRetirementOrder.push({ 
         name: 'Qualified Charitable Distribution Planning', 
-        capMonthly: Math.min(100000/12, 8333), // Up to $100k/year
+        capMonthly: Math.min(LIMITS.DEFAULTS.QCD_ANNUAL_LIMIT/12, 8333), // Up to $100k/year
         note: 'Satisfy RMDs tax-free through charity'
       });
     }
@@ -3240,10 +3255,8 @@ function handlePhase2(e) {
     if (!/family_bank/.test(key)) actualMap[key] = 0;
   });
   
-  // Set universal actuals
-  actualMap['retirement_hsa_actual']   = actualHsa;
+  // Set universal actuals (HSA belongs to Health domain, CESA to Education domain)
   actualMap['health_hsa_actual']       = actualHsa;
-  actualMap['retirement_combined_cesa_actual'] = actualCesa;
   actualMap['education_combined_cesa_actual']  = actualCesa;
   actualMap['retirement_traditional_401k_actual'] = actualRet;
   
@@ -3361,7 +3374,10 @@ function handlePhase2(e) {
       const grossIncome = Number(getValue(hdr,rowArr,HEADERS.GROSS_ANNUAL_INCOME)) || 0;
       const matchAmount = calculateEmployerMatch(grossIncome, matchPercentage);
       if (matchAmount > 0) {
-        nonDiscretionarySeeds.Retirement[`401(k) Match Traditional (${matchPercentage})`] = matchAmount;
+        // Use fixed vehicle name for consistency
+        nonDiscretionarySeeds.Retirement['401(k) Match Traditional'] = matchAmount;
+        // Store match percentage separately if needed for reporting
+        nonDiscretionarySeeds.Retirement['401(k) Match Traditional_note'] = matchPercentage;
       }
     }
   }
