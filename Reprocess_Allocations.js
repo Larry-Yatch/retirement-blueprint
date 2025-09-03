@@ -4,6 +4,30 @@
  */
 
 /**
+ * Helper function to sum object values
+ */
+function sumValues(obj) {
+  return Object.values(obj).reduce((sum, val) => sum + (Number(val) || 0), 0);
+}
+
+/**
+ * Helper function to get all _actual vehicle keys from headers
+ */
+function listAllVehicleActualKeys() {
+  const ws = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Working Sheet');
+  const headers = ws.getRange(2, 1, 1, ws.getLastColumn()).getValues()[0];
+  
+  const actualKeys = [];
+  headers.forEach(header => {
+    if (header && header.toString().endsWith('_actual')) {
+      actualKeys.push(header);
+    }
+  });
+  
+  return actualKeys;
+}
+
+/**
  * Reprocess a single row's allocation with the fixed code
  * @param {number} rowNum - The row number to reprocess
  * @param {boolean} generateDoc - Whether to also generate document after reprocessing
@@ -52,6 +76,16 @@ function reprocessSingleRow(rowNum, generateDoc = false) {
       console.log(`✅ 401(k) Match changed: $${originalMatch} → $${newMatch}`);
     }
     
+    // Trigger Phase 3 - Future Value Calculations
+    try {
+      console.log('Running Phase 3 future value calculations...');
+      runPhase3(rowNum);
+      console.log('✅ Future values calculated');
+    } catch (error) {
+      console.log(`⚠️ Phase 3 failed but reprocessing completed: ${error.toString()}`);
+      // Don't throw - reprocessing was successful even if Phase 3 fails
+    }
+    
     // Generate document if requested
     if (generateDoc) {
       console.log('Generating document...');
@@ -69,14 +103,18 @@ function reprocessSingleRow(rowNum, generateDoc = false) {
 }
 
 /**
- * Write allocation results to sheet (simplified from handlePhase2)
+ * Write allocation results to sheet (full implementation from handlePhase2)
  */
 function writeAllocationResults(ws, hdr, rowNum, results) {
   const rowArr = ws.getRange(rowNum, 1, 1, ws.getLastColumn()).getValues()[0];
   const profileId = getValue(hdr, rowArr, HEADERS.PROFILE_ID);
   
-  // Build actualMap (simplified - focusing on key fixes)
+  // Build complete actualMap - all keys default to 0
   const actualMap = {};
+  listAllVehicleActualKeys().forEach(key => {
+    // skip any family_bank_actual keys
+    if (!/family_bank/.test(key)) actualMap[key] = 0;
+  });
   
   // Universal actuals
   const actualHsa = Number(getValue(hdr, rowArr, HEADERS.P2_HSA_MONTHLY_CONTRIB)) || 0;
@@ -87,29 +125,150 @@ function writeAllocationResults(ws, hdr, rowNum, results) {
   actualMap['education_combined_cesa_actual'] = actualCesa;
   actualMap['retirement_traditional_401k_actual'] = actualRet;
   
-  // Write actuals
-  Object.entries(actualMap).forEach(([key, value]) => {
-    if (hdr[key]) {
-      ws.getRange(rowNum, hdr[key])
-        .setValue(value)
-        .setNumberFormat('$#,##0');
+  // Define profiles with employer match
+  const matchProfiles = ['2_ROBS_Curious', '4_Roth_Reclaimer', '5_Bracket_Strategist', 
+                         '6_Catch_Up', '7_Foundation_Builder', '9_Late_Stage_Growth'];
+  
+  // Profile-specific actual contributions
+  let actualDist = 0;
+  if (profileId === '1_ROBS_In_Use') {
+    actualDist = (Number(getValue(hdr, rowArr, HEADERS.P2_EX_Q6)) || 0) / 12;
+    actualMap['retirement_robs_solo_401k_profit_distribution_actual'] = actualDist;
+  } else if (profileId === '3_Solo401k_Builder') {
+    const annualEmployee = Number(getValue(hdr, rowArr, HEADERS.P2_EX_Q4)) || 0;
+    const annualEmployer = Number(getValue(hdr, rowArr, HEADERS.P2_EX_Q5)) || 0;
+    actualMap['retirement_solo_401k_employee_actual'] = annualEmployee / 12;
+    actualMap['retirement_solo_401k_employer_actual'] = annualEmployer / 12;
+  } else if (profileId === '8_Biz_Owner_Group') {
+    const annualContribution = Number(getValue(hdr, rowArr, HEADERS.P2_EX_Q6)) || 0;
+    actualMap['retirement_group_401k_employee_actual'] = annualContribution / 12;
+  }
+  
+  // Add employer match actuals for W-2 profiles
+  if (matchProfiles.includes(profileId)) {
+    let hasMatch = false;
+    let matchPercentage = '';
+    
+    if (profileId === '2_ROBS_Curious') {
+      hasMatch = getValue(hdr, rowArr, HEADERS.P2_EX_Q4) === 'Yes';
+      matchPercentage = getValue(hdr, rowArr, HEADERS.P2_EX_Q5) || '';
+    } else if (['4_Roth_Reclaimer'].includes(profileId)) {
+      hasMatch = getValue(hdr, rowArr, HEADERS.P2_EX_Q6) === 'Yes';
+      matchPercentage = getValue(hdr, rowArr, HEADERS.P2_EX_Q7) || '';
+    } else if (['5_Bracket_Strategist', '6_Catch_Up', '7_Foundation_Builder', '9_Late_Stage_Growth'].includes(profileId)) {
+      hasMatch = getValue(hdr, rowArr, HEADERS.P2_EX_Q2) === 'Yes';
+      matchPercentage = getValue(hdr, rowArr, HEADERS.P2_EX_Q3) || '';
     }
+    
+    if (hasMatch && matchPercentage) {
+      const grossIncome = Number(getValue(hdr, rowArr, HEADERS.GROSS_ANNUAL_INCOME)) || 0;
+      const matchAmount = calculateEmployerMatch(grossIncome, matchPercentage);
+      if (matchAmount > 0) {
+        actualMap['retirement_401k_match_traditional_actual'] = matchAmount;
+      }
+    }
+  }
+  
+  // Write all actuals
+  Object.entries(actualMap).forEach(([hdrName, rawAmt]) => {
+    const col = hdr[hdrName];
+    if (!col) return;
+    ws.getRange(rowNum, col)
+      .setValue(Math.round(rawAmt))
+      .setNumberFormat('$#,##0');
   });
   
-  // Write ideals from results.vehicles
+  // Build non-discretionary seeds based on profile
+  const nonDiscretionarySeeds = { Education: {}, Health: {}, Retirement: {} };
+  
+  // Profile 1: ROBS In Use - Profit distributions
+  if (profileId === '1_ROBS_In_Use' && actualDist > 0) {
+    nonDiscretionarySeeds.Retirement['ROBS Solo 401(k) – Profit Distribution'] = actualDist;
+  } 
+  
+  // Profile 3: Solo 401k Builder - Employer contributions
+  else if (profileId === '3_Solo401k_Builder') {
+    const annualEmployer = Number(getValue(hdr, rowArr, HEADERS.P2_EX_Q5)) || 0;
+    if (annualEmployer > 0) {
+      nonDiscretionarySeeds.Retirement['Solo 401(k) – Employer'] = annualEmployer / 12;
+    }
+  }
+  
+  // Profile 8: Business Owner Group - Required contributions
+  else if (profileId === '8_Biz_Owner_Group') {
+    const planType = getValue(hdr, rowArr, HEADERS.P2_EX_Q5) || '';
+    if (planType.includes('Defined Benefit')) {
+      const annualDB = Number(getValue(hdr, rowArr, HEADERS.P2_EX_Q6)) || 0;
+      if (annualDB > 0) {
+        nonDiscretionarySeeds.Retirement['Defined Benefit Plan'] = annualDB / 12;
+      }
+    }
+  }
+  
+  // Check profiles with employer match
+  if (matchProfiles.includes(profileId)) {
+    let hasMatch = false;
+    let matchPercentage = '';
+    
+    if (profileId === '2_ROBS_Curious') {
+      hasMatch = getValue(hdr, rowArr, HEADERS.P2_EX_Q4) === 'Yes';
+      matchPercentage = getValue(hdr, rowArr, HEADERS.P2_EX_Q5) || '';
+    } else if (['4_Roth_Reclaimer'].includes(profileId)) {
+      hasMatch = getValue(hdr, rowArr, HEADERS.P2_EX_Q6) === 'Yes';
+      matchPercentage = getValue(hdr, rowArr, HEADERS.P2_EX_Q7) || '';
+    } else if (['5_Bracket_Strategist', '6_Catch_Up', '7_Foundation_Builder', '9_Late_Stage_Growth'].includes(profileId)) {
+      hasMatch = getValue(hdr, rowArr, HEADERS.P2_EX_Q2) === 'Yes';
+      matchPercentage = getValue(hdr, rowArr, HEADERS.P2_EX_Q3) || '';
+    }
+    
+    if (hasMatch && matchPercentage) {
+      const grossIncome = Number(getValue(hdr, rowArr, HEADERS.GROSS_ANNUAL_INCOME)) || 0;
+      const matchAmount = calculateEmployerMatch(grossIncome, matchPercentage);
+      if (matchAmount > 0) {
+        nonDiscretionarySeeds.Retirement['401(k) Match Traditional'] = matchAmount;
+        // Store match percentage separately if needed for reporting
+        nonDiscretionarySeeds.Retirement['401(k) Match Traditional_note'] = matchPercentage;
+      }
+    }
+  }
+  
+  // Write ideal allocations (discretionary + non-discretionary)
   const writtenIdeal = new Set();
   let sumIdeal = 0;
   
-  Object.entries(results.vehicles).forEach(([domain, vehicles]) => {
-    Object.entries(vehicles).forEach(([veh, amtRaw]) => {
+  ['Retirement', 'Education', 'Health'].forEach(domain => {
+    // First write discretionary allocations from engine
+    for (const [veh, amtRaw] of Object.entries(results.vehicles[domain] || {})) {
+      if (veh === 'Family Bank') continue;
       const key = veh.toLowerCase()
-        .replace(/401\(k\)/g, '401k')
         .replace(/[()%–]/g, '')
         .replace(/\s+/g, '_');
       const hdrName = `${domain.toLowerCase()}_${key}_ideal`;
       const col = hdr[hdrName];
+      if (!col) continue;
       
-      if (col) {
+      // Add non-discretionary amount if applicable
+      const nonDiscAmt = nonDiscretionarySeeds[domain][veh] || 0;
+      const amt = Math.round((amtRaw || 0) + nonDiscAmt);
+      
+      ws.getRange(rowNum, col)
+        .setValue(amt)
+        .setNumberFormat('$#,##0');
+      writtenIdeal.add(hdrName);
+      sumIdeal += amt;
+    }
+    
+    // Then add any non-discretionary seeds that weren't in the engine results
+    for (const [veh, amtRaw] of Object.entries(nonDiscretionarySeeds[domain])) {
+      // Skip note fields
+      if (veh.endsWith('_note')) continue;
+      if (!results.vehicles[domain] || !results.vehicles[domain][veh]) {
+        const key = veh.toLowerCase()
+          .replace(/[()%–]/g, '')
+          .replace(/\s+/g, '_');
+        const hdrName = `${domain.toLowerCase()}_${key}_ideal`;
+        const col = hdr[hdrName];
+        if (!col) continue;
         const amt = Math.round(amtRaw || 0);
         ws.getRange(rowNum, col)
           .setValue(amt)
@@ -117,10 +276,69 @@ function writeAllocationResults(ws, hdr, rowNum, results) {
         writtenIdeal.add(hdrName);
         sumIdeal += amt;
       }
-    });
+    }
   });
   
-  console.log(`Wrote ${writtenIdeal.size} ideal allocations`);
+  // Calculate and write family bank ideal
+  const userPercent = Number(getValue(hdr, rowArr, HEADERS.ALLOCATION_PERCENTAGE)) || 0;
+  const targetRate = Math.max(userPercent / 100, CONFIG.OPTIMIZED_SAVINGS_RATE);
+  const totalPool = Number(getValue(hdr, rowArr, HEADERS.NET_MONTHLY_INCOME)) * targetRate;
+  
+  // Add non-discretionary seeds to get true total
+  const totalNonDiscretionary = sumValues(nonDiscretionarySeeds.Education) +
+                                sumValues(nonDiscretionarySeeds.Health) +
+                                sumValues(nonDiscretionarySeeds.Retirement);
+  const totalIdealPool = totalPool + totalNonDiscretionary;
+  
+  const leftover = Math.max(0, Math.round(totalIdealPool - sumIdeal));
+  const fbCol = hdr[HEADERS.FAMILY_BANK_IDEAL];
+  if (fbCol) {
+    ws.getRange(rowNum, fbCol)
+      .setValue(leftover)
+      .setNumberFormat('$#,##0');
+    writtenIdeal.add('family_bank_ideal');
+  }
+  
+  // Collect and store vehicle recommendations with notes
+  const recommendations = [];
+  ['Retirement', 'Education', 'Health'].forEach(domain => {
+    // Find vehicles with notes from the original vehicleOrders
+    const domainVehicles = results.vehicleOrders ? results.vehicleOrders[domain] : null;
+    if (domainVehicles && Array.isArray(domainVehicles)) {
+      domainVehicles.forEach(vehicle => {
+        if (vehicle.note) {
+          // Only include vehicles that have an allocated amount
+          const amtRaw = results.vehicles[domain] ? results.vehicles[domain][vehicle.name] : 0;
+          if (amtRaw > 0) {
+            recommendations.push(`${vehicle.name}: ${vehicle.note}`);
+          } else if (vehicle.note.includes('Action item:')) {
+            // Include action items even without allocation
+            recommendations.push(vehicle.note);
+          }
+        }
+      });
+    }
+  });
+  
+  // Write recommendations to sheet
+  const recCol = hdr[HEADERS.VEHICLE_RECOMMENDATIONS];
+  if (recCol && recommendations.length > 0) {
+    ws.getRange(rowNum, recCol)
+      .setValue(recommendations.join('\n'));
+  }
+  
+  // Zero-fill any remaining _actual or _ideal columns
+  Object.entries(hdr).forEach(([name, col]) => {
+    const cell = ws.getRange(rowNum, col);
+    if (name.endsWith('_actual') && !(name in actualMap)) {
+      cell.setValue(0).setNumberFormat('$#,##0');
+    }
+    if (name.endsWith('_ideal') && !writtenIdeal.has(name)) {
+      cell.setValue(0).setNumberFormat('$#,##0');
+    }
+  });
+  
+  console.log(`✅ Wrote ${Object.keys(actualMap).length} actuals, ${writtenIdeal.size} ideals`);
 }
 
 /**
