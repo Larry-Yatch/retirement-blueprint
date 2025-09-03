@@ -229,6 +229,14 @@ function batchReprocess() {
 **Cause:** ProfileID column incorrect or logic flaw
 **Solution:** Check getProfileFromRow() and ProfileID column value
 
+### Issue: "Employer match not showing in documents"
+**Cause:** Column values exist but not appearing in generated documents
+**Solution:** 
+1. Verify `Document_Narratives.js` includes match in vehicle list (line 577)
+2. Check `formatVehicleRecommendations` function returns match
+3. Ensure all files pushed via clasp
+**Resolution:** Fixed in January 2025 - match now displays correctly
+
 ## Quick Debug Commands
 
 ```javascript

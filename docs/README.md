@@ -125,12 +125,13 @@ The system now implements a two-output system showing **actual** (current) vs **
 - ✅ Phase 3 Future Value Calculator implemented
 
 ### Recent Updates (January 2025)
+- ✅ Fixed employer match display in document generation
+- ✅ Resolved ROBS profit distribution double-counting issue
 - Phase 3 Future Value Calculator with personalized rates (8-20%)
 - Document Generation System with automatic PDF creation
 - Branded document templates with logo support
 - Email delivery with multiple PDF attachments
 - Consolidated documentation for easier navigation
-- Archived completed audit and cleanup documents
 
 ## 📁 Archive Structure
 
