@@ -242,14 +242,23 @@ function writeAllocationResults(ws, hdr, rowNum, results) {
       if (veh === 'Family Bank') continue;
       const key = veh.toLowerCase()
         .replace(/[()%–]/g, '')
-        .replace(/\s+/g, '_');
+        .replace(/\s+/g, '_')
+        .replace(/__+/g, '_'); // Fix double underscores
       const hdrName = `${domain.toLowerCase()}_${key}_ideal`;
       const col = hdr[hdrName];
       if (!col) continue;
       
       // Add non-discretionary amount if applicable
+      // For ROBS profit distribution, use the non-discretionary seed value only (don't add)
       const nonDiscAmt = nonDiscretionarySeeds[domain][veh] || 0;
-      const amt = Math.round((amtRaw || 0) + nonDiscAmt);
+      let amt;
+      if (veh === 'ROBS Solo 401(k) – Profit Distribution' && nonDiscAmt > 0) {
+        // For ROBS profit, use only the non-discretionary seed amount
+        amt = Math.round(nonDiscAmt);
+      } else {
+        // For other vehicles, add non-discretionary to discretionary
+        amt = Math.round((amtRaw || 0) + nonDiscAmt);
+      }
       
       ws.getRange(rowNum, col)
         .setValue(amt)

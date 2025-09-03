@@ -1,6 +1,6 @@
 # Retirement Blueprint Documentation
 
-*Last Updated: January 27, 2025*
+*Last Updated: January 2025*
 
 ## 🚨 Important Update: Actual vs Ideal System
 
@@ -10,9 +10,9 @@ The system now implements a two-output system showing **actual** (current) vs **
 
 ### System Understanding
 
-1. **[System_Overview.md](./System_Overview.md)** *(Updated)*
+1. **[System_Overview.md](./System_Overview.md)**
    - Project overview and architecture
-   - NEW: Actual vs ideal output system
+   - Actual vs ideal output system
    - System features and profile status
    - Infrastructure improvements
 
@@ -22,7 +22,7 @@ The system now implements a two-output system showing **actual** (current) vs **
    - Discretionary vs non-discretionary contributions
    - Implementation details and testing
 
-3. **[Phase_3_Future_Value_System.md](./Phase_3_Future_Value_System.md)** 🆕
+3. **[Phase_3_Future_Value_System.md](./Phase_3_Future_Value_System.md)**
    - Future value calculator documentation
    - Personalized interest rate calculation
    - Domain consolidation and projections
@@ -35,56 +35,66 @@ The system now implements a two-output system showing **actual** (current) vs **
    - Standard structures and patterns
    - Profile-specific details and status
 
-5. **[Technical_Reference.md](./Technical_Reference.md)** *(Updated)*
+5. **[Technical_Reference.md](./Technical_Reference.md)**
    - Header management system
    - Actual/ideal system functions
-   - NEW: Phase 3 future value functions
+   - Phase 3 future value functions
    - Form mapping system
    - Contribution limits
 
-### Testing Documentation
+6. **[Report_Fields_Implementation_Guide.md](./Report_Fields_Implementation_Guide.md)**
+   - Email report generation
+   - Field mappings and formatting
 
-7. **[TESTING_GUIDE_COMPLETE.md](./TESTING_GUIDE_COMPLETE.md)**
+### Document Generation
+
+7. **[Document_Generation_Guide.md](./Document_Generation_Guide.md)**
+   - Complete document generation system
+   - Automatic generation after Phase 3
+   - Template configuration
+   - Email integration with PDF attachments
+
+8. **[Document_Branding_Complete_Guide.md](./Document_Branding_Complete_Guide.md)**
+   - Logo and branding setup
+   - Color schemes and typography
+   - Professional formatting
+   - Troubleshooting branding issues
+
+### Testing & Debugging
+
+9. **[TESTING_GUIDE_COMPLETE.md](./TESTING_GUIDE_COMPLETE.md)**
    - Comprehensive testing framework
    - Test data requirements
    - Common failures and solutions
    - Debug helpers
 
-8. **[TESTING_QUICK_REFERENCE.md](./TESTING_QUICK_REFERENCE.md)**
-   - Quick command reference
-   - Common test commands
-   - Profile test status
+10. **[TESTING_QUICK_REFERENCE.md](./TESTING_QUICK_REFERENCE.md)**
+    - Quick command reference
+    - Common test commands
+    - Profile test status
+
+11. **[Debugging_Reference.md](./Debugging_Reference.md)** 🆕
+    - Reprocess_Allocations.js guide
+    - Common debugging scenarios
+    - Header verification
+    - Debug logging best practices
 
 ### User Resources
 
-9. **[User_Guide.md](./User_Guide.md)**
-   - Guide for end users
-   - Understanding the 9 profiles
-   - Interpreting results
+12. **[User_Guide.md](./User_Guide.md)**
+    - Guide for end users
+    - Understanding the 9 profiles
+    - Interpreting results
 
-10. **[Quick_Start.md](./Quick_Start.md)**
-   - "I need to..." task reference
-   - Common workflows
-   - Troubleshooting
+13. **[Quick_Start.md](./Quick_Start.md)**
+    - "I need to..." task reference
+    - Common workflows
+    - Troubleshooting
 
-### Additional Resources
-
-11. **[Report_Fields_Implementation_Guide.md](./Report_Fields_Implementation_Guide.md)**
-   - Email report generation
-   - Field mappings
-
-12. **[Profile_Complete_Validation_Guide.md](./Profile_Complete_Validation_Guide.md)**
+14. **[Profile_Complete_Validation_Guide.md](./Profile_Complete_Validation_Guide.md)**
     - Profile validation procedures
     - Testing checklists
-
-13. **[GOOGLE_APPS_SCRIPT_FILES.md](./GOOGLE_APPS_SCRIPT_FILES.md)**
-    - File structure reference
-    - Function locations
-
-14. **[Document_Generation_Setup_Guide.md](./Document_Generation_Setup_Guide.md)** 🆕
-    - Automatic document generation system
-    - Template configuration
-    - Email integration
+    - Validation rules
 
 ## 🚀 Where to Start
 
@@ -97,9 +107,11 @@ The system now implements a two-output system showing **actual** (current) vs **
 - Go to [TESTING_GUIDE_COMPLETE.md](./TESTING_GUIDE_COMPLETE.md)
 - Use [TESTING_QUICK_REFERENCE.md](./TESTING_QUICK_REFERENCE.md) for commands
 
-**Debugging issues?**
-- Check the actual/ideal system if seeing allocation issues
-- Reference [Technical_Reference.md](./Technical_Reference.md)
+**Debugging allocation issues?**
+- Use [Debugging_Reference.md](./Debugging_Reference.md) for Reprocess_Allocations
+- Check the actual/ideal system documentation
+- Reference [Technical_Reference.md](./Technical_Reference.md) for headers
+- See Current_Headers.md for exact column positions
 
 ## 🚀 System Status
 
@@ -112,26 +124,30 @@ The system now implements a two-output system showing **actual** (current) vs **
 - ✅ All form questions properly mapped and validated
 - ✅ Phase 3 Future Value Calculator implemented
 
-### Recent Updates (January 28, 2025)
-- Added Phase 3 Future Value Calculator
-- Implemented personalized interest rate calculation (8-20%)
-- Added domain-based consolidation for future projections
-- Integrated automatic Phase 3 execution after Phase 2
-- Created comprehensive test suite for future value calculations
-- **NEW: Document Generation System** - Automatic narrative reports with email delivery
-  - Generates personalized PDF reports after Phase 3
-  - Includes actual vs ideal analysis and future projections
-  - See [Document Generation Setup Guide](./Document_Generation_Setup_Guide.md)
+### Recent Updates (January 2025)
+- Phase 3 Future Value Calculator with personalized rates (8-20%)
+- Document Generation System with automatic PDF creation
+- Branded document templates with logo support
+- Email delivery with multiple PDF attachments
+- Consolidated documentation for easier navigation
+- Archived completed audit and cleanup documents
 
-## 📁 Archive
+## 📁 Archive Structure
 
-The following documents have been archived as they describe outdated behavior:
-- `PROFILE_TESTING_RESULTS_pre_actual_ideal.md` - Old test results
-- `MISSING_SEEDS_ANALYSIS_outdated.md` - Old seeding behavior
-- `CURRENT_CONTRIBUTION_TRACKING_outdated.md` - Superseded by actual/ideal
-- `FORM_QUESTION_UPDATES_outdated.md` - Old form questions
-- `IMPLEMENTATION_STEPS_TWO_OUTPUT_completed.md` - Completed plan
-- `PROFILE_SEEDS_REFERENCE_outdated.md` - Old seed behavior
-- `Development_Notes_historical.md` - Historical notes
+Historical and completed documentation has been organized into archive folders:
 
-Historical documentation is stored in the `archive/` folder for reference.
+**`archive/completed_audits_2024/`** - Completed audit and fix documentation
+- Audit fix summaries
+- Cleanup instructions
+- Google Apps Script cleanup guides
+
+**`archive/document_generation_old/`** - Previous document generation guides
+- Original setup guides (now consolidated)
+- Phase-specific documentation (now merged)
+
+**`archive/`** - Historical documentation
+- Outdated test results and analyses
+- Old form questions and implementations
+- Historical development notes
+
+All current, actively-used documentation remains in the main docs folder.
