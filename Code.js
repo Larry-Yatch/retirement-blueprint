@@ -62,10 +62,13 @@ function onOpen() {
       .addItem('Legacy: Complete Version', 'generateDocumentComplete')
       .addToUi();
     
-    // Reprocess menu
+    // Reprocess menu - Enhanced with email options
     ui.createMenu('🔄 Reprocess Allocations')
-      .addItem('📝 Test Reprocess (Enter Row #)', 'testReprocessWithPrompt')
-      .addItem('🎯 Reprocess Current Row', 'reprocessCurrentRow')
+      .addItem('⚡ Quick Test (No Doc/Email)', 'quickTestReprocess')
+      .addItem('📝 Test with Options...', 'testReprocessWithPrompt')
+      .addSeparator()
+      .addItem('🎯 Reprocess Current Row (No Doc)', 'reprocessCurrentRow')
+      .addItem('📄 Reprocess + Doc (No Email)', 'testReprocessSingleRow')
       .addSeparator()
       .addItem('⚠️ Reprocess ALL Rows', 'reprocessAllRows')
       .addItem('📄 Regenerate ALL Documents', 'regenerateAllDocuments')

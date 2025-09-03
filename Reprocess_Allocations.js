@@ -4,10 +4,60 @@
  */
 
 /**
+ * Add Reprocess menu to the spreadsheet
+ * Call this from main onOpen() function
+ */
+function addReprocessMenu() {
+  const ui = SpreadsheetApp.getUi();
+  ui.createMenu('🔄 Reprocess')
+    .addItem('Quick Test (Current Row - No Doc/Email)', 'quickTestReprocess')
+    .addItem('Test with Options...', 'testReprocessWithPrompt')
+    .addSeparator()
+    .addItem('Reprocess Current Row (No Doc)', 'reprocessCurrentRow')
+    .addItem('Reprocess with Document (No Email)', 'testReprocessSingleRow')
+    .addSeparator()
+    .addItem('Bulk Reprocess All Rows...', 'reprocessAllRows')
+    .addItem('Regenerate All Documents...', 'regenerateAllDocuments')
+    .addToUi();
+}
+
+/**
  * Helper function to sum object values
  */
 function sumValues(obj) {
   return Object.values(obj).reduce((sum, val) => sum + (Number(val) || 0), 0);
+}
+
+/**
+ * Generate document without sending email
+ * This wraps the document generation to suppress email sending
+ */
+function generateDocumentNoEmail(rowNum) {
+  try {
+    console.log(`Generating document for row ${rowNum} (email disabled)...`);
+    
+    // Store original email function
+    const originalSendEmail = MailApp.sendEmail;
+    
+    // Override to prevent sending
+    MailApp.sendEmail = function(options) {
+      console.log(`Email suppressed - would have sent to: ${options.to || 'unknown'}`);
+      return; // Do nothing
+    };
+    
+    try {
+      // Generate document (email will be suppressed)
+      const docUrl = generateDocumentBrandedForRow(rowNum);
+      return docUrl;
+    } finally {
+      // Restore original function
+      MailApp.sendEmail = originalSendEmail;
+    }
+    
+  } catch (error) {
+    console.error(`Error generating document: ${error.toString()}`);
+    throw error;
+  }
 }
 
 /**
@@ -30,9 +80,12 @@ function listAllVehicleActualKeys() {
 /**
  * Reprocess a single row's allocation with the fixed code
  * @param {number} rowNum - The row number to reprocess
- * @param {boolean} generateDoc - Whether to also generate document after reprocessing
+ * @param {Object} options - Options object with generateDoc and sendEmail flags
+ * @param {boolean} options.generateDoc - Whether to generate document (default: false)
+ * @param {boolean} options.sendEmail - Whether to send email with document (default: false)
  */
-function reprocessSingleRow(rowNum, generateDoc = false) {
+function reprocessSingleRow(rowNum, options = {}) {
+  const { generateDoc = false, sendEmail = false } = options;
   try {
     // Validate rowNum
     if (!rowNum || isNaN(rowNum) || rowNum < 3) {
@@ -88,9 +141,15 @@ function reprocessSingleRow(rowNum, generateDoc = false) {
     
     // Generate document if requested
     if (generateDoc) {
-      console.log('Generating document...');
-      const docUrl = generateDocumentBrandedForRow(rowNum);
-      console.log(`Document created: ${docUrl}`);
+      if (sendEmail) {
+        console.log('Generating document and sending email...');
+        const docUrl = generateDocumentBrandedForRow(rowNum);
+        console.log(`Document created and emailed: ${docUrl}`);
+      } else {
+        console.log('Generating document WITHOUT sending email...');
+        const docUrl = generateDocumentNoEmail(rowNum);
+        console.log(`Document created (no email sent): ${docUrl}`);
+      }
     }
     
     console.log(`========== COMPLETED ROW ${rowNum} ==========\n`);
@@ -351,26 +410,92 @@ function writeAllocationResults(ws, hdr, rowNum, results) {
 }
 
 /**
- * Simple test function - always prompts for row number
+ * Quick test function - reprocess without document or email
+ * For rapid testing of allocation calculations only
+ */
+function quickTestReprocess() {
+  const sheet = SpreadsheetApp.getActiveSheet();
+  if (!sheet || sheet.getName() !== 'Working Sheet') {
+    SpreadsheetApp.getUi().alert(
+      'Wrong Sheet',
+      'Please select a row in the Working Sheet',
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+    return;
+  }
+  
+  const rowNum = sheet.getActiveRange().getRow();
+  if (rowNum < 3) {
+    SpreadsheetApp.getUi().alert(
+      'Invalid Row',
+      'Please select a data row (row 3 or below)',
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+    return;
+  }
+  
+  console.log(`Quick test on row ${rowNum} - allocations only, no document/email`);
+  const success = reprocessSingleRow(rowNum, { generateDoc: false, sendEmail: false });
+  
+  if (success) {
+    SpreadsheetApp.getUi().alert(
+      'Quick Test Complete',
+      `Row ${rowNum} allocations reprocessed.\nNo document generated, no email sent.`,
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+  }
+}
+
+/**
+ * Simple test function - prompts for row number and options
  */
 function testReprocessWithPrompt() {
   const ui = SpreadsheetApp.getUi();
-  const response = ui.prompt(
+  
+  // First prompt for row number
+  const rowResponse = ui.prompt(
     'Test Reprocess',
     'Enter row number to reprocess (3 or higher):',
     ui.ButtonSet.OK_CANCEL
   );
   
-  if (response.getSelectedButton() === ui.Button.OK) {
-    const rowNum = parseInt(response.getResponseText());
-    if (rowNum && rowNum >= 3) {
-      const success = reprocessSingleRow(rowNum, true);
-      if (success) {
-        ui.alert('Success', `Row ${rowNum} reprocessed and document generated.`, ui.ButtonSet.OK);
-      }
-    } else {
-      ui.alert('Invalid', 'Please enter a valid row number (3 or higher)', ui.ButtonSet.OK);
+  if (rowResponse.getSelectedButton() !== ui.Button.OK) return;
+  
+  const rowNum = parseInt(rowResponse.getResponseText());
+  if (!rowNum || rowNum < 3) {
+    ui.alert('Invalid', 'Please enter a valid row number (3 or higher)', ui.ButtonSet.OK);
+    return;
+  }
+  
+  // Ask about document generation
+  const docResponse = ui.alert(
+    'Document Generation',
+    'Generate document for this row?',
+    ui.ButtonSet.YES_NO
+  );
+  
+  const generateDoc = (docResponse === ui.Button.YES);
+  let sendEmail = false;
+  
+  // If generating doc, ask about email
+  if (generateDoc) {
+    const emailResponse = ui.alert(
+      'Email Document',
+      'Send email with the document?',
+      ui.ButtonSet.YES_NO
+    );
+    sendEmail = (emailResponse === ui.Button.YES);
+  }
+  
+  // Process with options
+  const success = reprocessSingleRow(rowNum, { generateDoc, sendEmail });
+  
+  if (success) {
+    let message = `Row ${rowNum} reprocessed successfully.`;
+    if (generateDoc) {
+      message += sendEmail ? '\nDocument generated and emailed.' : '\nDocument generated (no email sent).';
     }
+    ui.alert('Success', message, ui.ButtonSet.OK);
   }
 }
 
@@ -404,12 +529,13 @@ function testReprocessSingleRow(rowNum = null) {
   
   console.log('Testing reprocess on row ' + rowNum);
   
-  const success = reprocessSingleRow(rowNum, true);
+  // For testing, generate doc but don't send email
+  const success = reprocessSingleRow(rowNum, { generateDoc: true, sendEmail: false });
   
   if (success) {
     SpreadsheetApp.getUi().alert(
       'Test Complete', 
-      `Row ${rowNum} has been reprocessed. Check the document and values.`,
+      `Row ${rowNum} has been reprocessed.\nDocument generated (no email sent).\nCheck the values and document.`,
       SpreadsheetApp.getUi().ButtonSet.OK
     );
   }
@@ -439,8 +565,9 @@ function reprocessCurrentRow() {
   );
   
   if (response === ui.Button.YES) {
-    reprocessSingleRow(rowNum, false);
-    ui.alert('Complete', `Row ${rowNum} has been reprocessed.`, ui.ButtonSet.OK);
+    // Just reprocess, no document generation for quick testing
+    reprocessSingleRow(rowNum, { generateDoc: false, sendEmail: false });
+    ui.alert('Complete', `Row ${rowNum} has been reprocessed (no document generated).`, ui.ButtonSet.OK);
   }
 }
 
@@ -483,7 +610,8 @@ function reprocessAllRows(startRow = 3, endRow = null) {
         continue;
       }
       
-      const success = reprocessSingleRow(row, false);
+      // Bulk reprocess without documents or emails
+      const success = reprocessSingleRow(row, { generateDoc: false, sendEmail: false });
       if (success) {
         successCount++;
       } else {
